@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { QuestionCard } from '@/components/quiz/QuestionCard';
 import { QuizResults } from '@/components/quiz/QuizResults';
-import claudeService from '@/services/claudeService';
+import llmService from '@/services/llmService';
 import { useAppStore } from '@/store/useAppStore';
 import { Quiz, QuizQuestion } from '@/types';
 
@@ -35,7 +35,7 @@ export default function QuizScreen() {
     setError(null);
 
     try {
-      const generatedQuestions = await claudeService.generateQuizQuestions(technology);
+      const generatedQuestions = await llmService.generateQuizQuestions(technology);
       setQuestions(generatedQuestions);
     } catch (err) {
       console.error('Failed to generate quiz:', err);

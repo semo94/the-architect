@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 export default {
   expo: {
     name: "TheArchitect",
@@ -45,9 +47,10 @@ export default {
       reactCompiler: true,
     },
     extra: {
-      claudeApiKey: process.env.CLAUDE_API_KEY,
-      claudeApiUrl: process.env.CLAUDE_API_URL || "https://api.anthropic.com/v1/messages",
-      claudeModel: process.env.CLAUDE_MODEL || "claude-3-5-sonnet-20241022",
+      llmProvider: process.env.LLM_PROVIDER || "anthropic",
+      llmApiKey: process.env.LLM_API_KEY,
+      llmApiUrl: process.env.LLM_API_URL || "https://api.anthropic.com/v1/messages",
+      llmModel: process.env.LLM_MODEL || "claude-3-5-sonnet-20241022",
     },
   },
 };

@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
   StyleSheet,
   Text,
+  View,
 } from 'react-native';
-import { useAppStore } from '../../store/useAppStore';
-import claudeService from '../../services/claudeService';
-import { TechnologyCard } from './TechnologyCard';
-import { ActionButtons } from './ActionButtons';
-import { Technology } from '../../types';
 import categorySchema from '../../constants/categories';
+import llmService from '../../services/llmService';
+import { useAppStore } from '../../store/useAppStore';
+import { Technology } from '../../types';
 import { LoadingSpinner } from '../common/LoadingSpinner';
-import { useRouter } from 'expo-router';
+import { ActionButtons } from './ActionButtons';
+import { TechnologyCard } from './TechnologyCard';
 
 interface Props {
   onComplete: () => void;
@@ -42,7 +42,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     try {
       const alreadyDiscovered = technologies.map(t => t.name);
 
-      const newTechnology = await claudeService.generateSurpriseTechnology(
+      const newTechnology = await llmService.generateSurpriseTechnology(
         alreadyDiscovered,
         dismissedTechnologies,
         categorySchema

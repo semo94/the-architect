@@ -1,10 +1,21 @@
 import Constants from 'expo-constants';
 import { z } from 'zod';
-import { Technology, QuizQuestion } from '../types';
+import { QuizQuestion, Technology } from '../types';
 
-const CLAUDE_API_KEY = Constants.expoConfig?.extra?.claudeApiKey;
-const CLAUDE_API_URL = Constants.expoConfig?.extra?.claudeApiUrl;
-const CLAUDE_MODEL = Constants.expoConfig?.extra?.claudeModel;
+// LLM Provider types
+type LLMProvider = 'anthropic' | 'openai' | 'custom';
+
+interface LLMConfig {
+  provider: LLMProvider;
+  apiKey: string;
+  apiUrl: string;
+  model: string;
+}
+
+interface LLMMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 // Validation schemas
 const TechnologyContentSchema = z.object({
@@ -36,43 +47,175 @@ const QuizQuestionsSchema = z.object({
   ).length(4),
 });
 
-class ClaudeService {
-  private async callClaude(prompt: string): Promise<any> {
-    if (!CLAUDE_API_KEY) {
-      throw new Error('Claude API key not configured');
+class LLMService {
+  private config: LLMConfig;
+
+  constructor() {
+    const provider = (Constants.expoConfig?.extra?.llmProvider || 'anthropic') as LLMProvider;
+    const apiKey = Constants.expoConfig?.extra?.llmApiKey;
+    const apiUrl = Constants.expoConfig?.extra?.llmApiUrl;
+    const model = Constants.expoConfig?.extra?.llmModel;
+
+    if (!apiKey) {
+      throw new Error('LLM API key not configured');
+    }
+
+    this.config = {
+      provider,
+      apiKey,
+      apiUrl,
+      model,
+    };
+  }
+
+  /**
+   * Extracts JSON from LLM response text that may contain markdown code blocks
+   */
+  private extractJSON(text: string): any {
+    // Remove markdown code block markers if present
+    let cleanedText = text.trim();
+
+    // Check for ```json ... ``` format
+    const jsonBlockMatch = cleanedText.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonBlockMatch) {
+      cleanedText = jsonBlockMatch[1].trim();
+    } else {
+      // Check for ``` ... ``` format
+      const codeBlockMatch = cleanedText.match(/```\s*([\s\S]*?)\s*```/);
+      if (codeBlockMatch) {
+        cleanedText = codeBlockMatch[1].trim();
+      }
     }
 
     try {
-      const response = await fetch(CLAUDE_API_URL!, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': CLAUDE_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: CLAUDE_MODEL,
-          max_tokens: 4000,
-          messages: [
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          temperature: 0.7,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Claude API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return JSON.parse(data.content[0].text);
+      return JSON.parse(cleanedText);
     } catch (error) {
-      console.error('Claude API call failed:', error);
-      throw error;
+      throw new Error(`Failed to parse LLM response as JSON: ${error instanceof Error ? error.message : 'Unknown error'}\n\nResponse text:\n${text}`);
     }
+  }
+
+  /**
+   * Makes API call based on configured provider
+   */
+  private async callLLM(prompt: string): Promise<any> {
+    const message: LLMMessage = {
+      role: 'user',
+      content: prompt,
+    };
+
+    let response: Response;
+
+    switch (this.config.provider) {
+      case 'anthropic':
+        response = await this.callAnthropic([message]);
+        break;
+      case 'openai':
+        response = await this.callOpenAI([message]);
+        break;
+      case 'custom':
+        response = await this.callCustomProvider([message]);
+        break;
+      default:
+        throw new Error(`Unsupported LLM provider: ${this.config.provider}`);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`LLM API error: ${response.statusText}\n${errorText}`);
+    }
+
+    const data = await response.json();
+    const textContent = this.extractTextContent(data);
+    return this.extractJSON(textContent);
+  }
+
+  /**
+   * Anthropic/Claude API implementation
+   */
+  private async callAnthropic(messages: LLMMessage[]): Promise<Response> {
+    return fetch(this.config.apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.config.apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: this.config.model,
+        max_tokens: 4000,
+        messages,
+        temperature: 0.7,
+      }),
+    });
+  }
+
+  /**
+   * OpenAI API implementation
+   */
+  private async callOpenAI(messages: LLMMessage[]): Promise<Response> {
+    return fetch(this.config.apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: this.config.model,
+        messages,
+        temperature: 0.7,
+        max_tokens: 4000,
+      }),
+    });
+  }
+
+  /**
+   * Custom provider implementation (follows OpenAI-like format)
+   */
+  private async callCustomProvider(messages: LLMMessage[]): Promise<Response> {
+    return fetch(this.config.apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: this.config.model,
+        messages,
+        temperature: 0.7,
+        max_tokens: 4000,
+      }),
+    });
+  }
+
+  /**
+   * Extracts text content from provider-specific response format
+   */
+  private extractTextContent(data: any): string {
+    switch (this.config.provider) {
+      case 'anthropic':
+        // Anthropic format: { content: [{ type: "text", text: "..." }] }
+        if (data.content && Array.isArray(data.content) && data.content[0]?.text) {
+          return data.content[0].text;
+        }
+        break;
+      case 'openai':
+        // OpenAI format: { choices: [{ message: { content: "..." } }] }
+        if (data.choices && Array.isArray(data.choices) && data.choices[0]?.message?.content) {
+          return data.choices[0].message.content;
+        }
+        break;
+      case 'custom':
+        // Try both formats
+        if (data.content && Array.isArray(data.content) && data.content[0]?.text) {
+          return data.content[0].text;
+        }
+        if (data.choices && Array.isArray(data.choices) && data.choices[0]?.message?.content) {
+          return data.choices[0].message.content;
+        }
+        break;
+    }
+
+    throw new Error(`Unable to extract text content from ${this.config.provider} response format`);
   }
 
   async generateSurpriseTechnology(
@@ -137,10 +280,11 @@ IMPORTANT:
 - Content must be substantial and architect-focused
 - Comparisons should be with genuinely similar technologies
 - Focus on architectural significance, not implementation details
+- Return ONLY valid JSON without markdown code blocks
 
 Generate the technology content now:`;
 
-    const result = await this.callClaude(prompt);
+    const result = await this.callLLM(prompt);
     const validated = TechnologyContentSchema.parse(result);
 
     return {
@@ -211,9 +355,12 @@ OUTPUT FORMAT (JSON):
   }
 }
 
+IMPORTANT:
+- Return ONLY valid JSON without markdown code blocks
+
 Generate the most relevant technology content now:`;
 
-    const result = await this.callClaude(prompt);
+    const result = await this.callLLM(prompt);
     const validated = TechnologyContentSchema.parse(result);
 
     return {
@@ -250,9 +397,12 @@ OUTPUT FORMAT (JSON):
   "options": ["Option 1", "Option 2", "Option 3", "Option 4"]
 }
 
+IMPORTANT:
+- Return ONLY valid JSON without markdown code blocks
+
 Generate the question now:`;
 
-    return await this.callClaude(prompt);
+    return await this.callLLM(prompt);
   }
 
   async generateQuizQuestions(
@@ -290,9 +440,12 @@ OUTPUT FORMAT (JSON):
   ]
 }
 
+IMPORTANT:
+- Return ONLY valid JSON without markdown code blocks
+
 Generate the quiz questions now:`;
 
-    const result = await this.callClaude(prompt);
+    const result = await this.callLLM(prompt);
     const validated = QuizQuestionsSchema.parse(result);
     return validated.questions;
   }
@@ -302,4 +455,4 @@ Generate the quiz questions now:`;
   }
 }
 
-export default new ClaudeService();
+export default new LLMService();
