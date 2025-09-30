@@ -1,98 +1,186 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { Card } from '@/components/common/Card';
+import { GuideMeFlow } from '@/components/discover/GuideMeFlow';
+import { SurpriseMeFlow } from '@/components/discover/SurpriseMeFlow';
+import { useAppStore } from '@/store/useAppStore';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function DiscoverScreen() {
+  const [flowMode, setFlowMode] = useState<'idle' | 'surprise' | 'guided'>('idle');
+  const { profile } = useAppStore();
 
-export default function HomeScreen() {
+  const handleSurpriseMe = () => {
+    setFlowMode('surprise');
+  };
+
+  const handleGuideMe = () => {
+    setFlowMode('guided');
+  };
+
+  const handleFlowComplete = () => {
+    setFlowMode('idle');
+  };
+
+  if (flowMode === 'surprise') {
+    return <SurpriseMeFlow onComplete={handleFlowComplete} />;
+  }
+
+  if (flowMode === 'guided') {
+    return <GuideMeFlow onComplete={handleFlowComplete} />;
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Expand Your Architecture Knowledge</Text>
+        <Text style={styles.subtitle}>
+          You've discovered {profile.statistics.breadthExpansion.totalDiscovered} technologies
+        </Text>
+      </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      <View style={styles.statsContainer}>
+        <Card style={styles.statCard}>
+          <Text style={styles.statNumber}>
+            {profile.statistics.breadthExpansion.totalLearned}
+          </Text>
+          <Text style={styles.statLabel}>Learned</Text>
+        </Card>
+        <Card style={styles.statCard}>
+          <Text style={styles.statNumber}>
+            {profile.statistics.breadthExpansion.inBucketList}
+          </Text>
+          <Text style={styles.statLabel}>In Bucket</Text>
+        </Card>
+      </View>
+
+      <Text style={styles.sectionTitle}>Discovery Mode</Text>
+
+      <TouchableOpacity onPress={handleSurpriseMe}>
+        <Card style={styles.modeCard}>
+          <Text style={styles.modeIcon}>🎲</Text>
+          <View style={styles.modeContent}>
+            <Text style={styles.modeTitle}>Surprise Me</Text>
+            <Text style={styles.modeDescription}>
+              Discover a random technology you haven't learned yet
+            </Text>
+          </View>
+        </Card>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={handleGuideMe}>
+        <Card style={styles.modeCard}>
+          <Text style={styles.modeIcon}>🧭</Text>
+          <View style={styles.modeContent}>
+            <Text style={styles.modeTitle}>Guide Me</Text>
+            <Text style={styles.modeDescription}>
+              Answer a few questions to find relevant technologies
+            </Text>
+          </View>
+        </Card>
+      </TouchableOpacity>
+
+      <View style={styles.tipContainer}>
+        <Text style={styles.tipTitle}>💡 Pro Tip</Text>
+        <Text style={styles.tipText}>
+          Aim to discover 3-5 new technologies each week to steadily expand your architectural breadth
+        </Text>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  stepContainer: {
-    gap: 8,
+  header: {
+    padding: 20,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 15,
+  },
+  statCard: {
+    flex: 1,
+    padding: 20,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  modeCard: {
+    flexDirection: 'row',
+    padding: 20,
+    marginHorizontal: 20,
+    marginBottom: 15,
+  },
+  modeIcon: {
+    fontSize: 40,
+    marginRight: 15,
+  },
+  modeContent: {
+    flex: 1,
+  },
+  modeTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  modeDescription: {
+    fontSize: 14,
+    color: '#666',
+  },
+  tipContainer: {
+    margin: 20,
+    padding: 15,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+  },
+  tipTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1976D2',
+    marginBottom: 8,
+  },
+  tipText: {
+    fontSize: 14,
+    color: '#1565C0',
+    lineHeight: 20,
   },
 });

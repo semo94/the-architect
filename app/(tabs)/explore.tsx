@@ -1,112 +1,339 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { Card } from '@/components/common/Card';
+import { useAppStore } from '@/store/useAppStore';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+export default function ProfileScreen() {
+  const { profile, technologies } = useAppStore();
+  const router = useRouter();
 
-export default function TabTwoScreen() {
+  const handleTestKnowledge = (technologyId: string) => {
+    router.push({
+      pathname: '/quiz',
+      params: { technologyId }
+    });
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Your Progress</Text>
+        <Text style={styles.subtitle}>Track your architecture learning journey</Text>
+      </View>
+
+      {/* Breadth Expansion Dashboard */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Breadth Expansion</Text>
+        <View style={styles.statsGrid}>
+          <Card style={styles.statCard}>
+            <Text style={styles.statNumber}>{profile.statistics.breadthExpansion.totalDiscovered}</Text>
+            <Text style={styles.statLabel}>Discovered</Text>
+          </Card>
+          <Card style={styles.statCard}>
+            <Text style={styles.statNumber}>{profile.statistics.breadthExpansion.totalLearned}</Text>
+            <Text style={styles.statLabel}>Learned</Text>
+          </Card>
+          <Card style={styles.statCard}>
+            <Text style={styles.statNumber}>{profile.statistics.breadthExpansion.inBucketList}</Text>
+            <Text style={styles.statLabel}>In Bucket</Text>
+          </Card>
+          <Card style={styles.statCard}>
+            <Text style={styles.statNumber}>{profile.statistics.breadthExpansion.learningRate}%</Text>
+            <Text style={styles.statLabel}>Learning Rate</Text>
+          </Card>
+        </View>
+      </View>
+
+      {/* Quiz Performance */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Quiz Performance</Text>
+        <Card style={styles.perfCard}>
+          <View style={styles.perfRow}>
+            <Text style={styles.perfLabel}>Quizzes Taken:</Text>
+            <Text style={styles.perfValue}>{profile.statistics.quizPerformance.totalQuizzesTaken}</Text>
+          </View>
+          <View style={styles.perfRow}>
+            <Text style={styles.perfLabel}>Average Score:</Text>
+            <Text style={styles.perfValue}>{profile.statistics.quizPerformance.averageScore}%</Text>
+          </View>
+          <View style={styles.perfRow}>
+            <Text style={styles.perfLabel}>Pass Rate:</Text>
+            <Text style={styles.perfValue}>{profile.statistics.quizPerformance.passRate}%</Text>
+          </View>
+        </Card>
+      </View>
+
+      {/* Category Breakdown */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Category Breakdown</Text>
+        {Object.entries(profile.statistics.categoryBreakdown).map(([category, stats]) => (
+          <Card key={category} style={styles.categoryCard}>
+            <Text style={styles.categoryName}>{category}</Text>
+            <View style={styles.categoryStats}>
+              <Text style={styles.categoryText}>
+                {stats.learned} learned / {stats.discovered} discovered ({stats.learningRate}%)
+              </Text>
+            </View>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${stats.learningRate}%` }]} />
+            </View>
+          </Card>
+        ))}
+      </View>
+
+      {/* Milestones */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Milestones</Text>
+        {profile.milestones.map((milestone, index) => {
+          const cardStyle: any = milestone.achievedAt
+            ? [styles.milestoneCard, styles.milestoneAchieved]
+            : styles.milestoneCard;
+          return (
+            <Card key={index} style={cardStyle}>
+              <Text style={styles.milestoneIcon}>{milestone.icon}</Text>
+              <View style={styles.milestoneContent}>
+                <Text style={styles.milestoneTitle}>{milestone.title}</Text>
+                <Text style={styles.milestoneStatus}>
+                  {milestone.achievedAt ? '✓ Achieved!' : `Reach ${milestone.threshold}`}
+                </Text>
+              </View>
+            </Card>
+          );
         })}
-      </Collapsible>
-    </ParallaxScrollView>
+      </View>
+
+      {/* Discovered Technologies List */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Discovered Technologies ({technologies.length})</Text>
+        {technologies.length === 0 ? (
+          <Card style={styles.emptyCard}>
+            <Text style={styles.emptyText}>No technologies discovered yet!</Text>
+            <Text style={styles.emptySubtext}>Go to Discover tab to start your journey</Text>
+          </Card>
+        ) : (
+          technologies.map((tech) => (
+            <Card key={tech.id} style={styles.techCard}>
+              <View style={styles.techHeader}>
+                <Text style={styles.techName}>{tech.name}</Text>
+                <Text style={[
+                  styles.techStatus,
+                  tech.status === 'learned' && styles.techStatusLearned
+                ]}>
+                  {tech.status === 'learned' ? '✓ Learned' : '📋 Discovered'}
+                </Text>
+              </View>
+              <Text style={styles.techCategory}>{tech.category} › {tech.subcategory}</Text>
+              {tech.status === 'discovered' && (
+                <TouchableOpacity
+                  style={styles.testButton}
+                  onPress={() => handleTestKnowledge(tech.id)}
+                >
+                  <Text style={styles.testButtonText}>🎯 Test Knowledge</Text>
+                </TouchableOpacity>
+              )}
+            </Card>
+          ))
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  titleContainer: {
+  header: {
+    padding: 20,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+  },
+  section: {
+    marginVertical: 10,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  statsGrid: {
     flexDirection: 'row',
-    gap: 8,
+    flexWrap: 'wrap',
+    paddingHorizontal: 15,
+    gap: 10,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: '45%',
+    padding: 20,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  perfCard: {
+    marginHorizontal: 20,
+    padding: 20,
+  },
+  perfRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  perfLabel: {
+    fontSize: 16,
+    color: '#666',
+  },
+  perfValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  categoryCard: {
+    marginHorizontal: 20,
+    marginBottom: 10,
+    padding: 15,
+  },
+  categoryName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  categoryStats: {
+    marginBottom: 8,
+  },
+  categoryText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+  },
+  milestoneCard: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 10,
+    padding: 15,
+    alignItems: 'center',
+    opacity: 0.6,
+  },
+  milestoneAchieved: {
+    opacity: 1,
+    backgroundColor: '#E8F5E9',
+  },
+  milestoneIcon: {
+    fontSize: 32,
+    marginRight: 15,
+  },
+  milestoneContent: {
+    flex: 1,
+  },
+  milestoneTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  milestoneStatus: {
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyCard: {
+    marginHorizontal: 20,
+    padding: 30,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#666',
+  },
+  techCard: {
+    marginHorizontal: 20,
+    marginBottom: 10,
+    padding: 15,
+  },
+  techHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  techName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
+  },
+  techStatus: {
+    fontSize: 12,
+    color: '#2196F3',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 4,
+  },
+  techStatusLearned: {
+    color: '#4CAF50',
+    backgroundColor: '#E8F5E9',
+  },
+  techCategory: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  testButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  testButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

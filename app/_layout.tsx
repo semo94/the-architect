@@ -16,7 +16,16 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen
+          name="quiz"
+          options={{
+            presentation: 'card',
+            title: 'Test Your Knowledge',
+            headerStyle: { backgroundColor: '#4CAF50' },
+            headerTintColor: '#fff',
+            headerTitleStyle: { fontWeight: 'bold' },
+          }}
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
