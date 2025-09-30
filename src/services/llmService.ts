@@ -1,6 +1,10 @@
+import 'react-native-get-random-values';
 import Constants from 'expo-constants';
 import { z } from 'zod';
+import { v4 as uuidv4 } from 'uuid';
+import { ANTHROPIC_VERSION, MAX_TOKENS, TEMPERATURE } from '../constants/llm';
 import { QuizQuestion, Technology } from '../types';
+import { promptTemplates } from './prompts';
 
 // LLM Provider types
 type LLMProvider = 'anthropic' | 'openai' | 'custom';
@@ -15,6 +19,11 @@ interface LLMConfig {
 interface LLMMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+interface ProviderHeaders {
+  'Content-Type': string;
+  [key: string]: string;
 }
 
 // Validation schemas
@@ -103,25 +112,11 @@ class LLMService {
       content: prompt,
     };
 
-    let response: Response;
-
-    switch (this.config.provider) {
-      case 'anthropic':
-        response = await this.callAnthropic([message]);
-        break;
-      case 'openai':
-        response = await this.callOpenAI([message]);
-        break;
-      case 'custom':
-        response = await this.callCustomProvider([message]);
-        break;
-      default:
-        throw new Error(`Unsupported LLM provider: ${this.config.provider}`);
-    }
+    const response = await this.makeProviderRequest([message]);
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`LLM API error: ${response.statusText}\n${errorText}`);
+      throw new Error(`LLM API error (${this.config.provider}): ${response.statusText}\n${errorText}`);
     }
 
     const data = await response.json();
@@ -130,60 +125,68 @@ class LLMService {
   }
 
   /**
-   * Anthropic/Claude API implementation
+   * Helper methods for provider configuration
    */
-  private async callAnthropic(messages: LLMMessage[]): Promise<Response> {
-    return fetch(this.config.apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.config.apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: this.config.model,
-        max_tokens: 4000,
-        messages,
-        temperature: 0.7,
-      }),
-    });
+  private getProxyUrl(): string | null {
+    // EXPO_PUBLIC_ variables are exposed to web bundle safely
+    const proxyUrl = (Constants.expoConfig?.extra as any)?.llmProxyUrl || process.env.EXPO_PUBLIC_LLM_PROXY_URL;
+    return typeof proxyUrl === 'string' && proxyUrl.length > 0 ? proxyUrl : null;
+  }
+
+  private isWeb(): boolean {
+    // expo-constants doesn't expose platform in a typed way; use navigator if present
+    return typeof navigator !== 'undefined' && typeof window !== 'undefined';
+  }
+
+  private getEffectiveUrl(proxyUrl: string | null): string {
+    return proxyUrl ? `${proxyUrl}/api/llm` : this.config.apiUrl;
+  }
+
+  private getProviderHeaders(proxyUrl: string | null): ProviderHeaders {
+    const baseHeaders: ProviderHeaders = { 'Content-Type': 'application/json' };
+
+    if (proxyUrl) {
+      return baseHeaders;
+    }
+
+    switch (this.config.provider) {
+      case 'anthropic':
+        return {
+          ...baseHeaders,
+          'x-api-key': this.config.apiKey,
+          'anthropic-version': ANTHROPIC_VERSION,
+        };
+      case 'openai':
+      case 'custom':
+        return {
+          ...baseHeaders,
+          'Authorization': `Bearer ${this.config.apiKey}`,
+        };
+    }
+  }
+
+  private getRequestBody(messages: LLMMessage[]): any {
+    return {
+      model: this.config.model,
+      messages,
+      temperature: TEMPERATURE,
+      max_tokens: MAX_TOKENS,
+    };
   }
 
   /**
-   * OpenAI API implementation
+   * Unified provider API call
    */
-  private async callOpenAI(messages: LLMMessage[]): Promise<Response> {
-    return fetch(this.config.apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: this.config.model,
-        messages,
-        temperature: 0.7,
-        max_tokens: 4000,
-      }),
-    });
-  }
+  private async makeProviderRequest(messages: LLMMessage[]): Promise<Response> {
+    const proxyUrl = this.isWeb() ? this.getProxyUrl() : null;
+    const url = this.getEffectiveUrl(proxyUrl);
+    const headers = this.getProviderHeaders(proxyUrl);
+    const body = this.getRequestBody(messages);
 
-  /**
-   * Custom provider implementation (follows OpenAI-like format)
-   */
-  private async callCustomProvider(messages: LLMMessage[]): Promise<Response> {
-    return fetch(this.config.apiUrl, {
+    return fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: this.config.model,
-        messages,
-        temperature: 0.7,
-        max_tokens: 4000,
-      }),
+      headers,
+      body: JSON.stringify(body),
     });
   }
 
@@ -191,28 +194,16 @@ class LLMService {
    * Extracts text content from provider-specific response format
    */
   private extractTextContent(data: any): string {
-    switch (this.config.provider) {
-      case 'anthropic':
-        // Anthropic format: { content: [{ type: "text", text: "..." }] }
-        if (data.content && Array.isArray(data.content) && data.content[0]?.text) {
-          return data.content[0].text;
-        }
-        break;
-      case 'openai':
-        // OpenAI format: { choices: [{ message: { content: "..." } }] }
-        if (data.choices && Array.isArray(data.choices) && data.choices[0]?.message?.content) {
-          return data.choices[0].message.content;
-        }
-        break;
-      case 'custom':
-        // Try both formats
-        if (data.content && Array.isArray(data.content) && data.content[0]?.text) {
-          return data.content[0].text;
-        }
-        if (data.choices && Array.isArray(data.choices) && data.choices[0]?.message?.content) {
-          return data.choices[0].message.content;
-        }
-        break;
+    // Anthropic format: { content: [{ type: "text", text: "..." }] }
+    const anthropicText = data.content?.[0]?.text;
+    if (anthropicText) {
+      return anthropicText;
+    }
+
+    // OpenAI format: { choices: [{ message: { content: "..." } }] }
+    const openaiText = data.choices?.[0]?.message?.content;
+    if (openaiText) {
+      return openaiText;
     }
 
     throw new Error(`Unable to extract text content from ${this.config.provider} response format`);
@@ -223,72 +214,17 @@ class LLMService {
     dismissed: string[],
     categorySchema: any
   ): Promise<Technology> {
-    const prompt = `
-You are an expert software architecture mentor helping an engineer expand their technical breadth.
-
-TASK: Generate content for ONE technology the user hasn't discovered yet.
-
-CONTEXT:
-- Already discovered: ${JSON.stringify(alreadyDiscovered)}
-- Recently dismissed: ${JSON.stringify(dismissed)}
-- Category schema (for reference): ${JSON.stringify(categorySchema)}
-
-PROCESS:
-1. Randomly select a domain and subcategory from the schema
-2. Think of ANY real, architecturally significant technology that fits this subcategory
-3. The technology can be from the schema examples OR any other legitimate technology
-4. Ensure it's NOT in the discovered or dismissed lists
-5. Generate comprehensive content
-
-OUTPUT FORMAT (JSON):
-{
-  "name": "Technology Name",
-  "category": "Top-Level Domain",
-  "subcategory": "Specific Subcategory",
-  "content": {
-    "what": "2-3 paragraphs explaining core concepts and how it works",
-    "why": "2-3 paragraphs on when/why architects use this, key use cases",
-    "pros": [
-      "Specific advantage 1 with architectural context",
-      "Specific advantage 2 with architectural context",
-      "Specific advantage 3 with architectural context",
-      "Specific advantage 4 with architectural context",
-      "Specific advantage 5 with architectural context"
-    ],
-    "cons": [
-      "Specific limitation 1 with trade-offs",
-      "Specific limitation 2 with trade-offs",
-      "Specific limitation 3 with trade-offs",
-      "Specific limitation 4 with trade-offs",
-      "Specific limitation 5 with trade-offs"
-    ],
-    "compareToSimilar": [
-      {
-        "technology": "Similar Tech 1",
-        "comparison": "2-3 sentences on key distinctions and when to choose which"
-      },
-      {
-        "technology": "Similar Tech 2",
-        "comparison": "2-3 sentences highlighting trade-offs"
-      }
-    ]
-  }
-}
-
-IMPORTANT:
-- Technology must be real and production-grade
-- Content must be substantial and architect-focused
-- Comparisons should be with genuinely similar technologies
-- Focus on architectural significance, not implementation details
-- Return ONLY valid JSON without markdown code blocks
-
-Generate the technology content now:`;
+    const prompt = promptTemplates.generateSurpriseTechnology(
+      alreadyDiscovered,
+      dismissed,
+      categorySchema
+    );
 
     const result = await this.callLLM(prompt);
     const validated = TechnologyContentSchema.parse(result);
 
     return {
-      id: this.generateId(),
+      id: uuidv4(),
       ...validated,
       status: 'discovered',
       discoveryMethod: 'surprise',
@@ -302,69 +238,17 @@ Generate the technology content now:`;
     alreadyDiscovered: string[],
     categorySchema: any
   ): Promise<Technology> {
-    const prompt = `
-You are an expert software architecture mentor helping an engineer discover relevant technologies.
-
-TASK: Based on the user's guided selections, generate content for the MOST RELEVANT technology they haven't discovered.
-
-USER'S JOURNEY:
-${conversationHistory.map(h => `- ${h.question}: ${h.answer}`).join('\n')}
-
-CONTEXT:
-- Already discovered: ${JSON.stringify(alreadyDiscovered)}
-- Category schema: ${JSON.stringify(categorySchema)}
-
-SELECTION CRITERIA:
-1. Technology must align with user's expressed interests
-2. Must be novel (not in discovered list)
-3. Should be the most relevant option based on their selections
-4. Must be real, credible, and architecturally significant
-
-OUTPUT FORMAT (JSON):
-{
-  "name": "Technology Name",
-  "category": "Top-Level Domain",
-  "subcategory": "Specific Subcategory",
-  "content": {
-    "what": "2-3 paragraphs explaining core concepts and how it works",
-    "why": "2-3 paragraphs on when/why architects use this, key use cases",
-    "pros": [
-      "Specific advantage 1 with architectural context",
-      "Specific advantage 2 with architectural context",
-      "Specific advantage 3 with architectural context",
-      "Specific advantage 4 with architectural context",
-      "Specific advantage 5 with architectural context"
-    ],
-    "cons": [
-      "Specific limitation 1 with trade-offs",
-      "Specific limitation 2 with trade-offs",
-      "Specific limitation 3 with trade-offs",
-      "Specific limitation 4 with trade-offs",
-      "Specific limitation 5 with trade-offs"
-    ],
-    "compareToSimilar": [
-      {
-        "technology": "Similar Tech 1",
-        "comparison": "2-3 sentences on key distinctions and when to choose which"
-      },
-      {
-        "technology": "Similar Tech 2",
-        "comparison": "2-3 sentences highlighting trade-offs"
-      }
-    ]
-  }
-}
-
-IMPORTANT:
-- Return ONLY valid JSON without markdown code blocks
-
-Generate the most relevant technology content now:`;
+    const prompt = promptTemplates.generateGuidedTechnology(
+      conversationHistory,
+      alreadyDiscovered,
+      categorySchema
+    );
 
     const result = await this.callLLM(prompt);
     const validated = TechnologyContentSchema.parse(result);
 
     return {
-      id: this.generateId(),
+      id: uuidv4(),
       ...validated,
       status: 'discovered',
       discoveryMethod: 'guided',
@@ -378,29 +262,11 @@ Generate the most relevant technology content now:`;
     previousSelections: any[],
     categorySchema: any
   ): Promise<{ question: string; options: string[] }> {
-    const prompt = `
-You are guiding a software engineer to discover relevant architecture technologies.
-
-CURRENT STEP: ${step} of 3
-PREVIOUS SELECTIONS: ${JSON.stringify(previousSelections)}
-CATEGORY SCHEMA: ${JSON.stringify(categorySchema)}
-
-Generate the next appropriate question with 4-6 relevant options based on the user's journey.
-
-For step 1: Ask about general domain interest
-For step 2: Narrow down within selected domain
-For step 3: Get specific about their learning goal
-
-OUTPUT FORMAT (JSON):
-{
-  "question": "Your conversational question here",
-  "options": ["Option 1", "Option 2", "Option 3", "Option 4"]
-}
-
-IMPORTANT:
-- Return ONLY valid JSON without markdown code blocks
-
-Generate the question now:`;
+    const prompt = promptTemplates.generateGuidedQuestion(
+      step,
+      previousSelections,
+      categorySchema
+    );
 
     return await this.callLLM(prompt);
   }
@@ -408,51 +274,13 @@ Generate the question now:`;
   async generateQuizQuestions(
     technology: Technology
   ): Promise<QuizQuestion[]> {
-    const prompt = `
-You are creating a quiz to test understanding of ${technology.name}.
-
-TECHNOLOGY CONTENT:
-${JSON.stringify(technology.content)}
-
-Create 4 multiple-choice questions that test architectural understanding, not memorization.
-
-QUESTION DISTRIBUTION:
-- 2 questions testing conceptual understanding (What/Why)
-- 1 question testing practical application (When to use)
-- 1 question testing trade-offs analysis (Pros/Cons)
-
-Each question should:
-- Have 4 options
-- Have exactly 1 correct answer
-- Include a brief explanation (2-3 sentences)
-- Test architectural thinking, not trivia
-
-OUTPUT FORMAT (JSON):
-{
-  "questions": [
-    {
-      "question": "Clear question text",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctAnswer": 0,
-      "explanation": "Brief explanation of why this answer is correct"
-    },
-    // ... 3 more questions
-  ]
-}
-
-IMPORTANT:
-- Return ONLY valid JSON without markdown code blocks
-
-Generate the quiz questions now:`;
+    const prompt = promptTemplates.generateQuizQuestions(technology);
 
     const result = await this.callLLM(prompt);
     const validated = QuizQuestionsSchema.parse(result);
     return validated.questions;
   }
 
-  private generateId(): string {
-    return `tech-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
 }
 
 export default new LLMService();

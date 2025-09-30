@@ -51,6 +51,8 @@ export default {
       llmApiKey: process.env.LLM_API_KEY,
       llmApiUrl: process.env.LLM_API_URL || "https://api.anthropic.com/v1/messages",
       llmModel: process.env.LLM_MODEL || "claude-3-5-sonnet-20241022",
+      // public for web bundle consumption; points to local proxy in dev
+      llmProxyUrl: process.env.EXPO_PUBLIC_LLM_PROXY_URL || "",
     },
   },
 };

@@ -74,9 +74,18 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
   error: null,
 
   addTechnology: (technology: Technology) => {
-    set((state) => ({
-      technologies: [...state.technologies, technology],
-    }));
+    set((state) => {
+      // Prevent duplicates by id or name when navigating back to a previously rendered component
+      const exists = state.technologies.some(
+        (t: Technology) => t.id === technology.id || t.name === technology.name
+      );
+      if (exists) {
+        return state;
+      }
+      return {
+        technologies: [...state.technologies, technology],
+      } as any;
+    });
     get().calculateStatistics();
     get().checkMilestones();
   },
