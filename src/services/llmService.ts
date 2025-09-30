@@ -2,7 +2,6 @@ import 'react-native-get-random-values';
 import Constants from 'expo-constants';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { ANTHROPIC_VERSION, MAX_TOKENS, TEMPERATURE } from '../constants/llm';
 import { QuizQuestion, Technology } from '../types';
 import { promptTemplates } from './prompts';
 
@@ -154,7 +153,7 @@ class LLMService {
         return {
           ...baseHeaders,
           'x-api-key': this.config.apiKey,
-          'anthropic-version': ANTHROPIC_VERSION,
+          'anthropic-version': Constants.expoConfig?.extra?.llmAnthropicVersion || '2023-06-01',
         };
       case 'openai':
       case 'custom':
@@ -169,8 +168,8 @@ class LLMService {
     return {
       model: this.config.model,
       messages,
-      temperature: TEMPERATURE,
-      max_tokens: MAX_TOKENS,
+      temperature: Constants.expoConfig?.extra?.llmTemperature || 0.7,
+      max_tokens: Constants.expoConfig?.extra?.llmMaxTokens || 4000,
     };
   }
 
