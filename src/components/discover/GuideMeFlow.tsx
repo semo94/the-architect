@@ -3,7 +3,7 @@ import {
   View,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
@@ -152,9 +152,15 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={onComplete}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.retryButton,
+            pressed && styles.pressed
+          ]}
+          onPress={onComplete}
+        >
           <Text style={styles.retryButtonText}>Go Back</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }
@@ -197,14 +203,16 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 
           <View style={styles.optionsContainer}>
             {currentQuestion.options.map((option, index) => (
-              <TouchableOpacity
+              <Pressable
                 key={index}
-                style={styles.optionButton}
+                style={({ pressed }) => [
+                  styles.optionButton,
+                  pressed && styles.pressed
+                ]}
                 onPress={() => handleOptionSelect(option)}
-                activeOpacity={0.7}
               >
                 <Text style={styles.optionText}>{option}</Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </View>
 
@@ -221,9 +229,15 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
         </ScrollView>
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.cancelButton} onPress={onComplete}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.cancelButton,
+              pressed && styles.pressed
+            ]}
+            onPress={onComplete}
+          >
             <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
     );
@@ -261,6 +275,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     paddingVertical: 12,
     borderRadius: 8,
+    cursor: 'pointer' as any,
+  },
+  pressed: {
+    opacity: 0.7,
   },
   retryButtonText: {
     color: '#fff',
@@ -321,6 +339,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 2,
     borderColor: '#e0e0e0',
+    cursor: 'pointer' as any,
   },
   optionText: {
     fontSize: 16,
@@ -355,6 +374,7 @@ const styles = StyleSheet.create({
   cancelButton: {
     paddingVertical: 12,
     alignItems: 'center',
+    cursor: 'pointer' as any,
   },
   cancelButtonText: {
     color: '#666',

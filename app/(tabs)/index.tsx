@@ -3,9 +3,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  Pressable,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '@/components/common/Card';
 import { GuideMeFlow } from '@/components/discover/GuideMeFlow';
 import { SurpriseMeFlow } from '@/components/discover/SurpriseMeFlow';
@@ -14,6 +15,7 @@ import { useAppStore } from '@/store/useAppStore';
 export default function DiscoverScreen() {
   const [flowMode, setFlowMode] = useState<'idle' | 'surprise' | 'guided'>('idle');
   const { profile } = useAppStore();
+  const insets = useSafeAreaInsets();
 
   const handleSurpriseMe = () => {
     setFlowMode('surprise');
@@ -37,10 +39,10 @@ export default function DiscoverScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
         <Text style={styles.title}>Expand Your Architecture Knowledge</Text>
         <Text style={styles.subtitle}>
-          You've discovered {profile.statistics.breadthExpansion.totalDiscovered} technologies
+          You&apos;ve discovered {profile.statistics.breadthExpansion.totalDiscovered} technologies
         </Text>
       </View>
 
@@ -61,19 +63,19 @@ export default function DiscoverScreen() {
 
       <Text style={styles.sectionTitle}>Discovery Mode</Text>
 
-      <TouchableOpacity onPress={handleSurpriseMe}>
+      <Pressable onPress={handleSurpriseMe} style={({ pressed }) => [styles.touchable, pressed && styles.pressed]}>
         <Card style={styles.modeCard}>
           <Text style={styles.modeIcon}>🎲</Text>
           <View style={styles.modeContent}>
             <Text style={styles.modeTitle}>Surprise Me</Text>
             <Text style={styles.modeDescription}>
-              Discover a random technology you haven't learned yet
+              Discover a random technology you haven&apos;t learned yet
             </Text>
           </View>
         </Card>
-      </TouchableOpacity>
+      </Pressable>
 
-      <TouchableOpacity onPress={handleGuideMe}>
+      <Pressable onPress={handleGuideMe} style={({ pressed }) => [styles.touchable, pressed && styles.pressed]}>
         <Card style={styles.modeCard}>
           <Text style={styles.modeIcon}>🧭</Text>
           <View style={styles.modeContent}>
@@ -83,7 +85,7 @@ export default function DiscoverScreen() {
             </Text>
           </View>
         </Card>
-      </TouchableOpacity>
+      </Pressable>
 
       <View style={styles.tipContainer}>
         <Text style={styles.tipTitle}>💡 Pro Tip</Text>
@@ -99,6 +101,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  touchable: {
+    cursor: 'pointer' as any,
+  },
+  pressed: {
+    opacity: 0.7,
   },
   header: {
     padding: 20,

@@ -32,6 +32,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
 
   useEffect(() => {
     generateSurpriseTechnology();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const generateSurpriseTechnology = async () => {

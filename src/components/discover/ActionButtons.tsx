@@ -2,7 +2,7 @@ import React from 'react';
 import {
   View,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   Text,
 } from 'react-native';
 
@@ -15,20 +15,41 @@ interface Props {
 export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcquireNow }) => {
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={[styles.button, styles.dismissButton]} onPress={onDismiss}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.button,
+          styles.dismissButton,
+          pressed && styles.pressed
+        ]}
+        onPress={onDismiss}
+      >
         <Text style={styles.dismissIcon}>✕</Text>
         <Text style={styles.dismissText}>Dismiss</Text>
-      </TouchableOpacity>
+      </Pressable>
 
-      <TouchableOpacity style={[styles.button, styles.bucketButton]} onPress={onAddToBucket}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.button,
+          styles.bucketButton,
+          pressed && styles.pressed
+        ]}
+        onPress={onAddToBucket}
+      >
         <Text style={styles.bucketIcon}>📋</Text>
         <Text style={styles.bucketText}>Add to Bucket</Text>
-      </TouchableOpacity>
+      </Pressable>
 
-      <TouchableOpacity style={[styles.button, styles.acquireButton]} onPress={onAcquireNow}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.button,
+          styles.acquireButton,
+          pressed && styles.pressed
+        ]}
+        onPress={onAcquireNow}
+      >
         <Text style={styles.acquireIcon}>🎯</Text>
         <Text style={styles.acquireText}>Acquire Now</Text>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 };
@@ -48,6 +69,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginHorizontal: 5,
     borderRadius: 8,
+    cursor: 'pointer' as any,
+  },
+  pressed: {
+    opacity: 0.7,
   },
   dismissButton: {
     backgroundColor: '#f5f5f5',

@@ -2,7 +2,7 @@ import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
 } from 'react-native';
 import { QuizQuestion } from '../../types';
@@ -57,18 +57,20 @@ export const QuestionCard: React.FC<Props> = ({
           }
 
           return (
-            <TouchableOpacity
+            <Pressable
               key={index}
-              style={optionStyle}
+              style={({ pressed }) => [
+                ...optionStyle,
+                pressed && !showFeedback && styles.pressed
+              ]}
               onPress={() => !showFeedback && onSelectAnswer(index)}
               disabled={showFeedback}
-              activeOpacity={0.7}
             >
               <View style={styles.optionContent}>
                 <Text style={optionTextStyle}>{option}</Text>
                 {showIcon && <Text style={styles.iconText}>{showIcon}</Text>}
               </View>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </View>
@@ -114,6 +116,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 2,
     borderColor: '#e0e0e0',
+    cursor: 'pointer' as any,
+  },
+  pressed: {
+    opacity: 0.7,
   },
   optionSelected: {
     borderColor: '#4CAF50',

@@ -1,10 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  Pressable,
   View,
 } from 'react-native';
 import { QuestionCard } from '@/components/quiz/QuestionCard';
@@ -28,13 +28,7 @@ export default function QuizScreen() {
   const [quizComplete, setQuizComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (technology) {
-      generateQuiz();
-    }
-  }, [technology]);
-
-  const generateQuiz = async () => {
+  const generateQuiz = useCallback(async () => {
     if (!technology) return;
 
     setLoading(true);
@@ -49,7 +43,13 @@ export default function QuizScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [technology]);
+
+  useEffect(() => {
+    if (technology) {
+      generateQuiz();
+    }
+  }, [technology, generateQuiz]);
 
   const handleAnswer = (answerIndex: number) => {
     const newAnswers = [...userAnswers];
@@ -124,9 +124,15 @@ export default function QuizScreen() {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>Technology not found</Text>
-        <TouchableOpacity style={styles.button} onPress={handleClose}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.pressed
+          ]}
+          onPress={handleClose}
+        >
           <Text style={styles.buttonText}>Go Back</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }
@@ -145,12 +151,24 @@ export default function QuizScreen() {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.button} onPress={generateQuiz}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.pressed
+          ]}
+          onPress={generateQuiz}
+        >
           <Text style={styles.buttonText}>Try Again</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.cancelButton,
+            pressed && styles.pressed
+          ]}
+          onPress={handleClose}
+        >
           <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }
@@ -173,9 +191,15 @@ export default function QuizScreen() {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>No questions available</Text>
-        <TouchableOpacity style={styles.button} onPress={handleClose}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            pressed && styles.pressed
+          ]}
+          onPress={handleClose}
+        >
           <Text style={styles.buttonText}>Go Back</Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     );
   }
@@ -210,11 +234,17 @@ export default function QuizScreen() {
 
       {showFeedback && (
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.nextButton,
+              pressed && styles.pressed
+            ]}
+            onPress={handleNext}
+          >
             <Text style={styles.nextButtonText}>
               {currentQuestionIndex < questions.length - 1 ? 'Next Question' : 'Complete Quiz'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
     </View>
@@ -256,6 +286,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     marginTop: 10,
+    cursor: 'pointer' as any,
+  },
+  pressed: {
+    opacity: 0.8,
   },
   buttonText: {
     color: '#fff',
@@ -266,6 +300,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     paddingVertical: 12,
     marginTop: 10,
+    cursor: 'pointer' as any,
   },
   cancelButtonText: {
     color: '#666',
@@ -310,6 +345,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 12,
     alignItems: 'center',
+    cursor: 'pointer' as any,
   },
   nextButtonText: {
     color: '#fff',

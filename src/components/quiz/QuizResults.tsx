@@ -2,7 +2,7 @@ import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   ScrollView,
 } from 'react-native';
@@ -55,15 +55,15 @@ export const QuizResults: React.FC<Props> = ({
       {passed ? (
         <View style={styles.messageContainer}>
           <Text style={styles.messageText}>
-            Excellent work! You've demonstrated a solid understanding of this technology.
-            It has been marked as "learned" in your profile.
+            Excellent work! You&apos;ve demonstrated a solid understanding of this technology.
+            It has been marked as &quot;learned&quot; in your profile.
           </Text>
         </View>
       ) : (
         <View style={styles.messageContainer}>
           <Text style={styles.messageText}>
             You need 80% or higher to pass. Review the explanations below and try again
-            when you're ready. Each attempt generates new questions to test your understanding.
+            when you&apos;re ready. Each attempt generates new questions to test your understanding.
           </Text>
         </View>
       )}
@@ -126,18 +126,28 @@ export const QuizResults: React.FC<Props> = ({
 
       <View style={styles.actionButtons}>
         {!passed && onRetry && (
-          <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.retryButton,
+              pressed && styles.pressed
+            ]}
+            onPress={onRetry}
+          >
             <Text style={styles.retryButtonText}>Retry Quiz</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
-        <TouchableOpacity
-          style={[styles.closeButton, !passed && { marginTop: 12 }]}
+        <Pressable
+          style={({ pressed }) => [
+            styles.closeButton,
+            !passed && { marginTop: 12 },
+            pressed && styles.pressed
+          ]}
           onPress={onClose}
         >
           <Text style={styles.closeButtonText}>
             {passed ? 'Continue Learning' : 'Back to Profile'}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </ScrollView>
   );
@@ -306,6 +316,10 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 12,
     alignItems: 'center',
+    cursor: 'pointer' as any,
+  },
+  pressed: {
+    opacity: 0.8,
   },
   retryButtonText: {
     color: '#fff',
@@ -317,6 +331,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 12,
     alignItems: 'center',
+    cursor: 'pointer' as any,
   },
   closeButtonText: {
     color: '#fff',

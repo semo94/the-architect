@@ -4,15 +4,17 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  Pressable,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Card } from '@/components/common/Card';
 import { useAppStore } from '@/store/useAppStore';
 
 export default function ProfileScreen() {
   const { profile, technologies } = useAppStore();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const handleTestKnowledge = (technologyId: string) => {
     router.push({
@@ -23,7 +25,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
         <Text style={styles.title}>Your Progress</Text>
         <Text style={styles.subtitle}>Track your architecture learning journey</Text>
       </View>
@@ -131,12 +133,16 @@ export default function ProfileScreen() {
               </View>
               <Text style={styles.techCategory}>{tech.category} › {tech.subcategory}</Text>
               {tech.status === 'discovered' && (
-                <TouchableOpacity
-                  style={styles.testButton}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.testButton,
+                    styles.touchable,
+                    pressed && styles.pressed
+                  ]}
                   onPress={() => handleTestKnowledge(tech.id)}
                 >
                   <Text style={styles.testButtonText}>🎯 Test Knowledge</Text>
-                </TouchableOpacity>
+                </Pressable>
               )}
             </Card>
           ))
@@ -150,6 +156,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  touchable: {
+    cursor: 'pointer' as any,
+  },
+  pressed: {
+    opacity: 0.7,
   },
   header: {
     padding: 20,
