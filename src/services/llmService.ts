@@ -1,9 +1,10 @@
-import 'react-native-get-random-values';
 import Constants from 'expo-constants';
-import { z } from 'zod';
+import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
+import { z } from 'zod';
 import { QuizQuestion, Technology } from '../types';
-import { promptTemplates } from './prompts';
+import { promptTemplates } from '../utils/prompts';
+import sseClient from './sseService';
 
 // LLM Provider types
 type LLMProvider = 'anthropic' | 'openai' | 'custom';
@@ -124,6 +125,66 @@ class LLMService {
   }
 
   /**
+   * Streaming API call with progressive content updates
+   * Falls back to non-streaming if streaming fails
+   * @param prompt The prompt to send
+   * @param onProgress Callback for partial content (receives accumulated text)
+   * @returns Final parsed JSON result
+   */
+  async callLLMStream(
+    prompt: string,
+    onProgress?: (partialText: string) => void
+  ): Promise<any> {
+    const message: LLMMessage = {
+      role: 'user',
+      content: prompt,
+    };
+
+    const proxyUrl = this.getProxyUrl();
+    const streamUrl = proxyUrl ? `${proxyUrl}/api/llm/stream` : null;
+
+    // Try streaming first if available
+    if (streamUrl) {
+      try {
+        const body = this.getRequestBody([message]);
+        let accumulatedText = '';
+
+        return await new Promise((resolve, reject) => {
+          sseClient.connect(
+            streamUrl,
+            body,
+            {
+              onMessage: (data) => {
+                if (data.text) {
+                  accumulatedText += data.text;
+                  onProgress?.(accumulatedText);
+                }
+              },
+              onError: (error) => {
+                reject(error);
+              },
+              onComplete: () => {
+                try {
+                  const parsed = this.extractJSON(accumulatedText);
+                  resolve(parsed);
+                } catch (error) {
+                  reject(error);
+                }
+              },
+            }
+          );
+        });
+      } catch (streamError) {
+        console.warn('[LLM] Streaming failed, falling back to non-streaming:', streamError);
+        // Fall through to non-streaming fallback
+      }
+    }
+
+    // Fallback to non-streaming
+    return this.callLLM(prompt);
+  }
+
+  /**
    * Helper methods for provider configuration
    */
   private getProxyUrl(): string | null {
@@ -211,7 +272,8 @@ class LLMService {
   async generateSurpriseTechnology(
     alreadyDiscovered: string[],
     dismissed: string[],
-    categorySchema: any
+    categorySchema: any,
+    onProgress?: (partialText: string) => void
   ): Promise<Technology> {
     const prompt = promptTemplates.generateSurpriseTechnology(
       alreadyDiscovered,
@@ -219,7 +281,9 @@ class LLMService {
       categorySchema
     );
 
-    const result = await this.callLLM(prompt);
+    const result = onProgress
+      ? await this.callLLMStream(prompt, onProgress)
+      : await this.callLLM(prompt);
     const validated = TechnologyContentSchema.parse(result);
 
     return {
@@ -235,7 +299,8 @@ class LLMService {
   async generateGuidedTechnology(
     conversationHistory: any[],
     alreadyDiscovered: string[],
-    categorySchema: any
+    categorySchema: any,
+    onProgress?: (partialText: string) => void
   ): Promise<Technology> {
     const prompt = promptTemplates.generateGuidedTechnology(
       conversationHistory,
@@ -243,7 +308,9 @@ class LLMService {
       categorySchema
     );
 
-    const result = await this.callLLM(prompt);
+    const result = onProgress
+      ? await this.callLLMStream(prompt, onProgress)
+      : await this.callLLM(prompt);
     const validated = TechnologyContentSchema.parse(result);
 
     return {
@@ -271,11 +338,14 @@ class LLMService {
   }
 
   async generateQuizQuestions(
-    technology: Technology
+    technology: Technology,
+    onProgress?: (partialText: string) => void
   ): Promise<QuizQuestion[]> {
     const prompt = promptTemplates.generateQuizQuestions(technology);
 
-    const result = await this.callLLM(prompt);
+    const result = onProgress
+      ? await this.callLLMStream(prompt, onProgress)
+      : await this.callLLM(prompt);
     const validated = QuizQuestionsSchema.parse(result);
     return validated.questions;
   }

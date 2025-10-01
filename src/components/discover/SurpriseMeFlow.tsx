@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -9,8 +10,10 @@ import categorySchema from '../../constants/categories';
 import llmService from '../../services/llmService';
 import { useAppStore } from '../../store/useAppStore';
 import { Technology } from '../../types';
+import { hasMinimumData, parseStreamingJson } from '../../utils/streamingJsonParser';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ActionButtons } from './ActionButtons';
+import { StreamingTechnologyCard } from './StreamingTechnologyCard';
 import { TechnologyCard } from './TechnologyCard';
 
 interface Props {
@@ -20,6 +23,8 @@ interface Props {
 export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const [technology, setTechnology] = useState<Technology | null>(null);
   const [loading, setLoading] = useState(true);
+  const [partialData, setPartialData] = useState<Partial<Technology>>({});
+  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
@@ -37,6 +42,8 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
 
   const generateSurpriseTechnology = async () => {
     setLoading(true);
+    setPartialData({});
+    setIsStreaming(false);
     setError(null);
 
     try {
@@ -45,10 +52,22 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
       const newTechnology = await llmService.generateSurpriseTechnology(
         alreadyDiscovered,
         dismissedTechnologies,
-        categorySchema
+        categorySchema,
+        (partialText) => {
+          // Parse the streaming JSON progressively
+          const parsed = parseStreamingJson(partialText);
+          setPartialData(parsed);
+
+          // Once we have minimum data, show the streaming card
+          if (hasMinimumData(parsed)) {
+            setIsStreaming(true);
+            setLoading(false);
+          }
+        }
       );
 
       setTechnology(newTechnology);
+      setIsStreaming(false); // Stop streaming, show final card
     } catch (err) {
       setError('Failed to generate technology. Please try again.');
       console.error(err);
@@ -90,6 +109,24 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{error}</Text>
+        <Pressable
+          style={({ pressed }) => [
+            styles.retryButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={onComplete}
+        >
+          <Text style={styles.retryButtonText}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // Show streaming card while content is being generated
+  if (isStreaming && !technology) {
+    return (
+      <View style={styles.container}>
+        <StreamingTechnologyCard partialData={partialData} />
       </View>
     );
   }
@@ -98,6 +135,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     return null;
   }
 
+  // Show final card with action buttons
   return (
     <View style={styles.container}>
       <TechnologyCard technology={technology} />
@@ -113,17 +151,32 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   errorText: {
     fontSize: 16,
-    color: '#f44336',
-    textAlign: 'center',
+    color: "#f44336",
+    textAlign: "center",
+  },
+  retryButton: {
+    backgroundColor: "#4CAF50",
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 8,
+    cursor: "pointer" as any,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

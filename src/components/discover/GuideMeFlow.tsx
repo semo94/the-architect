@@ -1,19 +1,21 @@
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View,
-} from 'react-native';
-import categorySchema from '../../constants/categories';
-import llmService from '../../services/llmService';
-import { useAppStore } from '../../store/useAppStore';
-import { Technology } from '../../types';
-import { ActionButtons } from './ActionButtons';
-import { TechnologyCard } from './TechnologyCard';
+  View
+} from "react-native";
+import categorySchema from "../../constants/categories";
+import llmService from "../../services/llmService";
+import { useAppStore } from "../../store/useAppStore";
+import { Technology } from "../../types";
+import { hasMinimumData, parseStreamingJson } from "../../utils/streamingJsonParser";
+import { LoadingSpinner } from "../common/LoadingSpinner";
+import { ActionButtons } from "./ActionButtons";
+import { StreamingTechnologyCard } from "./StreamingTechnologyCard";
+import { TechnologyCard } from "./TechnologyCard";
 
 interface Props {
   onComplete: () => void;
@@ -26,10 +28,17 @@ interface ConversationStep {
 
 export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const [step, setStep] = useState(0);
-  const [conversationHistory, setConversationHistory] = useState<ConversationStep[]>([]);
-  const [currentQuestion, setCurrentQuestion] = useState<{ question: string; options: string[] } | null>(null);
+  const [conversationHistory, setConversationHistory] = useState<
+    ConversationStep[]
+  >([]);
+  const [currentQuestion, setCurrentQuestion] = useState<{
+    question: string;
+    options: string[];
+  } | null>(null);
   const [technology, setTechnology] = useState<Technology | null>(null);
   const [loading, setLoading] = useState(false);
+  const [partialData, setPartialData] = useState<Partial<Technology>>({});
+  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
@@ -51,7 +60,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
       );
       setCurrentQuestion(question);
     } catch (err) {
-      setError('Failed to generate question. Please try again.');
+      setError("Failed to generate question. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -79,7 +88,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
         setCurrentQuestion(nextQuestion);
         setStep(step + 1);
       } catch (err) {
-        setError('Failed to generate next question. Please try again.');
+        setError("Failed to generate next question. Please try again.");
         console.error(err);
       } finally {
         setLoading(false);
@@ -92,6 +101,8 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 
   const generateFinalTechnology = async (history: ConversationStep[]) => {
     setLoading(true);
+    setPartialData({});
+    setIsStreaming(false);
     setError(null);
 
     try {
@@ -100,13 +111,25 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
       const newTechnology = await llmService.generateGuidedTechnology(
         history,
         alreadyDiscovered,
-        categorySchema
+        categorySchema,
+        (partialText) => {
+          // Parse the streaming JSON progressively
+          const parsed = parseStreamingJson(partialText);
+          setPartialData(parsed);
+
+          // Once we have minimum data, show the streaming card
+          if (hasMinimumData(parsed)) {
+            setIsStreaming(true);
+            setLoading(false);
+          }
+        }
       );
 
       setTechnology(newTechnology);
       setCurrentQuestion(null);
+      setIsStreaming(false); // Stop streaming, show final card
     } catch (err) {
-      setError('Failed to generate technology. Please try again.');
+      setError("Failed to generate technology. Please try again.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -131,19 +154,29 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     if (technology) {
       addTechnology(technology);
       router.push({
-        pathname: '/quiz',
-        params: { technologyId: technology.id }
+        pathname: "/quiz",
+        params: { technologyId: technology.id },
       });
     }
   };
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
-        <Text style={styles.loadingText}>
-          {technology ? 'Finding the perfect technology for you...' : 'Preparing question...'}
-        </Text>
+      <LoadingSpinner
+        message={
+          technology
+            ? "Finding the perfect technology for you..."
+            : "Preparing question..."
+        }
+      />
+    );
+  }
+
+  // Show streaming card while content is being generated
+  if (isStreaming && !technology) {
+    return (
+      <View style={styles.container}>
+        <StreamingTechnologyCard partialData={partialData} />
       </View>
     );
   }
@@ -155,7 +188,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
         <Pressable
           style={({ pressed }) => [
             styles.retryButton,
-            pressed && styles.pressed
+            pressed && styles.pressed,
           ]}
           onPress={onComplete}
         >
@@ -207,7 +240,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
                 key={index}
                 style={({ pressed }) => [
                   styles.optionButton,
-                  pressed && styles.pressed
+                  pressed && styles.pressed,
                 ]}
                 onPress={() => handleOptionSelect(option)}
               >
@@ -232,7 +265,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
           <Pressable
             style={({ pressed }) => [
               styles.cancelButton,
-              pressed && styles.pressed
+              pressed && styles.pressed,
             ]}
             onPress={onComplete}
           >
@@ -249,74 +282,68 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
-    backgroundColor: '#f5f5f5',
-  },
-  loadingText: {
-    marginTop: 20,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    backgroundColor: "#f5f5f5",
   },
   errorText: {
     fontSize: 16,
-    color: '#f44336',
-    textAlign: 'center',
+    color: "#f44336",
+    textAlign: "center",
     marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     paddingHorizontal: 30,
     paddingVertical: 12,
     borderRadius: 8,
-    cursor: 'pointer' as any,
+    cursor: "pointer" as any,
   },
   pressed: {
     opacity: 0.7,
   },
   retryButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   content: {
     flex: 1,
   },
   header: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   stepIndicator: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
     marginBottom: 10,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   progressBar: {
     height: 8,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
     borderRadius: 4,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressFill: {
-    height: '100%',
-    backgroundColor: '#4CAF50',
+    height: "100%",
+    backgroundColor: "#4CAF50",
   },
   questionContainer: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     marginTop: 15,
     marginHorizontal: 15,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   questionIcon: {
     fontSize: 48,
@@ -324,28 +351,28 @@ const styles = StyleSheet.create({
   },
   questionText: {
     fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
     lineHeight: 28,
   },
   optionsContainer: {
     padding: 15,
   },
   optionButton: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 20,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
-    cursor: 'pointer' as any,
+    borderColor: "#e0e0e0",
+    cursor: "pointer" as any,
   },
   optionText: {
     fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-    textAlign: 'center',
+    color: "#333",
+    fontWeight: "500",
+    textAlign: "center",
   },
   historyContainer: {
     padding: 20,
@@ -353,32 +380,32 @@ const styles = StyleSheet.create({
   },
   historyTitle: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginBottom: 10,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   historyItem: {
     marginBottom: 8,
   },
   historyAnswer: {
     fontSize: 14,
-    color: '#4CAF50',
-    fontWeight: '500',
+    color: "#4CAF50",
+    fontWeight: "500",
   },
   footer: {
     padding: 15,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: "#e0e0e0",
   },
   cancelButton: {
     paddingVertical: 12,
-    alignItems: 'center',
-    cursor: 'pointer' as any,
+    alignItems: "center",
+    cursor: "pointer" as any,
   },
   cancelButtonText: {
-    color: '#666',
+    color: "#666",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

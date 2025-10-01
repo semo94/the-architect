@@ -78,6 +78,117 @@ app.post('/api/llm', async (req, res) => {
   }
 });
 
+app.post('/api/llm/stream', async (req, res) => {
+  try {
+    const body = req.body || {};
+
+    let targetUrl = API_URL;
+    let headers = { 'Content-Type': 'application/json' };
+    let payload = body;
+
+    if (PROVIDER === 'anthropic') {
+      headers['x-api-key'] = API_KEY;
+      headers['anthropic-version'] = '2023-06-01';
+      payload = {
+        model: body.model || MODEL,
+        max_tokens: body.max_tokens ?? 4000,
+        temperature: body.temperature ?? 0.7,
+        messages: body.messages || [],
+        stream: true,
+      };
+    } else {
+      headers['Authorization'] = `Bearer ${API_KEY}`;
+      payload = {
+        model: body.model || MODEL,
+        messages: body.messages || [],
+        temperature: body.temperature ?? 0.7,
+        max_tokens: body.max_tokens ?? 4000,
+        stream: true,
+      };
+    }
+
+    const upstream = await fetch(targetUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!upstream.ok) {
+      const errorText = await upstream.text();
+      return res.status(upstream.status).json({
+        error: 'Provider error',
+        message: errorText,
+      });
+    }
+
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const reader = upstream.body.getReader();
+    const decoder = new TextDecoder();
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+        for (const line of lines) {
+          if (PROVIDER === 'anthropic') {
+            // Anthropic format: data: {...}
+            if (line.startsWith('data:')) {
+              const data = line.slice(5).trim();
+              if (data === '[DONE]') continue;
+
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                  res.write(`data: ${JSON.stringify({ text: parsed.delta.text })}\n\n`);
+                } else if (parsed.type === 'message_stop') {
+                  res.write('data: [DONE]\n\n');
+                }
+              } catch (e) {
+                console.error('[llm-proxy] Parse error:', e);
+              }
+            }
+          } else {
+            // OpenAI format: data: {...}
+            if (line.startsWith('data:')) {
+              const data = line.slice(5).trim();
+              if (data === '[DONE]') {
+                res.write('data: [DONE]\n\n');
+                continue;
+              }
+
+              try {
+                const parsed = JSON.parse(data);
+                const text = parsed.choices?.[0]?.delta?.content;
+                if (text) {
+                  res.write(`data: ${JSON.stringify({ text })}\n\n`);
+                }
+              } catch (e) {
+                console.error('[llm-proxy] Parse error:', e);
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[llm-proxy] Stream error:', err);
+      res.write(`data: ${JSON.stringify({ error: err?.message || String(err) })}\n\n`);
+    } finally {
+      res.end();
+    }
+  } catch (err) {
+    console.error('[llm-proxy] Error:', err);
+    res.status(500).json({ error: 'Proxy error', message: err?.message || String(err) });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`[llm-proxy] Listening on http://localhost:${PORT}`);
 });
