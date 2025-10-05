@@ -6,6 +6,7 @@ import {
   Text,
   Pressable,
   View,
+  ScrollView,
 } from 'react-native';
 import { QuestionCard } from '@/components/quiz/QuestionCard';
 import { QuizResults } from '@/components/quiz/QuizResults';
@@ -223,14 +224,19 @@ export default function QuizScreen() {
         </View>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        bounces={true}
+        showsVerticalScrollIndicator={true}
+      >
         <QuestionCard
           question={currentQuestion}
           selectedAnswer={userAnswers[currentQuestionIndex]}
           showFeedback={showFeedback}
           onSelectAnswer={handleAnswer}
         />
-      </View>
+      </ScrollView>
 
       {showFeedback && (
         <View style={styles.footer}>
@@ -332,6 +338,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
+    flexGrow: 1,
     padding: 20,
   },
   footer: {

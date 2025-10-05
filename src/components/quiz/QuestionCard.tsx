@@ -92,7 +92,6 @@ export const QuestionCard: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
   },
   questionContainer: {
     backgroundColor: '#fff',
