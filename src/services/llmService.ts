@@ -141,47 +141,46 @@ class LLMService {
     };
 
     const proxyUrl = this.getProxyUrl();
-    const streamUrl = proxyUrl ? `${proxyUrl}/api/llm/stream` : null;
 
-    // Try streaming first if available
-    if (streamUrl) {
-      try {
-        const body = this.getRequestBody([message]);
-        let accumulatedText = '';
+    // Use proxy URL for web (CORS), or direct API URL for mobile
+    const streamUrl = proxyUrl ? `${proxyUrl}/api/llm/stream` : this.config.apiUrl;
+    const useProxy = !!proxyUrl;
 
-        return await new Promise((resolve, reject) => {
-          sseClient.connect(
-            streamUrl,
-            body,
-            {
-              onMessage: (data) => {
-                if (data.text) {
-                  accumulatedText += data.text;
-                  onProgress?.(accumulatedText);
-                }
-              },
-              onError: (error) => {
+    try {
+      const body = this.getRequestBody([message], true); // true = enable streaming
+      let accumulatedText = '';
+
+      return await new Promise((resolve, reject) => {
+        sseClient.connect(
+          streamUrl,
+          body,
+          {
+            onMessage: (data) => {
+              if (data.text) {
+                accumulatedText += data.text;
+                onProgress?.(accumulatedText);
+              }
+            },
+            onError: (error) => {
+              reject(error);
+            },
+            onComplete: () => {
+              try {
+                const parsed = this.extractJSON(accumulatedText);
+                resolve(parsed);
+              } catch (error) {
                 reject(error);
-              },
-              onComplete: () => {
-                try {
-                  const parsed = this.extractJSON(accumulatedText);
-                  resolve(parsed);
-                } catch (error) {
-                  reject(error);
-                }
-              },
-            }
-          );
-        });
-      } catch (streamError) {
-        console.warn('[LLM] Streaming failed, falling back to non-streaming:', streamError);
-        // Fall through to non-streaming fallback
-      }
+              }
+            },
+          },
+          useProxy // Pass flag to indicate if using proxy or direct API
+        );
+      });
+    } catch (streamError) {
+      console.warn('[LLM] Streaming failed, falling back to non-streaming:', streamError);
+      // Fallback to non-streaming
+      return this.callLLM(prompt);
     }
-
-    // Fallback to non-streaming
-    return this.callLLM(prompt);
   }
 
   /**
@@ -225,13 +224,19 @@ class LLMService {
     }
   }
 
-  private getRequestBody(messages: LLMMessage[]): any {
-    return {
+  private getRequestBody(messages: LLMMessage[], stream: boolean = false): any {
+    const body: any = {
       model: this.config.model,
       messages,
       temperature: Constants.expoConfig?.extra?.llmTemperature || 0.7,
       max_tokens: Constants.expoConfig?.extra?.llmMaxTokens || 4000,
     };
+
+    if (stream) {
+      body.stream = true;
+    }
+
+    return body;
   }
 
   /**
