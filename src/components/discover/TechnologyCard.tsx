@@ -1,10 +1,10 @@
 import React from 'react';
-import { ScrollView } from 'react-native';
 import { Technology } from '../../types';
 import { HeaderSection } from './sections/HeaderSection';
 import { TextSection } from './sections/TextSection';
 import { ListSection } from './sections/ListSection';
 import { ComparisonSection } from './sections/ComparisonSection';
+import { SafeAreaScrollView } from '../common/SafeAreaScrollView';
 import { technologyCardStyles } from './technologyCardStyles';
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 
 export const TechnologyCard: React.FC<Props> = ({ technology }) => {
   return (
-    <ScrollView style={technologyCardStyles.container}>
+    <SafeAreaScrollView style={technologyCardStyles.container}>
       <HeaderSection
         category={technology.category}
         subcategory={technology.subcategory}
@@ -29,6 +29,6 @@ export const TechnologyCard: React.FC<Props> = ({ technology }) => {
       <ListSection title="Trade-offs" items={technology.content.cons} bulletPoint="•" />
 
       <ComparisonSection comparisons={technology.content.compareToSimilar} />
-    </ScrollView>
+    </SafeAreaScrollView>
   );
 };

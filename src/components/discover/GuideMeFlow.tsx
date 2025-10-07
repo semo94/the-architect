@@ -7,6 +7,7 @@ import {
   Text,
   View
 } from "react-native";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import categorySchema from "../../constants/categories";
 import llmService from "../../services/llmService";
 import { useAppStore } from "../../store/useAppStore";
@@ -42,6 +43,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const { technologies, addTechnology, dismissTechnology } = useAppStore();
 
@@ -184,7 +186,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 
   if (error) {
     return (
-      <View style={styles.centerContainer}>
+      <View style={[styles.centerContainer, { paddingTop: Math.max(insets.top, 20) }]}>
         <Text style={styles.errorText}>{error}</Text>
         <Pressable
           style={({ pressed }) => [
@@ -217,19 +219,21 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   if (currentQuestion) {
     return (
       <View style={styles.container}>
-        <ScrollView style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.stepIndicator}>Step {step + 1} of 3</Text>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${((step + 1) / 3) * 100}%` },
-                ]}
-              />
-            </View>
+        {/* Fixed Header with Progress Bar */}
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
+          <Text style={styles.stepIndicator}>Step {step + 1} of 3</Text>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${((step + 1) / 3) * 100}%` },
+              ]}
+            />
           </View>
+        </View>
 
+        {/* Scrollable Content */}
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
           <View style={styles.questionContainer}>
             <Text style={styles.questionIcon}>🧭</Text>
             <Text style={styles.questionText}>{currentQuestion.question}</Text>
@@ -293,10 +297,16 @@ const styles = StyleSheet.create({
   },
   pressed: CommonStyles.pressed,
   retryButtonText: CommonStyles.buttonText,
+  header: {
+    ...CommonStyles.header,
+    paddingTop: Spacing.xl, // Will be overridden by inline style with safe area
+  },
   content: {
     flex: 1,
   },
-  header: CommonStyles.header,
+  contentContainer: {
+    flexGrow: 1,
+  },
   stepIndicator: {
     fontSize: Typography.fontSize.base,
     color: Colors.textSecondary,

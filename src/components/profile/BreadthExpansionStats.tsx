@@ -1,8 +1,13 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/common/Card';
+import { CommonStyles, Spacing, Typography } from '@/styles/globalStyles';
 import { ProfileStatistics } from '@/types';
-import { Colors, Typography, Spacing, CommonStyles } from '@/styles/globalStyles';
+import React from 'react';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const HORIZONTAL_MARGIN = Spacing.xl;
+const GAP = 12;
+const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_MARGIN * 2 - GAP) / 2;
 
 type BreadthExpansionStatsProps = ProfileStatistics['breadthExpansion'];
 
@@ -43,10 +48,18 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: Spacing.lg,
-    gap: 10,
+    paddingHorizontal: HORIZONTAL_MARGIN,
+    gap: GAP,
   },
-  statCard: CommonStyles.statCard,
-  statNumber: CommonStyles.statNumber,
+  statCard: {
+    width: CARD_WIDTH,
+    padding: Spacing.xl,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: Typography.fontSize.xxxl,
+    fontWeight: Typography.fontWeight.bold,
+    color: CommonStyles.statNumber.color,
+  },
   statLabel: CommonStyles.statLabel,
 });

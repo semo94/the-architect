@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ScrollView,
   Text,
   Animated,
 } from 'react-native';
@@ -10,6 +9,7 @@ import { HeaderSection } from './sections/HeaderSection';
 import { TextSection } from './sections/TextSection';
 import { ListSection } from './sections/ListSection';
 import { ComparisonSection } from './sections/ComparisonSection';
+import { SafeAreaScrollView } from '../common/SafeAreaScrollView';
 import { technologyCardStyles } from './technologyCardStyles';
 
 interface Props {
@@ -87,7 +87,7 @@ export const StreamingTechnologyCard: React.FC<Props> = ({ partialData }) => {
   );
 
   return (
-    <ScrollView style={technologyCardStyles.container}>
+    <SafeAreaScrollView style={technologyCardStyles.container}>
       <HeaderSection
         category={partialData.category}
         subcategory={partialData.subcategory}
@@ -131,7 +131,7 @@ export const StreamingTechnologyCard: React.FC<Props> = ({ partialData }) => {
         isLoading={!hasCompare}
         ItemWrapper={FadeInComparisonWrapper}
       />
-    </ScrollView>
+    </SafeAreaScrollView>
   );
 };
 

@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import categorySchema from '../../constants/categories';
 import llmService from '../../services/llmService';
 import { useAppStore } from '../../store/useAppStore';
@@ -28,6 +29,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const {
     technologies,
@@ -108,7 +110,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
 
   if (error) {
     return (
-      <View style={styles.centerContainer}>
+      <View style={[styles.centerContainer, { paddingTop: Math.max(insets.top, 20) }]}>
         <Text style={styles.errorText}>{error}</Text>
         <Pressable
           style={({ pressed }) => [

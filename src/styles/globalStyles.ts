@@ -1,4 +1,4 @@
-import { StyleSheet, Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 // ===== COLOR PALETTE =====
 export const Colors = {
@@ -368,3 +368,31 @@ export const getButtonStyle = (type: 'primary' | 'secondary' | 'error' | 'warnin
       return [baseStyle, CommonStyles.buttonPrimary];
   }
 };
+
+/**
+ * Helper function to get safe area padding for a container.
+ * Use with useSafeAreaInsets() from react-native-safe-area-context.
+ *
+ * @example
+ * ```tsx
+ * import { useSafeAreaInsets } from 'react-native-safe-area-context';
+ * import { getSafeAreaPadding } from '@/styles/globalStyles';
+ *
+ * const insets = useSafeAreaInsets();
+ * const safeAreaStyle = getSafeAreaPadding(insets, ['top']);
+ *
+ * <View style={[styles.container, safeAreaStyle]}>
+ *   <YourContent />
+ * </View>
+ * ```
+ */
+export const getSafeAreaPadding = (
+  insets: { top: number; bottom: number; left: number; right: number },
+  edges: ('top' | 'bottom' | 'left' | 'right')[] = ['top'],
+  minimumPadding = 0
+) => ({
+  paddingTop: edges.includes('top') ? Math.max(insets.top, minimumPadding) : 0,
+  paddingBottom: edges.includes('bottom') ? Math.max(insets.bottom, minimumPadding) : 0,
+  paddingLeft: edges.includes('left') ? Math.max(insets.left, minimumPadding) : 0,
+  paddingRight: edges.includes('right') ? Math.max(insets.right, minimumPadding) : 0,
+});
