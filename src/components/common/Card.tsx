@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import { Colors, Spacing, BorderRadius, Shadows } from '@/styles/globalStyles';
 
 interface CardProps {
   children: React.ReactNode;
@@ -12,25 +13,9 @@ export const Card: React.FC<CardProps> = ({ children, style }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: {
-          width: 0,
-          height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 3.84,
-      },
-      android: {
-        elevation: 5,
-      },
-      web: {
-        boxShadow: '0px 2px 3.84px rgba(0, 0, 0, 0.1)',
-      },
-    }),
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.lg,
+    ...Shadows.small,
   },
 });

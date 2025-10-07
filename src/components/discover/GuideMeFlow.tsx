@@ -16,6 +16,7 @@ import { LoadingSpinner } from "../common/LoadingSpinner";
 import { ActionButtons } from "./ActionButtons";
 import { StreamingTechnologyCard } from "./StreamingTechnologyCard";
 import { TechnologyCard } from "./TechnologyCard";
+import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
 
 interface Props {
   onComplete: () => void;
@@ -280,132 +281,89 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-    backgroundColor: "#f5f5f5",
-  },
+  container: CommonStyles.container,
+  centerContainer: CommonStyles.centerContainer,
   errorText: {
-    fontSize: 16,
-    color: "#f44336",
-    textAlign: "center",
-    marginBottom: 20,
+    ...CommonStyles.errorText,
+    marginBottom: Spacing.xl,
   },
   retryButton: {
-    backgroundColor: "#4CAF50",
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 8,
-    cursor: "pointer" as any,
+    ...CommonStyles.button,
+    ...CommonStyles.buttonPrimary,
   },
-  pressed: {
-    opacity: 0.7,
-  },
-  retryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  pressed: CommonStyles.pressed,
+  retryButtonText: CommonStyles.buttonText,
   content: {
     flex: 1,
   },
-  header: {
-    padding: 20,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
+  header: CommonStyles.header,
   stepIndicator: {
-    fontSize: 16,
-    color: "#666",
+    fontSize: Typography.fontSize.base,
+    color: Colors.textSecondary,
     marginBottom: 10,
-    fontWeight: "600",
+    fontWeight: Typography.fontWeight.semibold,
   },
-  progressBar: {
-    height: 8,
-    backgroundColor: "#e0e0e0",
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#4CAF50",
-  },
+  progressBar: CommonStyles.progressBar,
+  progressFill: CommonStyles.progressFill,
   questionContainer: {
-    padding: 20,
-    backgroundColor: "#fff",
-    marginTop: 15,
-    marginHorizontal: 15,
-    borderRadius: 12,
+    padding: Spacing.xl,
+    backgroundColor: Colors.white,
+    marginTop: Spacing.lg,
+    marginHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.lg,
     alignItems: "center",
   },
   questionIcon: {
-    fontSize: 48,
-    marginBottom: 15,
+    fontSize: Typography.fontSize.massive,
+    marginBottom: Spacing.lg,
   },
   questionText: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#333",
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text,
     textAlign: "center",
-    lineHeight: 28,
+    lineHeight: Typography.lineHeight.extraLoose,
   },
   optionsContainer: {
-    padding: 15,
+    padding: Spacing.lg,
   },
   optionButton: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
-    cursor: "pointer" as any,
+    ...CommonStyles.optionButton,
+    padding: Spacing.xl,
   },
   optionText: {
-    fontSize: 16,
-    color: "#333",
-    fontWeight: "500",
+    fontSize: Typography.fontSize.base,
+    color: Colors.text,
+    fontWeight: Typography.fontWeight.medium,
     textAlign: "center",
   },
   historyContainer: {
-    padding: 20,
+    padding: Spacing.xl,
     marginTop: 10,
   },
   historyTitle: {
-    fontSize: 14,
-    color: "#666",
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
     marginBottom: 10,
-    fontWeight: "600",
+    fontWeight: Typography.fontWeight.semibold,
   },
   historyItem: {
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   historyAnswer: {
-    fontSize: 14,
-    color: "#4CAF50",
-    fontWeight: "500",
+    fontSize: Typography.fontSize.sm,
+    color: Colors.primary,
+    fontWeight: Typography.fontWeight.medium,
   },
-  footer: {
-    padding: 15,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-  },
+  footer: CommonStyles.footer,
   cancelButton: {
-    paddingVertical: 12,
+    paddingVertical: Spacing.md,
     alignItems: "center",
     cursor: "pointer" as any,
   },
   cancelButtonText: {
-    color: "#666",
-    fontSize: 16,
-    fontWeight: "600",
+    color: Colors.textSecondary,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
   },
 });

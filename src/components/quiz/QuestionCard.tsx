@@ -6,6 +6,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { QuizQuestion } from '../../types';
+import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
 
 interface Props {
   question: QuizQuestion;
@@ -94,93 +95,73 @@ const styles = StyleSheet.create({
   container: {
   },
   questionContainer: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
+    backgroundColor: Colors.white,
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.xl,
   },
   questionText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    lineHeight: 26,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text,
+    lineHeight: Typography.lineHeight.loose,
   },
   optionsContainer: {
-    marginBottom: 20,
+    marginBottom: Spacing.xl,
   },
   optionButton: {
-    backgroundColor: '#fff',
-    padding: 18,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: '#e0e0e0',
-    cursor: 'pointer' as any,
+    ...CommonStyles.optionButton,
+    padding: Spacing.lg,
   },
-  pressed: {
-    opacity: 0.7,
-  },
-  optionSelected: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#E8F5E9',
-  },
-  optionCorrect: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#E8F5E9',
-  },
-  optionIncorrect: {
-    borderColor: '#f44336',
-    backgroundColor: '#FFEBEE',
-  },
+  pressed: CommonStyles.pressed,
+  optionSelected: CommonStyles.optionSelected,
+  optionCorrect: CommonStyles.optionCorrect,
+  optionIncorrect: CommonStyles.optionIncorrect,
   optionContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   optionText: {
-    fontSize: 16,
-    color: '#333',
+    ...CommonStyles.optionText,
     flex: 1,
-    lineHeight: 22,
   },
   optionTextSelected: {
-    color: '#2E7D32',
-    fontWeight: '600',
+    color: Colors.primaryDark,
+    fontWeight: Typography.fontWeight.semibold,
   },
   optionTextCorrect: {
-    color: '#2E7D32',
-    fontWeight: '600',
+    color: Colors.primaryDark,
+    fontWeight: Typography.fontWeight.semibold,
   },
   optionTextIncorrect: {
-    color: '#c62828',
-    fontWeight: '600',
+    color: Colors.errorDark,
+    fontWeight: Typography.fontWeight.semibold,
   },
   iconText: {
-    fontSize: 20,
+    fontSize: Typography.fontSize.xl,
     marginLeft: 10,
   },
   feedbackContainer: {
-    padding: 20,
-    borderRadius: 12,
+    padding: Spacing.xl,
+    borderRadius: BorderRadius.lg,
     borderWidth: 2,
   },
   feedbackCorrect: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#4CAF50',
+    backgroundColor: Colors.primaryLight,
+    borderColor: Colors.primary,
   },
   feedbackIncorrect: {
-    backgroundColor: '#FFEBEE',
-    borderColor: '#f44336',
+    backgroundColor: Colors.errorLight,
+    borderColor: Colors.error,
   },
   feedbackTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
     marginBottom: 10,
-    color: '#333',
+    color: Colors.text,
   },
   feedbackText: {
-    fontSize: 15,
-    color: '#666',
-    lineHeight: 22,
+    ...CommonStyles.bodyText,
   },
 });

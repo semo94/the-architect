@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Colors, Typography, Spacing, CommonStyles } from '@/styles/globalStyles';
 
 interface ProfileHeaderProps {
   paddingTop: number;
@@ -16,19 +17,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ paddingTop }) => {
 
 const styles = StyleSheet.create({
   header: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    ...CommonStyles.header,
+    padding: Spacing.xl,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
+  title: CommonStyles.headerTitle,
+  subtitle: CommonStyles.headerSubtitle,
 });

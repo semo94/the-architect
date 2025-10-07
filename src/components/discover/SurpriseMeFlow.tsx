@@ -15,6 +15,7 @@ import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ActionButtons } from './ActionButtons';
 import { StreamingTechnologyCard } from './StreamingTechnologyCard';
 import { TechnologyCard } from './TechnologyCard';
+import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
 
 interface Props {
   onComplete: () => void;
@@ -149,34 +150,13 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#f44336",
-    textAlign: "center",
-  },
+  container: CommonStyles.container,
+  centerContainer: CommonStyles.centerContainer,
+  errorText: CommonStyles.errorText,
   retryButton: {
-    backgroundColor: "#4CAF50",
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 8,
-    cursor: "pointer" as any,
+    ...CommonStyles.button,
+    ...CommonStyles.buttonPrimary,
   },
-  pressed: {
-    opacity: 0.7,
-  },
-  retryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  pressed: CommonStyles.pressed,
+  retryButtonText: CommonStyles.buttonText,
 });

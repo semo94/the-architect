@@ -9,6 +9,7 @@ import { QuizPerformanceCard } from '@/components/profile/QuizPerformanceCard';
 import { CategoryBreakdownList } from '@/components/profile/CategoryBreakdownList';
 import { MilestonesList } from '@/components/profile/MilestonesList';
 import { DiscoveredTechnologiesList } from '@/components/profile/DiscoveredTechnologiesList';
+import { CommonStyles } from '@/styles/globalStyles';
 
 export default function ProfileScreen() {
   const { profile, technologies } = useAppStore();
@@ -54,8 +55,5 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+  container: CommonStyles.container,
 });

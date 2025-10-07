@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, Pressable, View } from 'react-native';
 import { Card } from '@/components/common/Card';
 import { Technology } from '@/types';
+import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
 
 interface DiscoveredTechnologiesListProps {
   technologies: Technology[];
@@ -53,82 +54,72 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
 };
 
 const styles = StyleSheet.create({
-  section: {
-    marginVertical: 10,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    paddingHorizontal: 20,
-    marginBottom: 15,
-  },
+  section: CommonStyles.section,
+  sectionTitle: CommonStyles.sectionTitle,
   emptyCard: {
-    marginHorizontal: 20,
-    padding: 30,
+    marginHorizontal: Spacing.xl,
+    padding: Spacing.xxl,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text,
+    marginBottom: Spacing.sm,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
   },
   techCard: {
-    marginHorizontal: 20,
+    marginHorizontal: Spacing.xl,
     marginBottom: 10,
-    padding: 15,
+    padding: Spacing.lg,
   },
   techHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   techName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text,
     flex: 1,
   },
   techStatus: {
-    fontSize: 12,
-    color: '#2196F3',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: '#E3F2FD',
-    borderRadius: 4,
+    fontSize: Typography.fontSize.xs,
+    color: Colors.secondary,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    backgroundColor: Colors.secondaryLight,
+    borderRadius: BorderRadius.sm,
   },
   techStatusLearned: {
-    color: '#4CAF50',
-    backgroundColor: '#E8F5E9',
+    color: Colors.primary,
+    backgroundColor: Colors.primaryLight,
   },
   techCategory: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
   },
   testButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
     paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
     marginTop: 10,
     alignItems: 'center',
   },
   testButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    color: Colors.white,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semibold,
   },
   touchable: {
     cursor: 'pointer' as any,
   },
-  pressed: {
-    opacity: 0.7,
-  },
+  pressed: CommonStyles.pressed,
 });

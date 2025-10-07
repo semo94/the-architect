@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/common/Card';
 import { ProfileStatistics } from '@/types';
+import { Colors, Typography, Spacing, CommonStyles } from '@/styles/globalStyles';
 
 type QuizPerformanceCardProps = Omit<ProfileStatistics['quizPerformance'], 'firstTimePassRate'>;
 
@@ -32,19 +33,11 @@ export const QuizPerformanceCard: React.FC<QuizPerformanceCardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  section: {
-    marginVertical: 10,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    paddingHorizontal: 20,
-    marginBottom: 15,
-  },
+  section: CommonStyles.section,
+  sectionTitle: CommonStyles.sectionTitle,
   perfCard: {
-    marginHorizontal: 20,
-    padding: 20,
+    marginHorizontal: Spacing.xl,
+    padding: Spacing.xl,
   },
   perfRow: {
     flexDirection: 'row',
@@ -52,12 +45,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   perfLabel: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: Typography.fontSize.base,
+    color: Colors.textSecondary,
   },
   perfValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text,
   },
 });

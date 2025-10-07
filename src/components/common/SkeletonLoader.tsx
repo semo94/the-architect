@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
+import { Colors, Spacing } from '@/styles/globalStyles';
 
 interface SkeletonLoaderProps {
   width?: DimensionValue;
@@ -77,7 +78,7 @@ export const SkeletonText: React.FC<SkeletonTextProps> = ({
           key={index}
           height={lineHeight}
           width={index === lines - 1 ? lastLineWidth : '100%'}
-          style={{ marginBottom: 8 }}
+          style={{ marginBottom: Spacing.sm }}
         />
       ))}
     </View>
@@ -107,11 +108,11 @@ export const SkeletonBullet: React.FC<SkeletonBulletProps> = ({ count = 4 }) => 
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: Colors.border,
   },
   bulletContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
 });

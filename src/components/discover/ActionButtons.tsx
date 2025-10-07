@@ -5,6 +5,7 @@ import {
   Pressable,
   Text,
 } from 'react-native';
+import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
 
 interface Props {
   onDismiss: () => void;
@@ -57,55 +58,53 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    padding: 15,
-    backgroundColor: '#fff',
+    padding: Spacing.lg,
+    backgroundColor: Colors.white,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: Colors.border,
   },
   button: {
     flex: 1,
     flexDirection: 'column',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: Spacing.md,
     marginHorizontal: 5,
-    borderRadius: 8,
+    borderRadius: BorderRadius.md,
     cursor: 'pointer' as any,
   },
-  pressed: {
-    opacity: 0.7,
-  },
+  pressed: CommonStyles.pressed,
   dismissButton: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: Colors.background,
   },
   bucketButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: Colors.secondary,
   },
   acquireButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: Colors.primary,
   },
   dismissIcon: {
-    fontSize: 24,
-    color: '#666',
+    fontSize: Typography.fontSize.xxl,
+    color: Colors.textSecondary,
   },
   dismissText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: Typography.fontSize.xs,
+    color: Colors.textSecondary,
     marginTop: 4,
   },
   bucketIcon: {
-    fontSize: 24,
+    fontSize: Typography.fontSize.xxl,
   },
   bucketText: {
-    fontSize: 12,
-    color: '#fff',
+    fontSize: Typography.fontSize.xs,
+    color: Colors.white,
     marginTop: 4,
   },
   acquireIcon: {
-    fontSize: 24,
+    fontSize: Typography.fontSize.xxl,
   },
   acquireText: {
-    fontSize: 12,
-    color: '#fff',
+    fontSize: Typography.fontSize.xs,
+    color: Colors.white,
     marginTop: 4,
   },
 });

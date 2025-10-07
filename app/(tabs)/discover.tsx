@@ -11,6 +11,7 @@ import { Card } from '@/components/common/Card';
 import { GuideMeFlow } from '@/components/discover/GuideMeFlow';
 import { SurpriseMeFlow } from '@/components/discover/SurpriseMeFlow';
 import { useAppStore } from '@/store/useAppStore';
+import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
 
 export default function DiscoverScreen() {
   const [flowMode, setFlowMode] = useState<'idle' | 'surprise' | 'guided'>('idle');
@@ -98,97 +99,70 @@ export default function DiscoverScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+  container: CommonStyles.container,
   touchable: {
     cursor: 'pointer' as any,
   },
-  pressed: {
-    opacity: 0.7,
-  },
+  pressed: CommonStyles.pressed,
   header: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    ...CommonStyles.header,
+    padding: Spacing.xl,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
+  title: CommonStyles.headerTitle,
+  subtitle: CommonStyles.headerSubtitle,
   statsContainer: {
     flexDirection: 'row',
-    padding: 20,
-    gap: 15,
+    padding: Spacing.xl,
+    gap: Spacing.lg,
   },
-  statCard: {
-    flex: 1,
-    padding: 20,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-  },
+  statCard: CommonStyles.statCard,
+  statNumber: CommonStyles.statNumber,
+  statLabel: CommonStyles.statLabel,
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    paddingHorizontal: 20,
-    marginBottom: 15,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text,
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   modeCard: {
     flexDirection: 'row',
-    padding: 20,
-    marginHorizontal: 20,
-    marginBottom: 15,
+    padding: Spacing.xl,
+    marginHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   modeIcon: {
     fontSize: 40,
-    marginRight: 15,
+    marginRight: Spacing.lg,
   },
   modeContent: {
     flex: 1,
   },
   modeTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.text,
     marginBottom: 4,
   },
   modeDescription: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.textSecondary,
   },
   tipContainer: {
-    margin: 20,
-    padding: 15,
-    backgroundColor: '#E3F2FD',
-    borderRadius: 8,
+    margin: Spacing.xl,
+    padding: Spacing.lg,
+    backgroundColor: Colors.infoLight,
+    borderRadius: BorderRadius.md,
   },
   tipTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1976D2',
-    marginBottom: 8,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.secondaryDark,
+    marginBottom: Spacing.sm,
   },
   tipText: {
-    fontSize: 14,
-    color: '#1565C0',
-    lineHeight: 20,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.secondaryDark,
+    lineHeight: Typography.lineHeight.tight,
   },
 });
