@@ -11,9 +11,14 @@ export default {
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     ios: {
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false
+      },
       supportsTablet: true,
+      bundleIdentifier: "com.sbakri.thearchitect",
     },
     android: {
+      package: "com.sbakri.thearchitect",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -47,6 +52,10 @@ export default {
       reactCompiler: true,
     },
     extra: {
+      eas: {
+        projectId: "e08c5587-bdf1-4bb0-8f26-0c71c8245bf3"
+      },
+      projectId: "e08c5587-bdf1-4bb0-8f26-0c71c8245bf3",
       llmProvider: process.env.LLM_PROVIDER || "anthropic",
       llmApiKey: process.env.LLM_API_KEY,
       llmApiUrl: process.env.LLM_API_URL || "https://api.anthropic.com/v1/messages",
