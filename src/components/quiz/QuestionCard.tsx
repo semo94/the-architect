@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -24,7 +24,7 @@ export const QuestionCard: React.FC<Props> = ({
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
   const isCorrect = selectedAnswer === question.correctAnswer;
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: {
     },
     questionContainer: {
@@ -73,7 +73,7 @@ export const QuestionCard: React.FC<Props> = ({
     },
     iconText: {
       fontSize: typography.fontSize.xl,
-      marginLeft: 10,
+      marginLeft: spacing.md,
     },
     feedbackContainer: {
       padding: spacing.xl,
@@ -91,13 +91,13 @@ export const QuestionCard: React.FC<Props> = ({
     feedbackTitle: {
       fontSize: typography.fontSize.lg,
       fontWeight: typography.fontWeight.bold,
-      marginBottom: 10,
+      marginBottom: spacing.md,
       color: colors.text,
     },
     feedbackText: {
       ...themeStyles.bodyText,
     },
-  });
+  }), [colors, typography, spacing, borderRadius, themeStyles]);
 
   return (
     <View style={styles.container}>

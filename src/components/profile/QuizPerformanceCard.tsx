@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/common/Card';
 import { ProfileStatistics } from '@/types';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSectionStyles } from '@/hooks/useComponentStyles';
 
 type QuizPerformanceCardProps = Omit<ProfileStatistics['quizPerformance'], 'firstTimePassRate'>;
 
@@ -11,11 +12,10 @@ export const QuizPerformanceCard: React.FC<QuizPerformanceCardProps> = ({
   averageScore,
   passRate,
 }) => {
-  const { colors, typography, spacing, styles: themeStyles } = useTheme();
+  const { colors, typography, spacing } = useTheme();
+  const sectionStyles = useSectionStyles();
 
-  const styles = StyleSheet.create({
-    section: themeStyles.section,
-    sectionTitle: themeStyles.sectionTitle,
+  const styles = useMemo(() => StyleSheet.create({
     perfCard: {
       marginHorizontal: spacing.xl,
       padding: spacing.xl,
@@ -23,7 +23,7 @@ export const QuizPerformanceCard: React.FC<QuizPerformanceCardProps> = ({
     perfRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 10,
+      marginBottom: spacing.md,
     },
     perfLabel: {
       fontSize: typography.fontSize.base,
@@ -34,11 +34,11 @@ export const QuizPerformanceCard: React.FC<QuizPerformanceCardProps> = ({
       fontWeight: typography.fontWeight.semibold,
       color: colors.text,
     },
-  });
+  }), [colors, typography, spacing]);
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Quiz Performance</Text>
+    <View style={sectionStyles.section}>
+      <Text style={sectionStyles.sectionTitle}>Quiz Performance</Text>
       <Card style={styles.perfCard}>
         <View style={styles.perfRow}>
           <Text style={styles.perfLabel}>Quizzes Taken:</Text>

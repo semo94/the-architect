@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -123,7 +123,7 @@ export default function QuizScreen() {
     router.back();
   };
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: themeStyles.container,
     centerContainer: themeStyles.centerContainer,
     loadingText: {
@@ -136,20 +136,20 @@ export default function QuizScreen() {
       fontSize: typography.fontSize.lg,
       fontWeight: typography.fontWeight.bold,
       color: colors.text,
-      marginTop: 10,
+      marginTop: spacing.md,
     },
     button: {
       ...themeStyles.button,
       ...themeStyles.buttonPrimary,
-      marginTop: 10,
+      marginTop: spacing.md,
     },
     pressed: themeStyles.pressed,
     buttonText: themeStyles.buttonText,
     cancelButton: {
+      ...themeStyles.touchable,
       paddingHorizontal: spacing.xxl,
       paddingVertical: spacing.md,
-      marginTop: 10,
-      cursor: 'pointer' as any,
+      marginTop: spacing.md,
     },
     cancelButtonText: {
       color: colors.textSecondary,
@@ -162,7 +162,7 @@ export default function QuizScreen() {
     progressText: {
       fontSize: typography.fontSize.sm,
       color: colors.textSecondary,
-      marginTop: 4,
+      marginTop: spacing.xs,
     },
     progressBar: themeStyles.progressBar,
     progressFill: themeStyles.progressFill,
@@ -175,18 +175,18 @@ export default function QuizScreen() {
     },
     footer: themeStyles.footer,
     nextButton: {
+      ...themeStyles.touchable,
       backgroundColor: colors.primary,
       paddingVertical: spacing.lg,
       borderRadius: borderRadius.lg,
       alignItems: 'center',
-      cursor: 'pointer' as any,
     },
     nextButtonText: {
       color: colors.white,
       fontSize: typography.fontSize.base,
       fontWeight: typography.fontWeight.bold,
     },
-  });
+  }), [colors, typography, spacing, borderRadius, themeStyles]);
 
   if (!technology) {
     return (

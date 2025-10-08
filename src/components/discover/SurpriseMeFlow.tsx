@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -105,7 +105,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     }
   };
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: themeStyles.container,
     centerContainer: themeStyles.centerContainer,
     errorText: themeStyles.errorText,
@@ -115,7 +115,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     },
     pressed: themeStyles.pressed,
     retryButtonText: themeStyles.buttonText,
-  });
+  }), [themeStyles]);
 
   if (loading) {
     return <LoadingSpinner message="Finding something exciting for you..." />;

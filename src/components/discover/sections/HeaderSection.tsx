@@ -3,6 +3,7 @@ import { Text } from 'react-native';
 import { Card } from '../../common/Card';
 import { SkeletonLoader } from '../../common/SkeletonLoader';
 import { useTechnologyCardStyles } from '../technologyCardStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
   category?: string;
@@ -20,10 +21,11 @@ export const HeaderSection: React.FC<Props> = ({
   LoadingWrapper,
 }) => {
   const styles = useTechnologyCardStyles();
+  const { spacing } = useTheme();
 
   const content = isLoading ? (
     <>
-      <SkeletonLoader width="60%" height={14} style={{ marginBottom: 8 }} />
+      <SkeletonLoader width="60%" height={14} style={{ marginBottom: spacing.sm }} />
       <SkeletonLoader width="80%" height={28} />
     </>
   ) : (

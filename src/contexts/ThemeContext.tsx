@@ -6,7 +6,6 @@ import {
   getShadows,
   getCommonStyles,
   LightColors,
-  DarkColors,
   Spacing,
   Typography,
   BorderRadius,

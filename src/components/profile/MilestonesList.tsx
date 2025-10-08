@@ -1,23 +1,23 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/common/Card';
 import { Milestone } from '@/types';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSectionStyles } from '@/hooks/useComponentStyles';
 
 interface MilestonesListProps {
   milestones: Milestone[];
 }
 
 export const MilestonesList: React.FC<MilestonesListProps> = ({ milestones }) => {
-  const { colors, typography, spacing, styles: themeStyles } = useTheme();
+  const { colors, typography, spacing } = useTheme();
+  const sectionStyles = useSectionStyles();
 
-  const styles = StyleSheet.create({
-    section: themeStyles.section,
-    sectionTitle: themeStyles.sectionTitle,
+  const styles = useMemo(() => StyleSheet.create({
     milestoneCard: {
       flexDirection: 'row',
       marginHorizontal: spacing.xl,
-      marginBottom: 10,
+      marginBottom: spacing.md,
       padding: spacing.lg,
       alignItems: 'center',
       opacity: 0.6,
@@ -37,17 +37,17 @@ export const MilestonesList: React.FC<MilestonesListProps> = ({ milestones }) =>
       fontSize: typography.fontSize.base,
       fontWeight: typography.fontWeight.semibold,
       color: colors.text,
-      marginBottom: 4,
+      marginBottom: spacing.xs,
     },
     milestoneStatus: {
       fontSize: typography.fontSize.sm,
       color: colors.textSecondary,
     },
-  });
+  }), [colors, typography, spacing]);
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Milestones</Text>
+    <View style={sectionStyles.section}>
+      <Text style={sectionStyles.sectionTitle}>Milestones</Text>
       {milestones.map((milestone, index) => {
         const cardStyle: any = milestone.achievedAt
           ? [styles.milestoneCard, styles.milestoneAchieved]

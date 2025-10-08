@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, Pressable, View } from 'react-native';
 import { Card } from '@/components/common/Card';
 import { Technology } from '@/types';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSectionStyles } from '@/hooks/useComponentStyles';
 
 interface DiscoveredTechnologiesListProps {
   technologies: Technology[];
@@ -14,10 +15,9 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
   onTestKnowledge,
 }) => {
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
+  const sectionStyles = useSectionStyles();
 
-  const styles = StyleSheet.create({
-    section: themeStyles.section,
-    sectionTitle: themeStyles.sectionTitle,
+  const styles = useMemo(() => StyleSheet.create({
     emptyCard: {
       marginHorizontal: spacing.xl,
       padding: spacing.xxl,
@@ -35,7 +35,7 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
     },
     techCard: {
       marginHorizontal: spacing.xl,
-      marginBottom: 10,
+      marginBottom: spacing.md,
       padding: spacing.lg,
     },
     techHeader: {
@@ -69,10 +69,10 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
     },
     testButton: {
       backgroundColor: colors.primary,
-      paddingVertical: 10,
+      paddingVertical: spacing.md,
       paddingHorizontal: spacing.lg,
       borderRadius: borderRadius.md,
-      marginTop: 10,
+      marginTop: spacing.md,
       alignItems: 'center',
     },
     testButtonText: {
@@ -80,15 +80,13 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
       fontSize: typography.fontSize.sm,
       fontWeight: typography.fontWeight.semibold,
     },
-    touchable: {
-      cursor: 'pointer' as any,
-    },
+    touchable: themeStyles.touchable,
     pressed: themeStyles.pressed,
-  });
+  }), [colors, typography, spacing, borderRadius, themeStyles]);
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Discovered Technologies ({technologies.length})</Text>
+    <View style={sectionStyles.section}>
+      <Text style={sectionStyles.sectionTitle}>Discovered Technologies ({technologies.length})</Text>
       {technologies.length === 0 ? (
         <Card style={styles.emptyCard}>
           <Text style={styles.emptyText}>No technologies discovered yet!</Text>

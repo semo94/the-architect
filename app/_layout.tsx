@@ -10,9 +10,11 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { DarkColors, LightColors } from "@/styles/globalStyles";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const colors = colorScheme === "dark" ? DarkColors : LightColors;
 
   return (
     <SafeAreaProvider>
@@ -31,8 +33,8 @@ export default function RootLayout() {
               options={{
                 presentation: "card",
                 title: "Test Your Knowledge",
-                headerStyle: { backgroundColor: colorScheme === "dark" ? "#66BB6A" : "#4CAF50" },
-                headerTintColor: "#fff",
+                headerStyle: { backgroundColor: colors.primary },
+                headerTintColor: colors.white,
                 headerTitleStyle: { fontWeight: "bold" },
               }}
             />

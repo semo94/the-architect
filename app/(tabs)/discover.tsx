@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -19,31 +19,9 @@ export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
 
-  const handleSurpriseMe = () => {
-    setFlowMode('surprise');
-  };
-
-  const handleGuideMe = () => {
-    setFlowMode('guided');
-  };
-
-  const handleFlowComplete = () => {
-    setFlowMode('idle');
-  };
-
-  if (flowMode === 'surprise') {
-    return <SurpriseMeFlow onComplete={handleFlowComplete} />;
-  }
-
-  if (flowMode === 'guided') {
-    return <GuideMeFlow onComplete={handleFlowComplete} />;
-  }
-
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: themeStyles.container,
-    touchable: {
-      cursor: 'pointer' as any,
-    },
+    touchable: themeStyles.touchable,
     pressed: themeStyles.pressed,
     header: {
       ...themeStyles.header,
@@ -73,7 +51,7 @@ export default function DiscoverScreen() {
       marginBottom: spacing.lg,
     },
     modeIcon: {
-      fontSize: 40,
+      fontSize: typography.fontSize.massive,
       marginRight: spacing.lg,
     },
     modeContent: {
@@ -83,7 +61,7 @@ export default function DiscoverScreen() {
       fontSize: typography.fontSize.lg,
       fontWeight: typography.fontWeight.semibold,
       color: colors.text,
-      marginBottom: 4,
+      marginBottom: spacing.xs,
     },
     modeDescription: {
       fontSize: typography.fontSize.sm,
@@ -106,11 +84,31 @@ export default function DiscoverScreen() {
       color: colors.secondaryDark,
       lineHeight: typography.lineHeight.tight,
     },
-  });
+  }), [colors, typography, spacing, borderRadius, themeStyles]);
+
+  const handleSurpriseMe = () => {
+    setFlowMode('surprise');
+  };
+
+  const handleGuideMe = () => {
+    setFlowMode('guided');
+  };
+
+  const handleFlowComplete = () => {
+    setFlowMode('idle');
+  };
+
+  if (flowMode === 'surprise') {
+    return <SurpriseMeFlow onComplete={handleFlowComplete} />;
+  }
+
+  if (flowMode === 'guided') {
+    return <GuideMeFlow onComplete={handleFlowComplete} />;
+  }
 
   return (
     <ScrollView style={styles.container}>
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.xl) }]}>
         <Text style={styles.title}>Expand Your Architecture Knowledge</Text>
         <Text style={styles.subtitle}>
           You&apos;ve discovered {profile.statistics.breadthExpansion.totalDiscovered} technologies

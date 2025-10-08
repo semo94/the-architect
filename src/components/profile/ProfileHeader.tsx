@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { useHeaderStyles } from '@/hooks/useComponentStyles';
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface ProfileHeaderProps {
@@ -7,21 +8,13 @@ interface ProfileHeaderProps {
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ paddingTop }) => {
-  const { spacing, styles: themeStyles } = useTheme();
-
-  const styles = StyleSheet.create({
-    header: {
-      ...themeStyles.header,
-      padding: spacing.xl,
-    },
-    title: themeStyles.headerTitle,
-    subtitle: themeStyles.headerSubtitle,
-  });
+  const { spacing } = useTheme();
+  const styles = useHeaderStyles();
 
   return (
-    <View style={[styles.header, { paddingTop }]}>
-      <Text style={styles.title}>Your Progress</Text>
-      <Text style={styles.subtitle}>Track your architecture learning journey</Text>
+    <View style={[styles.header, { paddingTop, padding: spacing.xl }]}>
+      <Text style={styles.headerTitle}>Your Progress</Text>
+      <Text style={styles.headerSubtitle}>Track your architecture learning journey</Text>
     </View>
   );
 };

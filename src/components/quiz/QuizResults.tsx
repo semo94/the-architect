@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -30,7 +30,7 @@ export const QuizResults: React.FC<Props> = ({
     (q, idx) => userAnswers[idx] === q.correctAnswer
   ).length;
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: themeStyles.container,
     scoreContainer: {
       padding: spacing.xxl,
@@ -53,13 +53,13 @@ export const QuizResults: React.FC<Props> = ({
       fontSize: typography.fontSize.xxl,
       fontWeight: typography.fontWeight.bold,
       color: colors.text,
-      marginBottom: 10,
+      marginBottom: spacing.md,
     },
     scorePercentage: {
       fontSize: typography.fontSize.massive,
       fontWeight: typography.fontWeight.bold,
       color: colors.text,
-      marginBottom: 5,
+      marginBottom: spacing.xs,
     },
     scoreSubtitle: {
       fontSize: typography.fontSize.base,
@@ -85,7 +85,7 @@ export const QuizResults: React.FC<Props> = ({
     messageContainer: {
       margin: spacing.lg,
       padding: spacing.xl,
-      backgroundColor: colors.white,
+      backgroundColor: colors.cardBackground,
       borderRadius: borderRadius.lg,
     },
     messageText: {
@@ -102,7 +102,7 @@ export const QuizResults: React.FC<Props> = ({
       marginBottom: spacing.lg,
     },
     reviewQuestion: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.cardBackground,
       padding: spacing.xl,
       borderRadius: borderRadius.lg,
       marginBottom: spacing.lg,
@@ -172,7 +172,7 @@ export const QuizResults: React.FC<Props> = ({
       fontSize: typography.fontSize.sm,
       fontWeight: typography.fontWeight.semibold,
       color: colors.secondaryDark,
-      marginBottom: 6,
+      marginBottom: spacing.sm,
     },
     explanationText: {
       fontSize: typography.fontSize.sm,
@@ -208,7 +208,7 @@ export const QuizResults: React.FC<Props> = ({
       fontSize: typography.fontSize.base,
       fontWeight: typography.fontWeight.bold,
     },
-  });
+  }), [colors, typography, spacing, borderRadius, themeStyles]);
 
   return (
     <ScrollView style={styles.container}>
@@ -321,7 +321,7 @@ export const QuizResults: React.FC<Props> = ({
         <Pressable
           style={({ pressed }) => [
             styles.closeButton,
-            !passed && { marginTop: 12 },
+            !passed && { marginTop: spacing.md },
             pressed && styles.pressed
           ]}
           onPress={onClose}

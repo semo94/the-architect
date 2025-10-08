@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
+import { View, Animated, ViewStyle, DimensionValue } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface SkeletonLoaderProps {
@@ -95,23 +95,15 @@ interface SkeletonBulletProps {
 export const SkeletonBullet: React.FC<SkeletonBulletProps> = ({ count = 4 }) => {
   const { spacing } = useTheme();
 
-  const styles = StyleSheet.create({
-    bulletContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: spacing.md,
-    },
-  });
-
   return (
     <View>
       {Array.from({ length: count }).map((_, index) => (
-        <View key={index} style={styles.bulletContainer}>
+        <View key={index} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
           <SkeletonLoader width={20} height={20} borderRadius={10} />
           <SkeletonLoader
             width={index === count - 1 ? '60%' : '80%'}
             height={18}
-            style={{ marginLeft: 10 }}
+            style={{ marginLeft: spacing.md }}
           />
         </View>
       ))}

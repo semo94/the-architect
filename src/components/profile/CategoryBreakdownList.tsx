@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/common/Card';
 import { ProfileStatistics } from '@/types';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSectionStyles, useProgressBarStyles } from '@/hooks/useComponentStyles';
 
 interface CategoryBreakdownListProps {
   categoryBreakdown: ProfileStatistics['categoryBreakdown'];
@@ -11,14 +12,14 @@ interface CategoryBreakdownListProps {
 export const CategoryBreakdownList: React.FC<CategoryBreakdownListProps> = ({
   categoryBreakdown,
 }) => {
-  const { colors, typography, spacing, styles: themeStyles } = useTheme();
+  const { colors, typography, spacing } = useTheme();
+  const sectionStyles = useSectionStyles();
+  const progressBarStyles = useProgressBarStyles();
 
-  const styles = StyleSheet.create({
-    section: themeStyles.section,
-    sectionTitle: themeStyles.sectionTitle,
+  const styles = useMemo(() => StyleSheet.create({
     categoryCard: {
       marginHorizontal: spacing.xl,
-      marginBottom: 10,
+      marginBottom: spacing.md,
       padding: spacing.lg,
     },
     categoryName: {
@@ -34,13 +35,11 @@ export const CategoryBreakdownList: React.FC<CategoryBreakdownListProps> = ({
       fontSize: typography.fontSize.sm,
       color: colors.textSecondary,
     },
-    progressBar: themeStyles.progressBar,
-    progressFill: themeStyles.progressFill,
-  });
+  }), [colors, typography, spacing]);
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Category Breakdown</Text>
+    <View style={sectionStyles.section}>
+      <Text style={sectionStyles.sectionTitle}>Category Breakdown</Text>
       {Object.entries(categoryBreakdown).map(([category, stats]) => (
         <Card key={category} style={styles.categoryCard}>
           <Text style={styles.categoryName}>{category}</Text>
@@ -49,8 +48,8 @@ export const CategoryBreakdownList: React.FC<CategoryBreakdownListProps> = ({
               {stats.learned} learned / {stats.discovered} discovered ({stats.learningRate}%)
             </Text>
           </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${stats.learningRate}%` }]} />
+          <View style={progressBarStyles.progressBar}>
+            <View style={[progressBarStyles.progressFill, { width: `${stats.learningRate}%` }]} />
           </View>
         </Card>
       ))}

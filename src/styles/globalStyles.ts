@@ -411,7 +411,85 @@ export const getCommonStyles = (colorScheme: ColorSchemeName) => {
     statLabel: {
       fontSize: Typography.fontSize.sm,
       color: colors.textSecondary,
-      marginTop: 4,
+      marginTop: Spacing.xs,
+    },
+
+    // ===== MODALS & OVERLAYS =====
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    modalContent: {
+      backgroundColor: colors.cardBackground,
+      borderRadius: BorderRadius.lg,
+      padding: Spacing.xl,
+      width: '90%',
+      maxWidth: 400,
+    },
+
+    // ===== TOUCHABLE/INTERACTIVE =====
+    touchable: {
+      cursor: 'pointer' as any,
+    },
+
+    // ===== LAYOUT HELPERS =====
+    flexRow: {
+      flexDirection: 'row',
+    },
+
+    flexColumn: {
+      flexDirection: 'column',
+    },
+
+    flexCenter: {
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    flexBetween: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+
+    // ===== FORM INPUTS =====
+    input: {
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: BorderRadius.md,
+      padding: Spacing.md,
+      fontSize: Typography.fontSize.base,
+      color: colors.text,
+    },
+
+    inputFocused: {
+      borderColor: colors.primary,
+      borderWidth: 2,
+    },
+
+    inputError: {
+      borderColor: colors.error,
+    },
+
+    // ===== ICON STYLES =====
+    icon: {
+      fontSize: Typography.fontSize.xl,
+    },
+
+    iconSmall: {
+      fontSize: Typography.fontSize.base,
+    },
+
+    iconLarge: {
+      fontSize: Typography.fontSize.xxl,
+    },
+
+    iconHuge: {
+      fontSize: Typography.fontSize.massive,
     },
   });
 };
@@ -471,3 +549,36 @@ export const getSafeAreaPadding = (
   paddingLeft: edges.includes('left') ? Math.max(insets.left, minimumPadding) : 0,
   paddingRight: edges.includes('right') ? Math.max(insets.right, minimumPadding) : 0,
 });
+
+/**
+ * Helper to calculate dynamic card width for grid layouts
+ */
+export const getCardWidth = (screenWidth: number, columns: number, horizontalMargin: number, gap: number) => {
+  return (screenWidth - horizontalMargin * 2 - gap * (columns - 1)) / columns;
+};
+
+/**
+ * Common style combinations for quick access
+ */
+export const StyleCombinations = {
+  // Centered content
+  centerContent: {
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
+  // Row with space between
+  rowSpaceBetween: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+  },
+  // Row with items centered
+  rowCenter: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  },
+  // Full flex
+  flex1: {
+    flex: 1,
+  },
+};

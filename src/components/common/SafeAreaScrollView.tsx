@@ -1,7 +1,6 @@
 import React from 'react';
-import { ScrollView, ScrollViewProps, StyleSheet, View, ViewStyle } from 'react-native';
+import { ScrollView, ScrollViewProps, StyleSheet, ViewStyle } from 'react-native';
 import { useSafeAreaInsets, Edge } from 'react-native-safe-area-context';
-import { Spacing } from '@/styles/globalStyles';
 
 interface SafeAreaScrollViewProps extends ScrollViewProps {
   children: React.ReactNode;
@@ -9,7 +8,7 @@ interface SafeAreaScrollViewProps extends ScrollViewProps {
    * Which edges to apply safe area insets to.
    * Default: ['top']
    */
-  edges?: ReadonlyArray<Edge>;
+  edges?: readonly Edge[];
   /**
    * Minimum padding to apply even when there's no safe area inset.
    * Useful for devices without notch to still have consistent spacing.

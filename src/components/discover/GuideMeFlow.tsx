@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -48,7 +48,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 
   const { technologies, addTechnology, dismissTechnology } = useAppStore();
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: themeStyles.container,
     centerContainer: themeStyles.centerContainer,
     errorText: {
@@ -74,7 +74,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     stepIndicator: {
       fontSize: typography.fontSize.base,
       color: colors.textSecondary,
-      marginBottom: 10,
+      marginBottom: spacing.md,
       fontWeight: typography.fontWeight.semibold,
     },
     progressBar: themeStyles.progressBar,
@@ -113,12 +113,12 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     },
     historyContainer: {
       padding: spacing.xl,
-      marginTop: 10,
+      marginTop: spacing.md,
     },
     historyTitle: {
       fontSize: typography.fontSize.sm,
       color: colors.textSecondary,
-      marginBottom: 10,
+      marginBottom: spacing.md,
       fontWeight: typography.fontWeight.semibold,
     },
     historyItem: {
@@ -140,7 +140,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
       fontSize: typography.fontSize.base,
       fontWeight: typography.fontWeight.semibold,
     },
-  });
+  }), [colors, typography, spacing, borderRadius, themeStyles]);
 
   useEffect(() => {
     generateFirstQuestion();

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
@@ -24,12 +24,8 @@ export default function ProfileScreen() {
     });
   };
 
-  const styles = StyleSheet.create({
-    container: themeStyles.container,
-  });
-
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={themeStyles.container}>
       <ProfileHeader paddingTop={Math.max(insets.top, 20)} />
 
       <BreadthExpansionStats

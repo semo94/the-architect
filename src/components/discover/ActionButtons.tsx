@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,7 +16,7 @@ interface Props {
 export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcquireNow }) => {
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: {
       flexDirection: 'row',
       padding: spacing.lg,
@@ -29,7 +29,7 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
       flexDirection: 'column',
       alignItems: 'center',
       paddingVertical: spacing.md,
-      marginHorizontal: 5,
+      marginHorizontal: spacing.xs,
       borderRadius: borderRadius.md,
       cursor: 'pointer' as any,
     },
@@ -50,7 +50,7 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
     dismissText: {
       fontSize: typography.fontSize.xs,
       color: colors.textSecondary,
-      marginTop: 4,
+      marginTop: spacing.xs,
     },
     bucketIcon: {
       fontSize: typography.fontSize.xxl,
@@ -58,7 +58,7 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
     bucketText: {
       fontSize: typography.fontSize.xs,
       color: colors.white,
-      marginTop: 4,
+      marginTop: spacing.xs,
     },
     acquireIcon: {
       fontSize: typography.fontSize.xxl,
@@ -66,9 +66,9 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
     acquireText: {
       fontSize: typography.fontSize.xs,
       color: colors.white,
-      marginTop: 4,
+      marginTop: spacing.xs,
     },
-  });
+  }), [colors, typography, spacing, borderRadius, themeStyles]);
 
   return (
     <View style={styles.container}>

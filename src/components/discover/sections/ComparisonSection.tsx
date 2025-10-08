@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import { Card } from '../../common/Card';
 import { SkeletonLoader, SkeletonText } from '../../common/SkeletonLoader';
 import { useTechnologyCardStyles } from '../technologyCardStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Comparison {
   technology: string;
@@ -21,6 +22,7 @@ export const ComparisonSection: React.FC<Props> = ({
   ItemWrapper,
 }) => {
   const styles = useTechnologyCardStyles();
+  const { spacing } = useTheme();
 
   return (
     <Card style={styles.contentCard}>
@@ -28,11 +30,11 @@ export const ComparisonSection: React.FC<Props> = ({
       {isLoading ? (
         <>
           <View style={styles.comparisonItem}>
-            <SkeletonLoader width="40%" height={16} style={{ marginBottom: 6 }} />
+            <SkeletonLoader width="40%" height={16} style={{ marginBottom: spacing.sm }} />
             <SkeletonText lines={2} lineHeight={22} lastLineWidth="85%" />
           </View>
           <View style={styles.comparisonItem}>
-            <SkeletonLoader width="45%" height={16} style={{ marginBottom: 6 }} />
+            <SkeletonLoader width="45%" height={16} style={{ marginBottom: spacing.sm }} />
             <SkeletonText lines={2} lineHeight={22} lastLineWidth="75%" />
           </View>
         </>
