@@ -5,15 +5,17 @@ import { TextSection } from './sections/TextSection';
 import { ListSection } from './sections/ListSection';
 import { ComparisonSection } from './sections/ComparisonSection';
 import { SafeAreaScrollView } from '../common/SafeAreaScrollView';
-import { technologyCardStyles } from './technologyCardStyles';
+import { useTechnologyCardStyles } from './technologyCardStyles';
 
 interface Props {
   technology: Technology;
 }
 
 export const TechnologyCard: React.FC<Props> = ({ technology }) => {
+  const styles = useTechnologyCardStyles();
+
   return (
-    <SafeAreaScrollView style={technologyCardStyles.container}>
+    <SafeAreaScrollView style={styles.container}>
       <HeaderSection
         category={technology.category}
         subcategory={technology.subcategory}

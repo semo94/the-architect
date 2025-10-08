@@ -7,7 +7,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { QuizQuestion } from '../../types';
-import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
   score: number;
@@ -24,10 +24,191 @@ export const QuizResults: React.FC<Props> = ({
   onClose,
   onRetry,
 }) => {
+  const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
   const passed = score >= 80;
   const correctCount = questions.filter(
     (q, idx) => userAnswers[idx] === q.correctAnswer
   ).length;
+
+  const styles = StyleSheet.create({
+    container: themeStyles.container,
+    scoreContainer: {
+      padding: spacing.xxl,
+      alignItems: 'center',
+      borderBottomWidth: 3,
+    },
+    scoreContainerPassed: {
+      backgroundColor: colors.primaryLight,
+      borderBottomColor: colors.primary,
+    },
+    scoreContainerFailed: {
+      backgroundColor: colors.warningLight,
+      borderBottomColor: colors.warning,
+    },
+    scoreIcon: {
+      fontSize: typography.fontSize.giant,
+      marginBottom: spacing.lg,
+    },
+    scoreTitle: {
+      fontSize: typography.fontSize.xxl,
+      fontWeight: typography.fontWeight.bold,
+      color: colors.text,
+      marginBottom: 10,
+    },
+    scorePercentage: {
+      fontSize: typography.fontSize.massive,
+      fontWeight: typography.fontWeight.bold,
+      color: colors.text,
+      marginBottom: 5,
+    },
+    scoreSubtitle: {
+      fontSize: typography.fontSize.base,
+      color: colors.textSecondary,
+      marginBottom: spacing.lg,
+    },
+    statusBadge: {
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.xl,
+    },
+    statusBadgePassed: {
+      backgroundColor: colors.primary,
+    },
+    statusBadgeFailed: {
+      backgroundColor: colors.warning,
+    },
+    statusText: {
+      color: colors.white,
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.bold,
+    },
+    messageContainer: {
+      margin: spacing.lg,
+      padding: spacing.xl,
+      backgroundColor: colors.white,
+      borderRadius: borderRadius.lg,
+    },
+    messageText: {
+      ...themeStyles.bodyText,
+      textAlign: 'center',
+    },
+    reviewContainer: {
+      padding: spacing.lg,
+    },
+    reviewTitle: {
+      fontSize: typography.fontSize.xl,
+      fontWeight: typography.fontWeight.bold,
+      color: colors.text,
+      marginBottom: spacing.lg,
+    },
+    reviewQuestion: {
+      backgroundColor: colors.white,
+      padding: spacing.xl,
+      borderRadius: borderRadius.lg,
+      marginBottom: spacing.lg,
+    },
+    reviewHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    reviewQuestionNumber: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.textSecondary,
+    },
+    reviewBadge: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.lg,
+    },
+    reviewBadgeCorrect: {
+      backgroundColor: colors.primaryLight,
+    },
+    reviewBadgeIncorrect: {
+      backgroundColor: colors.errorLight,
+    },
+    reviewBadgeText: {
+      fontSize: typography.fontSize.xs,
+      fontWeight: typography.fontWeight.semibold,
+    },
+    reviewQuestionText: {
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text,
+      marginBottom: spacing.lg,
+      lineHeight: typography.lineHeight.relaxed,
+    },
+    reviewAnswers: {
+      marginBottom: spacing.lg,
+    },
+    reviewAnswer: {
+      padding: spacing.md,
+      borderRadius: borderRadius.md,
+      marginBottom: spacing.sm,
+      backgroundColor: colors.background,
+    },
+    reviewAnswerCorrect: {
+      backgroundColor: colors.primaryLight,
+      borderWidth: 2,
+      borderColor: colors.primary,
+    },
+    reviewAnswerWrong: {
+      backgroundColor: colors.errorLight,
+      borderWidth: 2,
+      borderColor: colors.error,
+    },
+    reviewAnswerText: {
+      fontSize: typography.fontSize.sm,
+      color: colors.text,
+    },
+    explanationContainer: {
+      padding: spacing.md,
+      backgroundColor: colors.infoLight,
+      borderRadius: borderRadius.md,
+    },
+    explanationLabel: {
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.secondaryDark,
+      marginBottom: 6,
+    },
+    explanationText: {
+      fontSize: typography.fontSize.sm,
+      color: colors.secondaryDark,
+      lineHeight: typography.lineHeight.tight,
+    },
+    actionButtons: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xxl,
+    },
+    retryButton: {
+      backgroundColor: colors.warning,
+      paddingVertical: spacing.lg,
+      borderRadius: borderRadius.lg,
+      alignItems: 'center',
+      cursor: 'pointer' as any,
+    },
+    pressed: themeStyles.pressed,
+    retryButtonText: {
+      color: colors.white,
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.bold,
+    },
+    closeButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: spacing.lg,
+      borderRadius: borderRadius.lg,
+      alignItems: 'center',
+      cursor: 'pointer' as any,
+    },
+    closeButtonText: {
+      color: colors.white,
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.bold,
+    },
+  });
 
   return (
     <ScrollView style={styles.container}>
@@ -153,183 +334,3 @@ export const QuizResults: React.FC<Props> = ({
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: CommonStyles.container,
-  scoreContainer: {
-    padding: Spacing.xxl,
-    alignItems: 'center',
-    borderBottomWidth: 3,
-  },
-  scoreContainerPassed: {
-    backgroundColor: Colors.primaryLight,
-    borderBottomColor: Colors.primary,
-  },
-  scoreContainerFailed: {
-    backgroundColor: Colors.warningLight,
-    borderBottomColor: Colors.warning,
-  },
-  scoreIcon: {
-    fontSize: Typography.fontSize.giant,
-    marginBottom: Spacing.lg,
-  },
-  scoreTitle: {
-    fontSize: Typography.fontSize.xxl,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text,
-    marginBottom: 10,
-  },
-  scorePercentage: {
-    fontSize: Typography.fontSize.massive,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text,
-    marginBottom: 5,
-  },
-  scoreSubtitle: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.lg,
-  },
-  statusBadge: {
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.xl,
-  },
-  statusBadgePassed: {
-    backgroundColor: Colors.primary,
-  },
-  statusBadgeFailed: {
-    backgroundColor: Colors.warning,
-  },
-  statusText: {
-    color: Colors.white,
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold,
-  },
-  messageContainer: {
-    margin: Spacing.lg,
-    padding: Spacing.xl,
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.lg,
-  },
-  messageText: {
-    ...CommonStyles.bodyText,
-    textAlign: 'center',
-  },
-  reviewContainer: {
-    padding: Spacing.lg,
-  },
-  reviewTitle: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text,
-    marginBottom: Spacing.lg,
-  },
-  reviewQuestion: {
-    backgroundColor: Colors.white,
-    padding: Spacing.xl,
-    borderRadius: BorderRadius.lg,
-    marginBottom: Spacing.lg,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  reviewQuestionNumber: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.textSecondary,
-  },
-  reviewBadge: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.lg,
-  },
-  reviewBadgeCorrect: {
-    backgroundColor: Colors.primaryLight,
-  },
-  reviewBadgeIncorrect: {
-    backgroundColor: Colors.errorLight,
-  },
-  reviewBadgeText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.semibold,
-  },
-  reviewQuestionText: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.lg,
-    lineHeight: Typography.lineHeight.relaxed,
-  },
-  reviewAnswers: {
-    marginBottom: Spacing.lg,
-  },
-  reviewAnswer: {
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.sm,
-    backgroundColor: Colors.background,
-  },
-  reviewAnswerCorrect: {
-    backgroundColor: Colors.primaryLight,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-  },
-  reviewAnswerWrong: {
-    backgroundColor: Colors.errorLight,
-    borderWidth: 2,
-    borderColor: Colors.error,
-  },
-  reviewAnswerText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.text,
-  },
-  explanationContainer: {
-    padding: Spacing.md,
-    backgroundColor: Colors.infoLight,
-    borderRadius: BorderRadius.md,
-  },
-  explanationLabel: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.secondaryDark,
-    marginBottom: 6,
-  },
-  explanationText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.secondaryDark,
-    lineHeight: Typography.lineHeight.tight,
-  },
-  actionButtons: {
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xxl,
-  },
-  retryButton: {
-    backgroundColor: Colors.warning,
-    paddingVertical: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    alignItems: 'center',
-    cursor: 'pointer' as any,
-  },
-  pressed: CommonStyles.pressed,
-  retryButtonText: {
-    color: Colors.white,
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-  },
-  closeButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    alignItems: 'center',
-    cursor: 'pointer' as any,
-  },
-  closeButtonText: {
-    color: Colors.white,
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-  },
-});

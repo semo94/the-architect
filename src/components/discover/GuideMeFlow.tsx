@@ -17,7 +17,7 @@ import { LoadingSpinner } from "../common/LoadingSpinner";
 import { ActionButtons } from "./ActionButtons";
 import { StreamingTechnologyCard } from "./StreamingTechnologyCard";
 import { TechnologyCard } from "./TechnologyCard";
-import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
   onComplete: () => void;
@@ -44,8 +44,103 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
 
   const { technologies, addTechnology, dismissTechnology } = useAppStore();
+
+  const styles = StyleSheet.create({
+    container: themeStyles.container,
+    centerContainer: themeStyles.centerContainer,
+    errorText: {
+      ...themeStyles.errorText,
+      marginBottom: spacing.xl,
+    },
+    retryButton: {
+      ...themeStyles.button,
+      ...themeStyles.buttonPrimary,
+    },
+    pressed: themeStyles.pressed,
+    retryButtonText: themeStyles.buttonText,
+    header: {
+      ...themeStyles.header,
+      paddingTop: spacing.xl, // Will be overridden by inline style with safe area
+    },
+    content: {
+      flex: 1,
+    },
+    contentContainer: {
+      flexGrow: 1,
+    },
+    stepIndicator: {
+      fontSize: typography.fontSize.base,
+      color: colors.textSecondary,
+      marginBottom: 10,
+      fontWeight: typography.fontWeight.semibold,
+    },
+    progressBar: themeStyles.progressBar,
+    progressFill: themeStyles.progressFill,
+    questionContainer: {
+      padding: spacing.xl,
+      backgroundColor: colors.cardBackground,
+      marginTop: spacing.lg,
+      marginHorizontal: spacing.lg,
+      borderRadius: borderRadius.lg,
+      alignItems: "center",
+    },
+    questionIcon: {
+      fontSize: typography.fontSize.massive,
+      marginBottom: spacing.lg,
+    },
+    questionText: {
+      fontSize: typography.fontSize.xl,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text,
+      textAlign: "center",
+      lineHeight: typography.lineHeight.extraLoose,
+    },
+    optionsContainer: {
+      padding: spacing.lg,
+    },
+    optionButton: {
+      ...themeStyles.optionButton,
+      padding: spacing.xl,
+    },
+    optionText: {
+      fontSize: typography.fontSize.base,
+      color: colors.text,
+      fontWeight: typography.fontWeight.medium,
+      textAlign: "center",
+    },
+    historyContainer: {
+      padding: spacing.xl,
+      marginTop: 10,
+    },
+    historyTitle: {
+      fontSize: typography.fontSize.sm,
+      color: colors.textSecondary,
+      marginBottom: 10,
+      fontWeight: typography.fontWeight.semibold,
+    },
+    historyItem: {
+      marginBottom: spacing.sm,
+    },
+    historyAnswer: {
+      fontSize: typography.fontSize.sm,
+      color: colors.primary,
+      fontWeight: typography.fontWeight.medium,
+    },
+    footer: themeStyles.footer,
+    cancelButton: {
+      paddingVertical: spacing.md,
+      alignItems: "center",
+      cursor: "pointer" as any,
+    },
+    cancelButtonText: {
+      color: colors.textSecondary,
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+    },
+  });
 
   useEffect(() => {
     generateFirstQuestion();
@@ -283,97 +378,3 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 
   return null;
 };
-
-const styles = StyleSheet.create({
-  container: CommonStyles.container,
-  centerContainer: CommonStyles.centerContainer,
-  errorText: {
-    ...CommonStyles.errorText,
-    marginBottom: Spacing.xl,
-  },
-  retryButton: {
-    ...CommonStyles.button,
-    ...CommonStyles.buttonPrimary,
-  },
-  pressed: CommonStyles.pressed,
-  retryButtonText: CommonStyles.buttonText,
-  header: {
-    ...CommonStyles.header,
-    paddingTop: Spacing.xl, // Will be overridden by inline style with safe area
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexGrow: 1,
-  },
-  stepIndicator: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.textSecondary,
-    marginBottom: 10,
-    fontWeight: Typography.fontWeight.semibold,
-  },
-  progressBar: CommonStyles.progressBar,
-  progressFill: CommonStyles.progressFill,
-  questionContainer: {
-    padding: Spacing.xl,
-    backgroundColor: Colors.white,
-    marginTop: Spacing.lg,
-    marginHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    alignItems: "center",
-  },
-  questionIcon: {
-    fontSize: Typography.fontSize.massive,
-    marginBottom: Spacing.lg,
-  },
-  questionText: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text,
-    textAlign: "center",
-    lineHeight: Typography.lineHeight.extraLoose,
-  },
-  optionsContainer: {
-    padding: Spacing.lg,
-  },
-  optionButton: {
-    ...CommonStyles.optionButton,
-    padding: Spacing.xl,
-  },
-  optionText: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.text,
-    fontWeight: Typography.fontWeight.medium,
-    textAlign: "center",
-  },
-  historyContainer: {
-    padding: Spacing.xl,
-    marginTop: 10,
-  },
-  historyTitle: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
-    marginBottom: 10,
-    fontWeight: Typography.fontWeight.semibold,
-  },
-  historyItem: {
-    marginBottom: Spacing.sm,
-  },
-  historyAnswer: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.primary,
-    fontWeight: Typography.fontWeight.medium,
-  },
-  footer: CommonStyles.footer,
-  cancelButton: {
-    paddingVertical: Spacing.md,
-    alignItems: "center",
-    cursor: "pointer" as any,
-  },
-  cancelButtonText: {
-    color: Colors.textSecondary,
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-  },
-});

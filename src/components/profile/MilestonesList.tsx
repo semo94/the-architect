@@ -2,13 +2,49 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/common/Card';
 import { Milestone } from '@/types';
-import { Colors, Typography, Spacing, CommonStyles } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface MilestonesListProps {
   milestones: Milestone[];
 }
 
 export const MilestonesList: React.FC<MilestonesListProps> = ({ milestones }) => {
+  const { colors, typography, spacing, styles: themeStyles } = useTheme();
+
+  const styles = StyleSheet.create({
+    section: themeStyles.section,
+    sectionTitle: themeStyles.sectionTitle,
+    milestoneCard: {
+      flexDirection: 'row',
+      marginHorizontal: spacing.xl,
+      marginBottom: 10,
+      padding: spacing.lg,
+      alignItems: 'center',
+      opacity: 0.6,
+    },
+    milestoneAchieved: {
+      opacity: 1,
+      backgroundColor: colors.primaryLight,
+    },
+    milestoneIcon: {
+      fontSize: typography.fontSize.huge,
+      marginRight: spacing.lg,
+    },
+    milestoneContent: {
+      flex: 1,
+    },
+    milestoneTitle: {
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text,
+      marginBottom: 4,
+    },
+    milestoneStatus: {
+      fontSize: typography.fontSize.sm,
+      color: colors.textSecondary,
+    },
+  });
+
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Milestones</Text>
@@ -31,37 +67,3 @@ export const MilestonesList: React.FC<MilestonesListProps> = ({ milestones }) =>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  section: CommonStyles.section,
-  sectionTitle: CommonStyles.sectionTitle,
-  milestoneCard: {
-    flexDirection: 'row',
-    marginHorizontal: Spacing.xl,
-    marginBottom: 10,
-    padding: Spacing.lg,
-    alignItems: 'center',
-    opacity: 0.6,
-  },
-  milestoneAchieved: {
-    opacity: 1,
-    backgroundColor: Colors.primaryLight,
-  },
-  milestoneIcon: {
-    fontSize: Typography.fontSize.huge,
-    marginRight: Spacing.lg,
-  },
-  milestoneContent: {
-    flex: 1,
-  },
-  milestoneTitle: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  milestoneStatus: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
-  },
-});

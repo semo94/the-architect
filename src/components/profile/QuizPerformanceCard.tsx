@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/common/Card';
 import { ProfileStatistics } from '@/types';
-import { Colors, Typography, Spacing, CommonStyles } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 type QuizPerformanceCardProps = Omit<ProfileStatistics['quizPerformance'], 'firstTimePassRate'>;
 
@@ -11,6 +11,31 @@ export const QuizPerformanceCard: React.FC<QuizPerformanceCardProps> = ({
   averageScore,
   passRate,
 }) => {
+  const { colors, typography, spacing, styles: themeStyles } = useTheme();
+
+  const styles = StyleSheet.create({
+    section: themeStyles.section,
+    sectionTitle: themeStyles.sectionTitle,
+    perfCard: {
+      marginHorizontal: spacing.xl,
+      padding: spacing.xl,
+    },
+    perfRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 10,
+    },
+    perfLabel: {
+      fontSize: typography.fontSize.base,
+      color: colors.textSecondary,
+    },
+    perfValue: {
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text,
+    },
+  });
+
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Quiz Performance</Text>
@@ -31,26 +56,3 @@ export const QuizPerformanceCard: React.FC<QuizPerformanceCardProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  section: CommonStyles.section,
-  sectionTitle: CommonStyles.sectionTitle,
-  perfCard: {
-    marginHorizontal: Spacing.xl,
-    padding: Spacing.xl,
-  },
-  perfRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  perfLabel: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.textSecondary,
-  },
-  perfValue: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text,
-  },
-});

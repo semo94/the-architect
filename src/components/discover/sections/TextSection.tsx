@@ -2,7 +2,7 @@ import React from 'react';
 import { Text } from 'react-native';
 import { Card } from '../../common/Card';
 import { SkeletonText } from '../../common/SkeletonLoader';
-import { technologyCardStyles } from '../technologyCardStyles';
+import { useTechnologyCardStyles } from '../technologyCardStyles';
 
 interface Props {
   title: string;
@@ -17,15 +17,17 @@ export const TextSection: React.FC<Props> = ({
   isLoading = false,
   ContentWrapper,
 }) => {
+  const styles = useTechnologyCardStyles();
+
   return (
-    <Card style={technologyCardStyles.contentCard}>
-      <Text style={technologyCardStyles.sectionTitle}>{title}</Text>
+    <Card style={styles.contentCard}>
+      <Text style={styles.sectionTitle}>{title}</Text>
       {isLoading ? (
         <SkeletonText lines={3} lineHeight={24} />
       ) : ContentWrapper && content ? (
-        <ContentWrapper text={content} style={technologyCardStyles.contentText} />
+        <ContentWrapper text={content} style={styles.contentText} />
       ) : (
-        <Text style={technologyCardStyles.contentText}>{content}</Text>
+        <Text style={styles.contentText}>{content}</Text>
       )}
     </Card>
   );

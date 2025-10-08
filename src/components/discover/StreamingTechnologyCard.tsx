@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Text,
   Animated,
+  Text,
 } from 'react-native';
-import { hasSectionData } from '../../utils/streamingJsonParser';
 import { Technology } from '../../types';
-import { HeaderSection } from './sections/HeaderSection';
-import { TextSection } from './sections/TextSection';
-import { ListSection } from './sections/ListSection';
-import { ComparisonSection } from './sections/ComparisonSection';
+import { hasSectionData } from '../../utils/streamingJsonParser';
 import { SafeAreaScrollView } from '../common/SafeAreaScrollView';
-import { technologyCardStyles } from './technologyCardStyles';
+import { ComparisonSection } from './sections/ComparisonSection';
+import { HeaderSection } from './sections/HeaderSection';
+import { ListSection } from './sections/ListSection';
+import { TextSection } from './sections/TextSection';
+import { useTechnologyCardStyles } from './technologyCardStyles';
 
 interface Props {
   partialData: Partial<Technology>;
@@ -61,6 +61,8 @@ const TypewriterText: React.FC<{ text: string; speed?: number; style?: any }> = 
 };
 
 export const StreamingTechnologyCard: React.FC<Props> = ({ partialData }) => {
+  const styles = useTechnologyCardStyles();
+
   const hasHeader = hasSectionData(partialData, 'header');
   const hasWhat = hasSectionData(partialData, 'what');
   const hasWhy = hasSectionData(partialData, 'why');
@@ -87,7 +89,7 @@ export const StreamingTechnologyCard: React.FC<Props> = ({ partialData }) => {
   );
 
   return (
-    <SafeAreaScrollView style={technologyCardStyles.container}>
+    <SafeAreaScrollView style={styles.container}>
       <HeaderSection
         category={partialData.category}
         subcategory={partialData.subcategory}

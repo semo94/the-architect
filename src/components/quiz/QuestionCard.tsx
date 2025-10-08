@@ -6,7 +6,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { QuizQuestion } from '../../types';
-import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
   question: QuizQuestion;
@@ -21,7 +21,83 @@ export const QuestionCard: React.FC<Props> = ({
   showFeedback,
   onSelectAnswer,
 }) => {
+  const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
   const isCorrect = selectedAnswer === question.correctAnswer;
+
+  const styles = StyleSheet.create({
+    container: {
+    },
+    questionContainer: {
+      backgroundColor: colors.cardBackground,
+      padding: spacing.xl,
+      borderRadius: borderRadius.lg,
+      marginBottom: spacing.xl,
+    },
+    questionText: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text,
+      lineHeight: typography.lineHeight.loose,
+    },
+    optionsContainer: {
+      marginBottom: spacing.xl,
+    },
+    optionButton: {
+      ...themeStyles.optionButton,
+      padding: spacing.lg,
+    },
+    pressed: themeStyles.pressed,
+    optionSelected: themeStyles.optionSelected,
+    optionCorrect: themeStyles.optionCorrect,
+    optionIncorrect: themeStyles.optionIncorrect,
+    optionContent: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    optionText: {
+      ...themeStyles.optionText,
+      flex: 1,
+    },
+    optionTextSelected: {
+      color: colors.primaryDark,
+      fontWeight: typography.fontWeight.semibold,
+    },
+    optionTextCorrect: {
+      color: colors.primaryDark,
+      fontWeight: typography.fontWeight.semibold,
+    },
+    optionTextIncorrect: {
+      color: colors.errorDark,
+      fontWeight: typography.fontWeight.semibold,
+    },
+    iconText: {
+      fontSize: typography.fontSize.xl,
+      marginLeft: 10,
+    },
+    feedbackContainer: {
+      padding: spacing.xl,
+      borderRadius: borderRadius.lg,
+      borderWidth: 2,
+    },
+    feedbackCorrect: {
+      backgroundColor: colors.primaryLight,
+      borderColor: colors.primary,
+    },
+    feedbackIncorrect: {
+      backgroundColor: colors.errorLight,
+      borderColor: colors.error,
+    },
+    feedbackTitle: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.bold,
+      marginBottom: 10,
+      color: colors.text,
+    },
+    feedbackText: {
+      ...themeStyles.bodyText,
+    },
+  });
 
   return (
     <View style={styles.container}>
@@ -90,78 +166,3 @@ export const QuestionCard: React.FC<Props> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-  },
-  questionContainer: {
-    backgroundColor: Colors.white,
-    padding: Spacing.xl,
-    borderRadius: BorderRadius.lg,
-    marginBottom: Spacing.xl,
-  },
-  questionText: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text,
-    lineHeight: Typography.lineHeight.loose,
-  },
-  optionsContainer: {
-    marginBottom: Spacing.xl,
-  },
-  optionButton: {
-    ...CommonStyles.optionButton,
-    padding: Spacing.lg,
-  },
-  pressed: CommonStyles.pressed,
-  optionSelected: CommonStyles.optionSelected,
-  optionCorrect: CommonStyles.optionCorrect,
-  optionIncorrect: CommonStyles.optionIncorrect,
-  optionContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  optionText: {
-    ...CommonStyles.optionText,
-    flex: 1,
-  },
-  optionTextSelected: {
-    color: Colors.primaryDark,
-    fontWeight: Typography.fontWeight.semibold,
-  },
-  optionTextCorrect: {
-    color: Colors.primaryDark,
-    fontWeight: Typography.fontWeight.semibold,
-  },
-  optionTextIncorrect: {
-    color: Colors.errorDark,
-    fontWeight: Typography.fontWeight.semibold,
-  },
-  iconText: {
-    fontSize: Typography.fontSize.xl,
-    marginLeft: 10,
-  },
-  feedbackContainer: {
-    padding: Spacing.xl,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 2,
-  },
-  feedbackCorrect: {
-    backgroundColor: Colors.primaryLight,
-    borderColor: Colors.primary,
-  },
-  feedbackIncorrect: {
-    backgroundColor: Colors.errorLight,
-    borderColor: Colors.error,
-  },
-  feedbackTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold,
-    marginBottom: 10,
-    color: Colors.text,
-  },
-  feedbackText: {
-    ...CommonStyles.bodyText,
-  },
-});

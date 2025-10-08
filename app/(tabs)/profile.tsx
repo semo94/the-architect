@@ -9,12 +9,13 @@ import { QuizPerformanceCard } from '@/components/profile/QuizPerformanceCard';
 import { CategoryBreakdownList } from '@/components/profile/CategoryBreakdownList';
 import { MilestonesList } from '@/components/profile/MilestonesList';
 import { DiscoveredTechnologiesList } from '@/components/profile/DiscoveredTechnologiesList';
-import { CommonStyles } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function ProfileScreen() {
   const { profile, technologies } = useAppStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { styles: themeStyles } = useTheme();
 
   const handleTestKnowledge = (technologyId: string) => {
     router.push({
@@ -22,6 +23,10 @@ export default function ProfileScreen() {
       params: { technologyId }
     });
   };
+
+  const styles = StyleSheet.create({
+    container: themeStyles.container,
+  });
 
   return (
     <ScrollView style={styles.container}>
@@ -53,7 +58,3 @@ export default function ProfileScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: CommonStyles.container,
-});

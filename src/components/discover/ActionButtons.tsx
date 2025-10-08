@@ -5,7 +5,7 @@ import {
   Pressable,
   Text,
 } from 'react-native';
-import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
   onDismiss: () => void;
@@ -14,6 +14,62 @@ interface Props {
 }
 
 export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcquireNow }) => {
+  const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
+
+  const styles = StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      padding: spacing.lg,
+      backgroundColor: colors.cardBackground,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    button: {
+      flex: 1,
+      flexDirection: 'column',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      marginHorizontal: 5,
+      borderRadius: borderRadius.md,
+      cursor: 'pointer' as any,
+    },
+    pressed: themeStyles.pressed,
+    dismissButton: {
+      backgroundColor: colors.background,
+    },
+    bucketButton: {
+      backgroundColor: colors.secondary,
+    },
+    acquireButton: {
+      backgroundColor: colors.primary,
+    },
+    dismissIcon: {
+      fontSize: typography.fontSize.xxl,
+      color: colors.textSecondary,
+    },
+    dismissText: {
+      fontSize: typography.fontSize.xs,
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    bucketIcon: {
+      fontSize: typography.fontSize.xxl,
+    },
+    bucketText: {
+      fontSize: typography.fontSize.xs,
+      color: colors.white,
+      marginTop: 4,
+    },
+    acquireIcon: {
+      fontSize: typography.fontSize.xxl,
+    },
+    acquireText: {
+      fontSize: typography.fontSize.xs,
+      color: colors.white,
+      marginTop: 4,
+    },
+  });
+
   return (
     <View style={styles.container}>
       <Pressable
@@ -54,57 +110,3 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    padding: Spacing.lg,
-    backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  button: {
-    flex: 1,
-    flexDirection: 'column',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    marginHorizontal: 5,
-    borderRadius: BorderRadius.md,
-    cursor: 'pointer' as any,
-  },
-  pressed: CommonStyles.pressed,
-  dismissButton: {
-    backgroundColor: Colors.background,
-  },
-  bucketButton: {
-    backgroundColor: Colors.secondary,
-  },
-  acquireButton: {
-    backgroundColor: Colors.primary,
-  },
-  dismissIcon: {
-    fontSize: Typography.fontSize.xxl,
-    color: Colors.textSecondary,
-  },
-  dismissText: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-  bucketIcon: {
-    fontSize: Typography.fontSize.xxl,
-  },
-  bucketText: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.white,
-    marginTop: 4,
-  },
-  acquireIcon: {
-    fontSize: Typography.fontSize.xxl,
-  },
-  acquireText: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.white,
-    marginTop: 4,
-  },
-});

@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, Pressable, View } from 'react-native';
 import { Card } from '@/components/common/Card';
 import { Technology } from '@/types';
-import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface DiscoveredTechnologiesListProps {
   technologies: Technology[];
@@ -13,6 +13,79 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
   technologies,
   onTestKnowledge,
 }) => {
+  const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
+
+  const styles = StyleSheet.create({
+    section: themeStyles.section,
+    sectionTitle: themeStyles.sectionTitle,
+    emptyCard: {
+      marginHorizontal: spacing.xl,
+      padding: spacing.xxl,
+      alignItems: 'center',
+    },
+    emptyText: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text,
+      marginBottom: spacing.sm,
+    },
+    emptySubtext: {
+      fontSize: typography.fontSize.sm,
+      color: colors.textSecondary,
+    },
+    techCard: {
+      marginHorizontal: spacing.xl,
+      marginBottom: 10,
+      padding: spacing.lg,
+    },
+    techHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    techName: {
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text,
+      flex: 1,
+    },
+    techStatus: {
+      fontSize: typography.fontSize.xs,
+      color: colors.secondary,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      backgroundColor: colors.secondaryLight,
+      borderRadius: borderRadius.sm,
+    },
+    techStatusLearned: {
+      color: colors.primary,
+      backgroundColor: colors.primaryLight,
+    },
+    techCategory: {
+      fontSize: typography.fontSize.sm,
+      color: colors.textSecondary,
+      marginBottom: spacing.sm,
+    },
+    testButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 10,
+      paddingHorizontal: spacing.lg,
+      borderRadius: borderRadius.md,
+      marginTop: 10,
+      alignItems: 'center',
+    },
+    testButtonText: {
+      color: colors.white,
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.semibold,
+    },
+    touchable: {
+      cursor: 'pointer' as any,
+    },
+    pressed: themeStyles.pressed,
+  });
+
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Discovered Technologies ({technologies.length})</Text>
@@ -52,74 +125,3 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  section: CommonStyles.section,
-  sectionTitle: CommonStyles.sectionTitle,
-  emptyCard: {
-    marginHorizontal: Spacing.xl,
-    padding: Spacing.xxl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  emptySubtext: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
-  },
-  techCard: {
-    marginHorizontal: Spacing.xl,
-    marginBottom: 10,
-    padding: Spacing.lg,
-  },
-  techHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  techName: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text,
-    flex: 1,
-  },
-  techStatus: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.secondary,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    backgroundColor: Colors.secondaryLight,
-    borderRadius: BorderRadius.sm,
-  },
-  techStatusLearned: {
-    color: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
-  techCategory: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
-  },
-  testButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 10,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.md,
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  testButtonText: {
-    color: Colors.white,
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semibold,
-  },
-  touchable: {
-    cursor: 'pointer' as any,
-  },
-  pressed: CommonStyles.pressed,
-});

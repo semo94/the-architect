@@ -13,11 +13,12 @@ import { QuizResults } from '@/components/quiz/QuizResults';
 import llmService from '@/services/llmService';
 import { useAppStore } from '@/store/useAppStore';
 import { Quiz, QuizQuestion } from '@/types';
-import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function QuizScreen() {
   const { technologyId } = useLocalSearchParams<{ technologyId: string }>();
   const router = useRouter();
+  const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
 
   const { technologies, quizzes, addQuiz } = useAppStore();
   const technology = technologies.find((t) => t.id === technologyId);
@@ -122,6 +123,71 @@ export default function QuizScreen() {
     router.back();
   };
 
+  const styles = StyleSheet.create({
+    container: themeStyles.container,
+    centerContainer: themeStyles.centerContainer,
+    loadingText: {
+      marginTop: spacing.xl,
+      fontSize: typography.fontSize.base,
+      color: colors.textSecondary,
+    },
+    errorText: themeStyles.errorText,
+    technologyName: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.bold,
+      color: colors.text,
+      marginTop: 10,
+    },
+    button: {
+      ...themeStyles.button,
+      ...themeStyles.buttonPrimary,
+      marginTop: 10,
+    },
+    pressed: themeStyles.pressed,
+    buttonText: themeStyles.buttonText,
+    cancelButton: {
+      paddingHorizontal: spacing.xxl,
+      paddingVertical: spacing.md,
+      marginTop: 10,
+      cursor: 'pointer' as any,
+    },
+    cancelButtonText: {
+      color: colors.textSecondary,
+      fontSize: typography.fontSize.base,
+    },
+    header: themeStyles.header,
+    headerContent: {
+      marginBottom: spacing.md,
+    },
+    progressText: {
+      fontSize: typography.fontSize.sm,
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    progressBar: themeStyles.progressBar,
+    progressFill: themeStyles.progressFill,
+    content: {
+      flex: 1,
+    },
+    contentContainer: {
+      flexGrow: 1,
+      padding: spacing.xl,
+    },
+    footer: themeStyles.footer,
+    nextButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: spacing.lg,
+      borderRadius: borderRadius.lg,
+      alignItems: 'center',
+      cursor: 'pointer' as any,
+    },
+    nextButtonText: {
+      color: colors.white,
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.bold,
+    },
+  });
+
   if (!technology) {
     return (
       <View style={styles.centerContainer}>
@@ -142,7 +208,7 @@ export default function QuizScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Generating quiz questions...</Text>
         <Text style={styles.technologyName}>{technology.name}</Text>
       </View>
@@ -257,68 +323,3 @@ export default function QuizScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: CommonStyles.container,
-  centerContainer: CommonStyles.centerContainer,
-  loadingText: {
-    marginTop: Spacing.xl,
-    fontSize: Typography.fontSize.base,
-    color: Colors.textSecondary,
-  },
-  errorText: CommonStyles.errorText,
-  technologyName: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text,
-    marginTop: 10,
-  },
-  button: {
-    ...CommonStyles.button,
-    ...CommonStyles.buttonPrimary,
-    marginTop: 10,
-  },
-  pressed: CommonStyles.pressed,
-  buttonText: CommonStyles.buttonText,
-  cancelButton: {
-    paddingHorizontal: Spacing.xxl,
-    paddingVertical: Spacing.md,
-    marginTop: 10,
-    cursor: 'pointer' as any,
-  },
-  cancelButtonText: {
-    color: Colors.textSecondary,
-    fontSize: Typography.fontSize.base,
-  },
-  header: CommonStyles.header,
-  headerContent: {
-    marginBottom: Spacing.md,
-  },
-  progressText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-  progressBar: CommonStyles.progressBar,
-  progressFill: CommonStyles.progressFill,
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexGrow: 1,
-    padding: Spacing.xl,
-  },
-  footer: CommonStyles.footer,
-  nextButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    alignItems: 'center',
-    cursor: 'pointer' as any,
-  },
-  nextButtonText: {
-    color: Colors.white,
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.bold,
-  },
-});

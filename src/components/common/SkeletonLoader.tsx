@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
-import { Colors, Spacing } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface SkeletonLoaderProps {
   width?: DimensionValue;
@@ -15,6 +15,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   borderRadius = 4,
   style,
 }) => {
+  const { colors } = useTheme();
   const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -47,12 +48,12 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     <View style={[{ width, height, borderRadius }, style]}>
       <Animated.View
         style={[
-          styles.skeleton,
           {
             width: '100%',
             height: '100%',
             borderRadius,
             opacity,
+            backgroundColor: colors.border,
           },
         ]}
       />
@@ -71,6 +72,8 @@ export const SkeletonText: React.FC<SkeletonTextProps> = ({
   lineHeight = 20,
   lastLineWidth = '70%',
 }) => {
+  const { spacing } = useTheme();
+
   return (
     <View>
       {Array.from({ length: lines }).map((_, index) => (
@@ -78,7 +81,7 @@ export const SkeletonText: React.FC<SkeletonTextProps> = ({
           key={index}
           height={lineHeight}
           width={index === lines - 1 ? lastLineWidth : '100%'}
-          style={{ marginBottom: Spacing.sm }}
+          style={{ marginBottom: spacing.sm }}
         />
       ))}
     </View>
@@ -90,6 +93,16 @@ interface SkeletonBulletProps {
 }
 
 export const SkeletonBullet: React.FC<SkeletonBulletProps> = ({ count = 4 }) => {
+  const { spacing } = useTheme();
+
+  const styles = StyleSheet.create({
+    bulletContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+  });
+
   return (
     <View>
       {Array.from({ length: count }).map((_, index) => (
@@ -105,14 +118,3 @@ export const SkeletonBullet: React.FC<SkeletonBulletProps> = ({ count = 4 }) => 
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  skeleton: {
-    backgroundColor: Colors.border,
-  },
-  bulletContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-});

@@ -2,7 +2,7 @@ import React from 'react';
 import { Text } from 'react-native';
 import { Card } from '../../common/Card';
 import { SkeletonLoader } from '../../common/SkeletonLoader';
-import { technologyCardStyles } from '../technologyCardStyles';
+import { useTechnologyCardStyles } from '../technologyCardStyles';
 
 interface Props {
   category?: string;
@@ -19,6 +19,8 @@ export const HeaderSection: React.FC<Props> = ({
   isLoading = false,
   LoadingWrapper,
 }) => {
+  const styles = useTechnologyCardStyles();
+
   const content = isLoading ? (
     <>
       <SkeletonLoader width="60%" height={14} style={{ marginBottom: 8 }} />
@@ -26,15 +28,15 @@ export const HeaderSection: React.FC<Props> = ({
     </>
   ) : (
     <>
-      <Text style={technologyCardStyles.categoryLabel}>
+      <Text style={styles.categoryLabel}>
         {category} › {subcategory}
       </Text>
-      <Text style={technologyCardStyles.title}>{name}</Text>
+      <Text style={styles.title}>{name}</Text>
     </>
   );
 
   return (
-    <Card style={technologyCardStyles.headerCard}>
+    <Card style={styles.headerCard}>
       {LoadingWrapper && !isLoading ? (
         <LoadingWrapper>{content}</LoadingWrapper>
       ) : (

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Card } from '../../common/Card';
 import { SkeletonBullet } from '../../common/SkeletonLoader';
-import { technologyCardStyles } from '../technologyCardStyles';
+import { useTechnologyCardStyles } from '../technologyCardStyles';
 
 interface Props {
   title: string;
@@ -19,18 +19,20 @@ export const ListSection: React.FC<Props> = ({
   isLoading = false,
   ItemWrapper,
 }) => {
+  const styles = useTechnologyCardStyles();
+
   return (
-    <Card style={technologyCardStyles.contentCard}>
-      <Text style={technologyCardStyles.sectionTitle}>{title}</Text>
+    <Card style={styles.contentCard}>
+      <Text style={styles.sectionTitle}>{title}</Text>
       {isLoading ? (
         <SkeletonBullet count={4} />
       ) : (
         <>
           {items.map((item, index) => {
             const listItem = (
-              <View style={technologyCardStyles.listItem}>
-                <Text style={technologyCardStyles.bulletPoint}>{bulletPoint}</Text>
-                <Text style={technologyCardStyles.listText}>{item}</Text>
+              <View style={styles.listItem}>
+                <Text style={styles.bulletPoint}>{bulletPoint}</Text>
+                <Text style={styles.listText}>{item}</Text>
               </View>
             );
 

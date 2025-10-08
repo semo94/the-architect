@@ -16,7 +16,7 @@ import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ActionButtons } from './ActionButtons';
 import { StreamingTechnologyCard } from './StreamingTechnologyCard';
 import { TechnologyCard } from './TechnologyCard';
-import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
   onComplete: () => void;
@@ -30,6 +30,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { styles: themeStyles } = useTheme();
 
   const {
     technologies,
@@ -104,6 +105,18 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     }
   };
 
+  const styles = StyleSheet.create({
+    container: themeStyles.container,
+    centerContainer: themeStyles.centerContainer,
+    errorText: themeStyles.errorText,
+    retryButton: {
+      ...themeStyles.button,
+      ...themeStyles.buttonPrimary,
+    },
+    pressed: themeStyles.pressed,
+    retryButtonText: themeStyles.buttonText,
+  });
+
   if (loading) {
     return <LoadingSpinner message="Finding something exciting for you..." />;
   }
@@ -150,15 +163,3 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: CommonStyles.container,
-  centerContainer: CommonStyles.centerContainer,
-  errorText: CommonStyles.errorText,
-  retryButton: {
-    ...CommonStyles.button,
-    ...CommonStyles.buttonPrimary,
-  },
-  pressed: CommonStyles.pressed,
-  retryButtonText: CommonStyles.buttonText,
-});

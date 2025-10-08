@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/common/Card';
 import { ProfileStatistics } from '@/types';
-import { Colors, Typography, Spacing, CommonStyles } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface CategoryBreakdownListProps {
   categoryBreakdown: ProfileStatistics['categoryBreakdown'];
@@ -11,6 +11,33 @@ interface CategoryBreakdownListProps {
 export const CategoryBreakdownList: React.FC<CategoryBreakdownListProps> = ({
   categoryBreakdown,
 }) => {
+  const { colors, typography, spacing, styles: themeStyles } = useTheme();
+
+  const styles = StyleSheet.create({
+    section: themeStyles.section,
+    sectionTitle: themeStyles.sectionTitle,
+    categoryCard: {
+      marginHorizontal: spacing.xl,
+      marginBottom: 10,
+      padding: spacing.lg,
+    },
+    categoryName: {
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text,
+      marginBottom: spacing.sm,
+    },
+    categoryStats: {
+      marginBottom: spacing.sm,
+    },
+    categoryText: {
+      fontSize: typography.fontSize.sm,
+      color: colors.textSecondary,
+    },
+    progressBar: themeStyles.progressBar,
+    progressFill: themeStyles.progressFill,
+  });
+
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Category Breakdown</Text>
@@ -30,28 +57,3 @@ export const CategoryBreakdownList: React.FC<CategoryBreakdownListProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  section: CommonStyles.section,
-  sectionTitle: CommonStyles.sectionTitle,
-  categoryCard: {
-    marginHorizontal: Spacing.xl,
-    marginBottom: 10,
-    padding: Spacing.lg,
-  },
-  categoryName: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
-  categoryStats: {
-    marginBottom: Spacing.sm,
-  },
-  categoryText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
-  },
-  progressBar: CommonStyles.progressBar,
-  progressFill: CommonStyles.progressFill,
-});

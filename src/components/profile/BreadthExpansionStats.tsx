@@ -1,13 +1,8 @@
 import { Card } from '@/components/common/Card';
-import { CommonStyles, Spacing, Typography } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 import { ProfileStatistics } from '@/types';
 import React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const HORIZONTAL_MARGIN = Spacing.xl;
-const GAP = 12;
-const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_MARGIN * 2 - GAP) / 2;
 
 type BreadthExpansionStatsProps = ProfileStatistics['breadthExpansion'];
 
@@ -17,6 +12,34 @@ export const BreadthExpansionStats: React.FC<BreadthExpansionStatsProps> = ({
   inBucketList,
   learningRate,
 }) => {
+  const { typography, spacing, styles: themeStyles } = useTheme();
+
+  const SCREEN_WIDTH = Dimensions.get('window').width;
+  const HORIZONTAL_MARGIN = spacing.xl;
+  const GAP = 12;
+  const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_MARGIN * 2 - GAP) / 2;
+
+  const styles = StyleSheet.create({
+    section: themeStyles.section,
+    sectionTitle: themeStyles.sectionTitle,
+    statsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      paddingHorizontal: HORIZONTAL_MARGIN,
+      gap: GAP,
+    },
+    statCard: {
+      width: CARD_WIDTH,
+      padding: spacing.xl,
+      alignItems: 'center',
+    },
+    statNumber: {
+      fontSize: typography.fontSize.xxxl,
+      fontWeight: typography.fontWeight.bold,
+      color: themeStyles.statNumber.color,
+    },
+    statLabel: themeStyles.statLabel,
+  });
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Breadth Expansion</Text>
@@ -41,25 +64,3 @@ export const BreadthExpansionStats: React.FC<BreadthExpansionStatsProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  section: CommonStyles.section,
-  sectionTitle: CommonStyles.sectionTitle,
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: HORIZONTAL_MARGIN,
-    gap: GAP,
-  },
-  statCard: {
-    width: CARD_WIDTH,
-    padding: Spacing.xl,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: Typography.fontSize.xxxl,
-    fontWeight: Typography.fontWeight.bold,
-    color: CommonStyles.statNumber.color,
-  },
-  statLabel: CommonStyles.statLabel,
-});

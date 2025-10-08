@@ -11,12 +11,13 @@ import { Card } from '@/components/common/Card';
 import { GuideMeFlow } from '@/components/discover/GuideMeFlow';
 import { SurpriseMeFlow } from '@/components/discover/SurpriseMeFlow';
 import { useAppStore } from '@/store/useAppStore';
-import { Colors, Typography, Spacing, BorderRadius, CommonStyles } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function DiscoverScreen() {
   const [flowMode, setFlowMode] = useState<'idle' | 'surprise' | 'guided'>('idle');
   const { profile } = useAppStore();
   const insets = useSafeAreaInsets();
+  const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
 
   const handleSurpriseMe = () => {
     setFlowMode('surprise');
@@ -37,6 +38,75 @@ export default function DiscoverScreen() {
   if (flowMode === 'guided') {
     return <GuideMeFlow onComplete={handleFlowComplete} />;
   }
+
+  const styles = StyleSheet.create({
+    container: themeStyles.container,
+    touchable: {
+      cursor: 'pointer' as any,
+    },
+    pressed: themeStyles.pressed,
+    header: {
+      ...themeStyles.header,
+      padding: spacing.xl,
+    },
+    title: themeStyles.headerTitle,
+    subtitle: themeStyles.headerSubtitle,
+    statsContainer: {
+      flexDirection: 'row',
+      padding: spacing.xl,
+      gap: spacing.lg,
+    },
+    statCard: themeStyles.statCard,
+    statNumber: themeStyles.statNumber,
+    statLabel: themeStyles.statLabel,
+    sectionTitle: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text,
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.lg,
+    },
+    modeCard: {
+      flexDirection: 'row',
+      padding: spacing.xl,
+      marginHorizontal: spacing.xl,
+      marginBottom: spacing.lg,
+    },
+    modeIcon: {
+      fontSize: 40,
+      marginRight: spacing.lg,
+    },
+    modeContent: {
+      flex: 1,
+    },
+    modeTitle: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text,
+      marginBottom: 4,
+    },
+    modeDescription: {
+      fontSize: typography.fontSize.sm,
+      color: colors.textSecondary,
+    },
+    tipContainer: {
+      margin: spacing.xl,
+      padding: spacing.lg,
+      backgroundColor: colors.infoLight,
+      borderRadius: borderRadius.md,
+    },
+    tipTitle: {
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.secondaryDark,
+      marginBottom: spacing.sm,
+    },
+    tipText: {
+      fontSize: typography.fontSize.sm,
+      color: colors.secondaryDark,
+      lineHeight: typography.lineHeight.tight,
+    },
+  });
 
   return (
     <ScrollView style={styles.container}>
@@ -97,72 +167,3 @@ export default function DiscoverScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: CommonStyles.container,
-  touchable: {
-    cursor: 'pointer' as any,
-  },
-  pressed: CommonStyles.pressed,
-  header: {
-    ...CommonStyles.header,
-    padding: Spacing.xl,
-  },
-  title: CommonStyles.headerTitle,
-  subtitle: CommonStyles.headerSubtitle,
-  statsContainer: {
-    flexDirection: 'row',
-    padding: Spacing.xl,
-    gap: Spacing.lg,
-  },
-  statCard: CommonStyles.statCard,
-  statNumber: CommonStyles.statNumber,
-  statLabel: CommonStyles.statLabel,
-  sectionTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text,
-    paddingHorizontal: Spacing.xl,
-    marginBottom: Spacing.lg,
-  },
-  modeCard: {
-    flexDirection: 'row',
-    padding: Spacing.xl,
-    marginHorizontal: Spacing.xl,
-    marginBottom: Spacing.lg,
-  },
-  modeIcon: {
-    fontSize: 40,
-    marginRight: Spacing.lg,
-  },
-  modeContent: {
-    flex: 1,
-  },
-  modeTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  modeDescription: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
-  },
-  tipContainer: {
-    margin: Spacing.xl,
-    padding: Spacing.lg,
-    backgroundColor: Colors.infoLight,
-    borderRadius: BorderRadius.md,
-  },
-  tipTitle: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.secondaryDark,
-    marginBottom: Spacing.sm,
-  },
-  tipText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.secondaryDark,
-    lineHeight: Typography.lineHeight.tight,
-  },
-});

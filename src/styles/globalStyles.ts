@@ -1,7 +1,7 @@
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, ColorSchemeName } from 'react-native';
 
 // ===== COLOR PALETTE =====
-export const Colors = {
+export const LightColors = {
   // Primary
   primary: '#4CAF50',
   primaryLight: '#E8F5E9',
@@ -26,6 +26,7 @@ export const Colors = {
 
   border: '#e0e0e0',
   background: '#f5f5f5',
+  cardBackground: '#fff',
   white: '#fff',
   black: '#000',
 
@@ -34,7 +35,63 @@ export const Colors = {
   successLight: '#E8F5E9',
   info: '#2196F3',
   infoLight: '#E3F2FD',
+
+  // Tab/Navigation
+  tint: '#0a7ea4',
+  icon: '#687076',
+  tabIconDefault: '#687076',
+  tabIconSelected: '#0a7ea4',
 };
+
+export const DarkColors = {
+  // Primary
+  primary: '#66BB6A',
+  primaryLight: '#2E7D32',
+  primaryDark: '#81C784',
+
+  // Secondary
+  secondary: '#42A5F5',
+  secondaryLight: '#1E88E5',
+  secondaryDark: '#64B5F6',
+
+  // Error/Warning
+  error: '#EF5350',
+  errorLight: '#C62828',
+  errorDark: '#E57373',
+  warning: '#FFA726',
+  warningLight: '#EF6C00',
+
+  // Neutral
+  text: '#ECEDEE',
+  textSecondary: '#B0B3B8',
+  textLight: '#8E9297',
+
+  border: '#3A3A3C',
+  background: '#000000',
+  cardBackground: '#1C1C1E',
+  white: '#fff',
+  black: '#000',
+
+  // Feedback
+  success: '#66BB6A',
+  successLight: '#2E7D32',
+  info: '#42A5F5',
+  infoLight: '#1565C0',
+
+  // Tab/Navigation
+  tint: '#fff',
+  icon: '#9BA1A6',
+  tabIconDefault: '#9BA1A6',
+  tabIconSelected: '#fff',
+};
+
+// Helper to get theme colors
+export const getColors = (colorScheme: ColorSchemeName) => {
+  return colorScheme === 'dark' ? DarkColors : LightColors;
+};
+
+// Backward compatibility - defaults to light theme
+export const Colors = LightColors;
 
 // ===== SPACING =====
 export const Spacing = {
@@ -91,258 +148,276 @@ export const BorderRadius = {
 };
 
 // ===== SHADOWS (Platform-specific) =====
-export const Shadows = {
-  small: Platform.select({
-    ios: {
-      shadowColor: Colors.black,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 3.84,
-    },
-    android: {
-      elevation: 5,
-    },
-    web: {
-      boxShadow: '0px 2px 3.84px rgba(0, 0, 0, 0.1)',
-    },
-  }),
-  medium: Platform.select({
-    ios: {
-      shadowColor: Colors.black,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 6,
-    },
-    android: {
-      elevation: 8,
-    },
-    web: {
-      boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.15)',
-    },
-  }),
+export const getShadows = (colorScheme: ColorSchemeName) => {
+  const isDark = colorScheme === 'dark';
+  return {
+    small: Platform.select({
+      ios: {
+        shadowColor: isDark ? '#fff' : '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: isDark ? 0.3 : 0.1,
+        shadowRadius: 3.84,
+      },
+      android: {
+        elevation: 5,
+      },
+      web: {
+        boxShadow: isDark
+          ? '0px 2px 3.84px rgba(255, 255, 255, 0.1)'
+          : '0px 2px 3.84px rgba(0, 0, 0, 0.1)',
+      },
+    }),
+    medium: Platform.select({
+      ios: {
+        shadowColor: isDark ? '#fff' : '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: isDark ? 0.4 : 0.15,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: isDark
+          ? '0px 4px 6px rgba(255, 255, 255, 0.15)'
+          : '0px 4px 6px rgba(0, 0, 0, 0.15)',
+      },
+    }),
+  };
 };
 
+// Backward compatibility - defaults to light theme
+export const Shadows = getShadows('light');
+
 // ===== COMMON STYLES =====
-export const CommonStyles = StyleSheet.create({
-  // ===== CONTAINERS =====
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+export const getCommonStyles = (colorScheme: ColorSchemeName) => {
+  const colors = getColors(colorScheme);
+  const shadows = getShadows(colorScheme);
 
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-    backgroundColor: Colors.background,
-  },
+  return StyleSheet.create({
+    // ===== CONTAINERS =====
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  // ===== CARD =====
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.lg,
-    ...Shadows.small,
-  },
+    centerContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: Spacing.xl,
+      backgroundColor: colors.background,
+    },
 
-  cardWithMargin: {
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.xl,
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
+    // ===== CARD =====
+    card: {
+      backgroundColor: colors.cardBackground,
+      borderRadius: BorderRadius.md,
+      padding: Spacing.lg,
+      ...shadows.small,
+    },
 
-  // ===== SECTION =====
-  section: {
-    marginVertical: 10,
-  },
+    cardWithMargin: {
+      backgroundColor: colors.cardBackground,
+      borderRadius: BorderRadius.md,
+      padding: Spacing.xl,
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.lg,
+    },
 
-  sectionTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text,
-    paddingHorizontal: Spacing.xl,
-    marginBottom: Spacing.lg,
-  },
+    // ===== SECTION =====
+    section: {
+      marginVertical: 10,
+    },
 
-  // ===== HEADERS =====
-  header: {
-    padding: Spacing.xl,
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
+    sectionTitle: {
+      fontSize: Typography.fontSize.lg,
+      fontWeight: Typography.fontWeight.semibold,
+      color: colors.text,
+      paddingHorizontal: Spacing.xl,
+      marginBottom: Spacing.lg,
+    },
 
-  headerTitle: {
-    fontSize: Typography.fontSize.xxl,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text,
-    marginBottom: Spacing.sm,
-  },
+    // ===== HEADERS =====
+    header: {
+      padding: Spacing.xl,
+      backgroundColor: colors.cardBackground,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
 
-  headerSubtitle: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.textSecondary,
-  },
+    headerTitle: {
+      fontSize: Typography.fontSize.xxl,
+      fontWeight: Typography.fontWeight.bold,
+      color: colors.text,
+      marginBottom: Spacing.sm,
+    },
 
-  // ===== BUTTONS =====
-  button: {
-    paddingHorizontal: Spacing.xxl,
-    paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    cursor: 'pointer' as any,
-  },
+    headerSubtitle: {
+      fontSize: Typography.fontSize.base,
+      color: colors.textSecondary,
+    },
 
-  buttonPrimary: {
-    backgroundColor: Colors.primary,
-  },
+    // ===== BUTTONS =====
+    button: {
+      paddingHorizontal: Spacing.xxl,
+      paddingVertical: Spacing.md,
+      borderRadius: BorderRadius.md,
+      alignItems: 'center',
+      cursor: 'pointer' as any,
+    },
 
-  buttonSecondary: {
-    backgroundColor: Colors.secondary,
-  },
+    buttonPrimary: {
+      backgroundColor: colors.primary,
+    },
 
-  buttonError: {
-    backgroundColor: Colors.error,
-  },
+    buttonSecondary: {
+      backgroundColor: colors.secondary,
+    },
 
-  buttonWarning: {
-    backgroundColor: Colors.warning,
-  },
+    buttonError: {
+      backgroundColor: colors.error,
+    },
 
-  buttonText: {
-    color: Colors.white,
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-  },
+    buttonWarning: {
+      backgroundColor: colors.warning,
+    },
 
-  // ===== PRESSED STATE =====
-  pressed: {
-    opacity: 0.7,
-  },
+    buttonText: {
+      color: colors.white,
+      fontSize: Typography.fontSize.base,
+      fontWeight: Typography.fontWeight.semibold,
+    },
 
-  // ===== TEXT =====
-  title: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.text,
-  },
+    // ===== PRESSED STATE =====
+    pressed: {
+      opacity: 0.7,
+    },
 
-  subtitle: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.textSecondary,
-  },
+    // ===== TEXT =====
+    title: {
+      fontSize: Typography.fontSize.xl,
+      fontWeight: Typography.fontWeight.bold,
+      color: colors.text,
+    },
 
-  bodyText: {
-    fontSize: Typography.fontSize.md,
-    color: Colors.textSecondary,
-    lineHeight: Typography.lineHeight.relaxed,
-  },
+    subtitle: {
+      fontSize: Typography.fontSize.base,
+      color: colors.textSecondary,
+    },
 
-  errorText: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.error,
-    textAlign: 'center',
-  },
+    bodyText: {
+      fontSize: Typography.fontSize.md,
+      color: colors.textSecondary,
+      lineHeight: Typography.lineHeight.relaxed,
+    },
 
-  // ===== PROGRESS BAR =====
-  progressBar: {
-    height: 8,
-    backgroundColor: Colors.border,
-    borderRadius: BorderRadius.sm,
-    overflow: 'hidden',
-  },
+    errorText: {
+      fontSize: Typography.fontSize.base,
+      color: colors.error,
+      textAlign: 'center',
+    },
 
-  progressFill: {
-    height: '100%',
-    backgroundColor: Colors.primary,
-  },
+    // ===== PROGRESS BAR =====
+    progressBar: {
+      height: 8,
+      backgroundColor: colors.border,
+      borderRadius: BorderRadius.sm,
+      overflow: 'hidden',
+    },
 
-  // ===== FOOTER =====
-  footer: {
-    padding: Spacing.xl,
-    backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
+    progressFill: {
+      height: '100%',
+      backgroundColor: colors.primary,
+    },
 
-  // ===== OPTIONS/CHOICES =====
-  optionButton: {
-    backgroundColor: Colors.white,
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    marginBottom: Spacing.md,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    cursor: 'pointer' as any,
-  },
+    // ===== FOOTER =====
+    footer: {
+      padding: Spacing.xl,
+      backgroundColor: colors.cardBackground,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
 
-  optionText: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.text,
-    lineHeight: Typography.lineHeight.normal,
-  },
+    // ===== OPTIONS/CHOICES =====
+    optionButton: {
+      backgroundColor: colors.cardBackground,
+      padding: Spacing.lg,
+      borderRadius: BorderRadius.lg,
+      marginBottom: Spacing.md,
+      borderWidth: 2,
+      borderColor: colors.border,
+      cursor: 'pointer' as any,
+    },
 
-  optionSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
+    optionText: {
+      fontSize: Typography.fontSize.base,
+      color: colors.text,
+      lineHeight: Typography.lineHeight.normal,
+    },
 
-  optionCorrect: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
+    optionSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primaryLight,
+    },
 
-  optionIncorrect: {
-    borderColor: Colors.error,
-    backgroundColor: Colors.errorLight,
-  },
+    optionCorrect: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primaryLight,
+    },
 
-  // ===== BADGES =====
-  badge: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.sm,
-  },
+    optionIncorrect: {
+      borderColor: colors.error,
+      backgroundColor: colors.errorLight,
+    },
 
-  badgeSuccess: {
-    backgroundColor: Colors.primaryLight,
-  },
+    // ===== BADGES =====
+    badge: {
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.xs,
+      borderRadius: BorderRadius.sm,
+    },
 
-  badgeError: {
-    backgroundColor: Colors.errorLight,
-  },
+    badgeSuccess: {
+      backgroundColor: colors.primaryLight,
+    },
 
-  badgeInfo: {
-    backgroundColor: Colors.infoLight,
-  },
+    badgeError: {
+      backgroundColor: colors.errorLight,
+    },
 
-  badgeText: {
-    fontSize: Typography.fontSize.xs,
-    fontWeight: Typography.fontWeight.semibold,
-  },
+    badgeInfo: {
+      backgroundColor: colors.infoLight,
+    },
 
-  // ===== STATS =====
-  statCard: {
-    flex: 1,
-    padding: Spacing.xl,
-    alignItems: 'center',
-  },
+    badgeText: {
+      fontSize: Typography.fontSize.xs,
+      fontWeight: Typography.fontWeight.semibold,
+    },
 
-  statNumber: {
-    fontSize: Typography.fontSize.huge,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.primary,
-  },
+    // ===== STATS =====
+    statCard: {
+      flex: 1,
+      padding: Spacing.xl,
+      alignItems: 'center',
+    },
 
-  statLabel: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-});
+    statNumber: {
+      fontSize: Typography.fontSize.huge,
+      fontWeight: Typography.fontWeight.bold,
+      color: colors.primary,
+    },
+
+    statLabel: {
+      fontSize: Typography.fontSize.sm,
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+  });
+};
+
+// Backward compatibility - defaults to light theme
+export const CommonStyles = getCommonStyles('light');
 
 // ===== UTILITY FUNCTIONS =====
 export const getCardStyle = (margin = true) => [

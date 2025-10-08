@@ -1,68 +1,72 @@
 import { StyleSheet } from 'react-native';
-import { Colors, Typography, Spacing, CommonStyles } from '@/styles/globalStyles';
+import { useTheme } from '@/contexts/ThemeContext';
 
-export const technologyCardStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  headerCard: {
-    margin: Spacing.lg,
-    padding: Spacing.xl,
-    backgroundColor: Colors.primary,
-  },
-  categoryLabel: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.primaryLight,
-    marginBottom: Spacing.sm,
-  },
-  title: {
-    fontSize: Typography.fontSize.xxxl,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.white,
-  },
-  contentCard: {
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-    padding: Spacing.xl,
-  },
-  sectionTitle: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text,
-    marginBottom: Spacing.md,
-  },
-  contentText: {
-    ...CommonStyles.bodyText,
-    lineHeight: Typography.lineHeight.relaxed,
-  },
-  listItem: {
-    flexDirection: 'row',
-    marginBottom: Spacing.md,
-  },
-  bulletPoint: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.primary,
-    marginRight: 10,
-    width: 20,
-  },
-  listText: {
-    flex: 1,
-    fontSize: Typography.fontSize.md,
-    color: Colors.textSecondary,
-    lineHeight: Typography.lineHeight.normal,
-  },
-  comparisonItem: {
-    marginBottom: Spacing.lg,
-  },
-  comparisonTitle: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semibold,
-    color: Colors.text,
-    marginBottom: 6,
-  },
-  comparisonText: {
-    fontSize: Typography.fontSize.md,
-    color: Colors.textSecondary,
-    lineHeight: Typography.lineHeight.normal,
-  },
-});
+export const useTechnologyCardStyles = () => {
+  const { colors, typography, spacing, styles: themeStyles } = useTheme();
+
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    headerCard: {
+      margin: spacing.lg,
+      padding: spacing.xl,
+      backgroundColor: colors.primary,
+    },
+    categoryLabel: {
+      fontSize: typography.fontSize.sm,
+      color: colors.primaryLight,
+      marginBottom: spacing.sm,
+    },
+    title: {
+      fontSize: typography.fontSize.xxxl,
+      fontWeight: typography.fontWeight.bold,
+      color: colors.white,
+    },
+    contentCard: {
+      marginHorizontal: spacing.lg,
+      marginBottom: spacing.lg,
+      padding: spacing.xl,
+    },
+    sectionTitle: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text,
+      marginBottom: spacing.md,
+    },
+    contentText: {
+      ...themeStyles.bodyText,
+      lineHeight: typography.lineHeight.relaxed,
+    },
+    listItem: {
+      flexDirection: 'row',
+      marginBottom: spacing.md,
+    },
+    bulletPoint: {
+      fontSize: typography.fontSize.base,
+      color: colors.primary,
+      marginRight: 10,
+      width: 20,
+    },
+    listText: {
+      flex: 1,
+      fontSize: typography.fontSize.md,
+      color: colors.textSecondary,
+      lineHeight: typography.lineHeight.normal,
+    },
+    comparisonItem: {
+      marginBottom: spacing.lg,
+    },
+    comparisonTitle: {
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
+      color: colors.text,
+      marginBottom: 6,
+    },
+    comparisonText: {
+      fontSize: typography.fontSize.md,
+      color: colors.textSecondary,
+      lineHeight: typography.lineHeight.normal,
+    },
+  });
+};

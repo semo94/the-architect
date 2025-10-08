@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Card } from '../../common/Card';
 import { SkeletonLoader, SkeletonText } from '../../common/SkeletonLoader';
-import { technologyCardStyles } from '../technologyCardStyles';
+import { useTechnologyCardStyles } from '../technologyCardStyles';
 
 interface Comparison {
   technology: string;
@@ -20,16 +20,18 @@ export const ComparisonSection: React.FC<Props> = ({
   isLoading = false,
   ItemWrapper,
 }) => {
+  const styles = useTechnologyCardStyles();
+
   return (
-    <Card style={technologyCardStyles.contentCard}>
-      <Text style={technologyCardStyles.sectionTitle}>Compare To Similar</Text>
+    <Card style={styles.contentCard}>
+      <Text style={styles.sectionTitle}>Compare To Similar</Text>
       {isLoading ? (
         <>
-          <View style={technologyCardStyles.comparisonItem}>
+          <View style={styles.comparisonItem}>
             <SkeletonLoader width="40%" height={16} style={{ marginBottom: 6 }} />
             <SkeletonText lines={2} lineHeight={22} lastLineWidth="85%" />
           </View>
-          <View style={technologyCardStyles.comparisonItem}>
+          <View style={styles.comparisonItem}>
             <SkeletonLoader width="45%" height={16} style={{ marginBottom: 6 }} />
             <SkeletonText lines={2} lineHeight={22} lastLineWidth="75%" />
           </View>
@@ -38,11 +40,11 @@ export const ComparisonSection: React.FC<Props> = ({
         <>
           {comparisons.map((comparison, index) => {
             const comparisonItem = (
-              <View style={technologyCardStyles.comparisonItem}>
-                <Text style={technologyCardStyles.comparisonTitle}>
+              <View style={styles.comparisonItem}>
+                <Text style={styles.comparisonTitle}>
                   vs {comparison.technology}
                 </Text>
-                <Text style={technologyCardStyles.comparisonText}>
+                <Text style={styles.comparisonText}>
                   {comparison.comparison}
                 </Text>
               </View>
