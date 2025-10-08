@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/useAppStore';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
@@ -12,7 +12,7 @@ import { DiscoveredTechnologiesList } from '@/components/profile/DiscoveredTechn
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function ProfileScreen() {
-  const { profile, technologies } = useAppStore();
+  const { profile, technologies, deleteTechnology } = useAppStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
@@ -22,6 +22,27 @@ export default function ProfileScreen() {
       pathname: '/quiz',
       params: { technologyId }
     });
+  };
+
+  const handleDelete = (technologyId: string) => {
+    const technology = technologies.find(t => t.id === technologyId);
+    if (!technology) return;
+
+    Alert.alert(
+      'Delete Technology',
+      `Are you sure you want to delete "${technology.name}"? This will permanently remove the technology and all associated quiz data from your profile.`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteTechnology(technologyId)
+        }
+      ]
+    );
   };
 
   return (
@@ -50,6 +71,7 @@ export default function ProfileScreen() {
       <DiscoveredTechnologiesList
         technologies={technologies}
         onTestKnowledge={handleTestKnowledge}
+        onDelete={handleDelete}
       />
     </ScrollView>
   );

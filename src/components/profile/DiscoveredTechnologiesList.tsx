@@ -8,11 +8,13 @@ import { useSectionStyles } from '@/hooks/useComponentStyles';
 interface DiscoveredTechnologiesListProps {
   technologies: Technology[];
   onTestKnowledge: (technologyId: string) => void;
+  onDelete: (technologyId: string) => void;
 }
 
 export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProps> = ({
   technologies,
   onTestKnowledge,
+  onDelete,
 }) => {
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
   const sectionStyles = useSectionStyles();
@@ -80,6 +82,27 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
       fontSize: typography.fontSize.sm,
       fontWeight: typography.fontWeight.semibold,
     },
+    deleteButton: {
+      backgroundColor: colors.error || '#DC2626',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      borderRadius: borderRadius.md,
+      marginTop: spacing.md,
+      alignItems: 'center',
+    },
+    deleteButtonText: {
+      color: colors.white,
+      fontSize: typography.fontSize.sm,
+      fontWeight: typography.fontWeight.semibold,
+    },
+    buttonRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+      marginTop: spacing.md,
+    },
+    buttonFlex: {
+      flex: 1,
+    },
     touchable: themeStyles.touchable,
     pressed: themeStyles.pressed,
   }), [colors, typography, spacing, borderRadius, themeStyles]);
@@ -105,18 +128,32 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
               </Text>
             </View>
             <Text style={styles.techCategory}>{tech.category} › {tech.subcategory}</Text>
-            {tech.status === 'discovered' && (
+            <View style={styles.buttonRow}>
+              {tech.status === 'discovered' && (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.testButton,
+                    styles.buttonFlex,
+                    styles.touchable,
+                    pressed && styles.pressed
+                  ]}
+                  onPress={() => onTestKnowledge(tech.id)}
+                >
+                  <Text style={styles.testButtonText}>🎯 Test Knowledge</Text>
+                </Pressable>
+              )}
               <Pressable
                 style={({ pressed }) => [
-                  styles.testButton,
+                  styles.deleteButton,
+                  tech.status === 'discovered' ? styles.buttonFlex : { flex: 1 },
                   styles.touchable,
                   pressed && styles.pressed
                 ]}
-                onPress={() => onTestKnowledge(tech.id)}
+                onPress={() => onDelete(tech.id)}
               >
-                <Text style={styles.testButtonText}>🎯 Test Knowledge</Text>
+                <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
               </Pressable>
-            )}
+            </View>
           </Card>
         ))
       )}

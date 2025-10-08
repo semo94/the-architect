@@ -15,6 +15,7 @@ interface AppState {
   addTechnology: (technology: Technology) => void;
   updateTechnologyStatus: (id: string, status: 'learned') => void;
   dismissTechnology: (name: string) => void;
+  deleteTechnology: (id: string) => void;
   addQuiz: (quiz: Quiz) => void;
   updateQuizAnswer: (questionIndex: number, answer: number) => void;
   calculateStatistics: () => void;
@@ -106,6 +107,15 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
     set((state) => ({
       dismissedTechnologies: [...state.dismissedTechnologies, name],
     }));
+  },
+
+  deleteTechnology: (id: string) => {
+    set((state) => ({
+      technologies: state.technologies.filter((tech: Technology) => tech.id !== id),
+      quizzes: state.quizzes.filter((quiz: Quiz) => quiz.technologyId !== id),
+    }));
+    get().calculateStatistics();
+    get().checkMilestones();
   },
 
   addQuiz: (quiz: Quiz) => {
