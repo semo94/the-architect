@@ -7,6 +7,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -17,31 +18,33 @@ export default function RootLayout() {
   const colors = colorScheme === "dark" ? DarkColors : LightColors;
 
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <NavigationThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen
-              name="(tabs)"
-              options={{
-                title: "Home",
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen
-              name="quiz"
-              options={{
-                presentation: "card",
-                title: "Test Your Knowledge",
-                headerStyle: { backgroundColor: colors.primary },
-                headerTintColor: colors.white,
-                headerTitleStyle: { fontWeight: "bold" },
-              }}
-            />
-          </Stack>
-          <StatusBar style="auto" />
-        </NavigationThemeProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <NavigationThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+            <Stack>
+              <Stack.Screen
+                name="(tabs)"
+                options={{
+                  title: "Home",
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="quiz"
+                options={{
+                  presentation: "card",
+                  title: "Test Your Knowledge",
+                  headerStyle: { backgroundColor: colors.primary },
+                  headerTintColor: colors.white,
+                  headerTitleStyle: { fontWeight: "bold" },
+                }}
+              />
+            </Stack>
+            <StatusBar style="auto" />
+          </NavigationThemeProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
