@@ -8,8 +8,10 @@ import {
   View,
   ScrollView,
 } from 'react-native';
-import { QuestionCard } from '@/components/quiz/QuestionCard';
 import { QuizResults } from '@/components/quiz/QuizResults';
+import { StreamingQuestionCard } from '@/components/quiz/StreamingQuestionCard';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { useStreamingData } from '@/hooks/useStreamingData';
 import llmService from '@/services/llmService';
 import { useAppStore } from '@/store/useAppStore';
 import { Quiz, QuizQuestion } from '@/types';
@@ -23,36 +25,90 @@ export default function QuizScreen() {
   const { technologies, quizzes, addQuiz } = useAppStore();
   const technology = technologies.find((t) => t.id === technologyId);
 
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]); // Final complete questions (for quiz results)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<number[]>([]);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [quizComplete, setQuizComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Streaming state for quiz questions
+  const quizStreaming = useStreamingData<{ questions: QuizQuestion[] }>({
+    // Show UI as soon as we have the first question text (even without options)
+    hasMinimumData: (data) => !!(data.questions && data.questions.length > 0 && data.questions[0]?.question),
+    // Transform flat format (option_0, option_1, ...) to array format (options: [...])
+    transformData: (flatData: any) => {
+      console.log('[Quiz] transformData called with:', JSON.stringify(flatData).slice(0, 300));
+      if (!flatData || !flatData.questions) return { questions: [] };
+
+      // Map all questions, including partial ones during streaming
+      const transformedQuestions = flatData.questions
+        .map((q: any) => {
+          // Collect available options (may be incomplete during streaming)
+          const options = [
+            q.option_0,
+            q.option_1,
+            q.option_2,
+            q.option_3,
+          ].filter((opt: any) => opt !== undefined && opt !== null && opt !== '');
+
+          return {
+            question: q.question || '',
+            options: options,  // May have 0-4 options during streaming
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation || '',
+          };
+        })
+        .filter((q: any) => q.question); // Only include if has question text
+
+      console.log('[Quiz] Transformed to', transformedQuestions.length, 'questions with',
+                  transformedQuestions[0]?.options.length || 0, 'options in first');
+      return {
+        questions: transformedQuestions,
+      };
+    },
+    onComplete: (data) => {
+      console.log('[Quiz] onComplete called with', data.questions.length, 'questions');
+      // Store final questions for quiz results
+      setQuestions(data.questions);
+    },
+  });
 
   const generateQuiz = useCallback(async () => {
     if (!technology) return;
 
-    setLoading(true);
     setError(null);
+    quizStreaming.reset(); // This sets isLoading=true internally
 
     try {
-      const generatedQuestions = await llmService.generateQuizQuestions(technology);
-      setQuestions(generatedQuestions);
+      const generatedQuestions = await llmService.generateQuizQuestions(
+        technology,
+        quizStreaming.onProgress
+      );
+      // Don't set questions here - let onComplete handle it to avoid premature UI transition
+      quizStreaming.handleComplete({ questions: generatedQuestions });
     } catch (err) {
       console.error('Failed to generate quiz:', err);
       setError('Failed to generate quiz questions. Please try again.');
-    } finally {
-      setLoading(false);
+      quizStreaming.handleError(err as Error);
     }
-  }, [technology]);
+  }, [technology, quizStreaming.onProgress, quizStreaming.handleComplete, quizStreaming.handleError, quizStreaming.reset]);
 
   useEffect(() => {
     if (technology) {
       generateQuiz();
     }
   }, [technology, generateQuiz]);
+
+  // Helper to check if a question is complete (has all required fields for interaction)
+  const isQuestionComplete = (q: Partial<QuizQuestion>): boolean => {
+    return !!(
+      q.question &&
+      q.options?.length === 4 &&
+      typeof q.correctAnswer === 'number' &&
+      q.explanation
+    );
+  };
 
   const handleAnswer = (answerIndex: number) => {
     const newAnswers = [...userAnswers];
@@ -62,7 +118,7 @@ export default function QuizScreen() {
   };
 
   const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
+    if (currentQuestionIndex < 3) {  // 0-3 = 4 questions total
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setShowFeedback(false);
     } else {
@@ -73,6 +129,7 @@ export default function QuizScreen() {
   const completeQuiz = () => {
     if (!technology) return;
 
+    const questions = quizStreaming.partialData.questions || [];
     const score = calculateScore();
     const passed = score >= 80;
 
@@ -101,6 +158,7 @@ export default function QuizScreen() {
   };
 
   const calculateScore = () => {
+    const questions = quizStreaming.partialData.questions || [];
     let correct = 0;
     questions.forEach((q, idx) => {
       if (userAnswers[idx] === q.correctAnswer) {
@@ -111,7 +169,6 @@ export default function QuizScreen() {
   };
 
   const handleRetry = () => {
-    setQuestions([]);
     setCurrentQuestionIndex(0);
     setUserAnswers([]);
     setShowFeedback(false);
@@ -205,14 +262,9 @@ export default function QuizScreen() {
     );
   }
 
-  if (loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Generating quiz questions...</Text>
-        <Text style={styles.technologyName}>{technology.name}</Text>
-      </View>
-    );
+  // Show loading spinner before streaming starts
+  if (quizStreaming.isLoading && !quizStreaming.isStreaming) {
+    return <LoadingSpinner message="Preparing your quiz..." />;
   }
 
   if (error) {
@@ -253,24 +305,15 @@ export default function QuizScreen() {
     );
   }
 
-  const currentQuestion = questions[currentQuestionIndex];
+  // Get current question from streaming data or loaded questions
+  const allQuestions = quizStreaming.partialData.questions || questions;
+  const currentQuestion = allQuestions[currentQuestionIndex];
 
   if (!currentQuestion) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>No questions available</Text>
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            pressed && styles.pressed
-          ]}
-          onPress={handleClose}
-        >
-          <Text style={styles.buttonText}>Go Back</Text>
-        </Pressable>
-      </View>
-    );
+    return <LoadingSpinner message="Loading question..." />;
   }
+
+  const isCurrentQuestionComplete = isQuestionComplete(currentQuestion);
 
   return (
     <View style={styles.container}>
@@ -278,14 +321,14 @@ export default function QuizScreen() {
         <View style={styles.headerContent}>
           <Text style={styles.technologyName}>{technology.name}</Text>
           <Text style={styles.progressText}>
-            Question {currentQuestionIndex + 1} of {questions.length}
+            Question {currentQuestionIndex + 1} of 4
           </Text>
         </View>
         <View style={styles.progressBar}>
           <View
             style={[
               styles.progressFill,
-              { width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` },
+              { width: `${((currentQuestionIndex + 1) / 4) * 100}%` },
             ]}
           />
         </View>
@@ -297,15 +340,18 @@ export default function QuizScreen() {
         bounces={true}
         showsVerticalScrollIndicator={true}
       >
-        <QuestionCard
+        <StreamingQuestionCard
           question={currentQuestion}
+          questionNumber={currentQuestionIndex + 1}
+          totalQuestions={4}
+          isComplete={isCurrentQuestionComplete}
           selectedAnswer={userAnswers[currentQuestionIndex]}
           showFeedback={showFeedback}
           onSelectAnswer={handleAnswer}
         />
       </ScrollView>
 
-      {showFeedback && (
+      {showFeedback && isCurrentQuestionComplete && (
         <View style={styles.footer}>
           <Pressable
             style={({ pressed }) => [
@@ -315,7 +361,7 @@ export default function QuizScreen() {
             onPress={handleNext}
           >
             <Text style={styles.nextButtonText}>
-              {currentQuestionIndex < questions.length - 1 ? 'Next Question' : 'Complete Quiz'}
+              {currentQuestionIndex < 3 ? 'Next Question' : 'Complete Quiz'}
             </Text>
           </Pressable>
         </View>

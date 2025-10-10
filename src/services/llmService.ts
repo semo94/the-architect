@@ -45,11 +45,15 @@ const TechnologyContentSchema = z.object({
   }),
 });
 
-const QuizQuestionsSchema = z.object({
+// Schema for LLM response (flat format for better streaming)
+const QuizQuestionsSchemaFlat = z.object({
   questions: z.array(
     z.object({
       question: z.string(),
-      options: z.array(z.string()).length(4),
+      option_0: z.string(),
+      option_1: z.string(),
+      option_2: z.string(),
+      option_3: z.string(),
       correctAnswer: z.number().min(0).max(3),
       explanation: z.string(),
     })
@@ -146,41 +150,47 @@ class LLMService {
     const streamUrl = proxyUrl ? `${proxyUrl}/api/llm/stream` : this.config.apiUrl;
     const useProxy = !!proxyUrl;
 
+    // Only catch synchronous setup errors for fallback
+    let body;
     try {
-      const body = this.getRequestBody([message], true); // true = enable streaming
-      let accumulatedText = '';
-
-      return await new Promise((resolve, reject) => {
-        sseClient.connect(
-          streamUrl,
-          body,
-          {
-            onMessage: (data) => {
-              if (data.text) {
-                accumulatedText += data.text;
-                onProgress?.(accumulatedText);
-              }
-            },
-            onError: (error) => {
-              reject(error);
-            },
-            onComplete: () => {
-              try {
-                const parsed = this.extractJSON(accumulatedText);
-                resolve(parsed);
-              } catch (error) {
-                reject(error);
-              }
-            },
-          },
-          useProxy // Pass flag to indicate if using proxy or direct API
-        );
-      });
-    } catch (streamError) {
-      console.warn('[LLM] Streaming failed, falling back to non-streaming:', streamError);
-      // Fallback to non-streaming
+      body = this.getRequestBody([message], true); // true = enable streaming
+    } catch (setupError) {
+      console.warn('[LLM] Streaming setup failed, falling back to non-streaming:', setupError);
       return this.callLLM(prompt);
     }
+
+    // Don't wrap Promise in try-catch - let rejections propagate to caller
+    let accumulatedText = '';
+    return new Promise((resolve, reject) => {
+      console.log('[LLM] Starting SSE stream...');
+      sseClient.connect(
+        streamUrl,
+        body,
+        {
+          onMessage: (data) => {
+            if (data.text) {
+              accumulatedText += data.text;
+              console.log('[LLM] Stream chunk received, accumulated length:', accumulatedText.length);
+              onProgress?.(accumulatedText);
+            }
+          },
+          onError: (error) => {
+            console.error('[LLM] Stream error:', error);
+            reject(error);
+          },
+          onComplete: () => {
+            console.log('[LLM] Stream complete, total text length:', accumulatedText.length);
+            try {
+              const parsed = this.extractJSON(accumulatedText);
+              resolve(parsed);
+            } catch (error) {
+              reject(error);
+            }
+          },
+        },
+        useProxy // Pass flag to indicate if using proxy or direct API
+      );
+    });
   }
 
   /**
@@ -331,7 +341,8 @@ class LLMService {
   async generateGuidedQuestion(
     step: number,
     previousSelections: any[],
-    categorySchema: any
+    categorySchema: any,
+    onProgress?: (partialText: string) => void
   ): Promise<{ question: string; options: string[] }> {
     const prompt = promptTemplates.generateGuidedQuestion(
       step,
@@ -339,7 +350,11 @@ class LLMService {
       categorySchema
     );
 
-    return await this.callLLM(prompt);
+    const result = onProgress
+      ? await this.callLLMStream(prompt, onProgress)
+      : await this.callLLM(prompt);
+
+    return result;
   }
 
   async generateQuizQuestions(
@@ -348,11 +363,19 @@ class LLMService {
   ): Promise<QuizQuestion[]> {
     const prompt = promptTemplates.generateQuizQuestions(technology);
 
+    // Pass through the onProgress callback directly - the hook will handle transformation
     const result = onProgress
       ? await this.callLLMStream(prompt, onProgress)
       : await this.callLLM(prompt);
-    const validated = QuizQuestionsSchema.parse(result);
-    return validated.questions;
+
+    // Validate using flat schema, then transform to array format for final result
+    const validated = QuizQuestionsSchemaFlat.parse(result);
+    return validated.questions.map(q => ({
+      question: q.question,
+      options: [q.option_0, q.option_1, q.option_2, q.option_3],
+      correctAnswer: q.correctAnswer,
+      explanation: q.explanation,
+    }));
   }
 
 }

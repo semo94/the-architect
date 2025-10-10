@@ -13,8 +13,10 @@ import llmService from "../../services/llmService";
 import { useAppStore } from "../../store/useAppStore";
 import { Technology } from "../../types";
 import { hasMinimumData, parseStreamingJson } from "../../utils/streamingJsonParser";
+import { useStreamingData } from "../../hooks/useStreamingData";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { ActionButtons } from "./ActionButtons";
+import { StreamingQuestionCard } from "./StreamingQuestionCard";
 import { StreamingTechnologyCard } from "./StreamingTechnologyCard";
 import { TechnologyCard } from "./TechnologyCard";
 import { useTheme } from '@/contexts/ThemeContext';
@@ -48,6 +50,11 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 
   const { technologies, addTechnology, dismissTechnology } = useAppStore();
 
+  // Streaming state for questions
+  const questionStreaming = useStreamingData<{ question: string; options: string[] }>({
+    hasMinimumData: (data) => !!data.question,
+  });
+
   const styles = useMemo(() => StyleSheet.create({
     container: themeStyles.container,
     centerContainer: themeStyles.centerContainer,
@@ -79,38 +86,6 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     },
     progressBar: themeStyles.progressBar,
     progressFill: themeStyles.progressFill,
-    questionContainer: {
-      padding: spacing.xl,
-      backgroundColor: colors.cardBackground,
-      marginTop: spacing.lg,
-      marginHorizontal: spacing.lg,
-      borderRadius: borderRadius.lg,
-      alignItems: "center",
-    },
-    questionIcon: {
-      fontSize: typography.fontSize.massive,
-      marginBottom: spacing.lg,
-    },
-    questionText: {
-      fontSize: typography.fontSize.xl,
-      fontWeight: typography.fontWeight.semibold,
-      color: colors.text,
-      textAlign: "center",
-      lineHeight: typography.lineHeight.extraLoose,
-    },
-    optionsContainer: {
-      padding: spacing.lg,
-    },
-    optionButton: {
-      ...themeStyles.optionButton,
-      padding: spacing.xl,
-    },
-    optionText: {
-      fontSize: typography.fontSize.base,
-      color: colors.text,
-      fontWeight: typography.fontWeight.medium,
-      textAlign: "center",
-    },
     historyContainer: {
       padding: spacing.xl,
       marginTop: spacing.md,
@@ -147,21 +122,22 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   }, []);
 
   const generateFirstQuestion = async () => {
-    setLoading(true);
     setError(null);
+    questionStreaming.reset(); // This sets isLoading=true internally
 
     try {
       const question = await llmService.generateGuidedQuestion(
         1,
         [],
-        categorySchema
+        categorySchema,
+        questionStreaming.onProgress
       );
       setCurrentQuestion(question);
+      questionStreaming.handleComplete(question);
     } catch (err) {
       setError("Failed to generate question. Please try again.");
       console.error(err);
-    } finally {
-      setLoading(false);
+      questionStreaming.handleError(err as Error);
     }
   };
 
@@ -176,20 +152,21 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 
     if (step < 2) {
       // Generate next question
-      setLoading(true);
+      questionStreaming.reset(); // This sets isLoading=true internally
       try {
         const nextQuestion = await llmService.generateGuidedQuestion(
           step + 2,
           newHistory,
-          categorySchema
+          categorySchema,
+          questionStreaming.onProgress
         );
         setCurrentQuestion(nextQuestion);
+        questionStreaming.handleComplete(nextQuestion);
         setStep(step + 1);
       } catch (err) {
         setError("Failed to generate next question. Please try again.");
         console.error(err);
-      } finally {
-        setLoading(false);
+        questionStreaming.handleError(err as Error);
       }
     } else {
       // Generate final technology
@@ -258,13 +235,18 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     }
   };
 
+  // Show loading spinner before any streaming data arrives
+  if (questionStreaming.isLoading && !questionStreaming.isStreaming) {
+    return <LoadingSpinner message="Preparing question..." />;
+  }
+
   if (loading) {
     return (
       <LoadingSpinner
         message={
           technology
             ? "Finding the perfect technology for you..."
-            : "Preparing question..."
+            : "Generating your personalized learning path..."
         }
       />
     );
@@ -310,8 +292,13 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     );
   }
 
-  // Show question and options
-  if (currentQuestion) {
+  // Show question and options (with streaming support)
+  if (currentQuestion || questionStreaming.isStreaming) {
+    const displayData = questionStreaming.isStreaming || questionStreaming.isLoading
+      ? questionStreaming.partialData
+      : currentQuestion;
+    const isComplete = !!questionStreaming.finalData;
+
     return (
       <View style={styles.container}>
         {/* Fixed Header with Progress Bar */}
@@ -329,25 +316,12 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 
         {/* Scrollable Content */}
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-          <View style={styles.questionContainer}>
-            <Text style={styles.questionIcon}>🧭</Text>
-            <Text style={styles.questionText}>{currentQuestion.question}</Text>
-          </View>
-
-          <View style={styles.optionsContainer}>
-            {currentQuestion.options.map((option, index) => (
-              <Pressable
-                key={index}
-                style={({ pressed }) => [
-                  styles.optionButton,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => handleOptionSelect(option)}
-              >
-                <Text style={styles.optionText}>{option}</Text>
-              </Pressable>
-            ))}
-          </View>
+          <StreamingQuestionCard
+            partialData={displayData || {}}
+            isStreaming={questionStreaming.isStreaming}
+            isComplete={isComplete}
+            onSelectOption={handleOptionSelect}
+          />
 
           {conversationHistory.length > 0 && (
             <View style={styles.historyContainer}>

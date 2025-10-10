@@ -197,7 +197,10 @@ OUTPUT FORMAT (JSON):
   "questions": [
     {
       "question": "Clear question text",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "option_0": "First option",
+      "option_1": "Second option",
+      "option_2": "Third option",
+      "option_3": "Fourth option",
       "correctAnswer": 0,
       "explanation": "Brief explanation of why this answer is correct"
     },
@@ -205,7 +208,11 @@ OUTPUT FORMAT (JSON):
   ]
 }
 
-IMPORTANT:
+IMPORTANT STREAMING REQUIREMENTS:
+- Generate fields in this EXACT order: question, option_0, option_1, option_2, option_3, correctAnswer, explanation
+- Complete the ENTIRE question object before starting the next question object
+- This enables optimal progressive display during streaming
+- Use option_0, option_1, option_2, option_3 format (not an options array)
 - Return ONLY valid JSON without markdown code blocks
 
 Generate the quiz questions now:`,
