@@ -12,8 +12,6 @@ import { TypewriterText, FadeInItemWrapper } from '../common/StreamingAnimations
 
 interface Props {
   question: Partial<QuizQuestion>;
-  questionNumber: number;
-  totalQuestions: number;
   isComplete: boolean;  // Has all required fields (question, 4 options, correctAnswer, explanation)
   selectedAnswer?: number;
   showFeedback: boolean;
@@ -27,8 +25,6 @@ interface Props {
  */
 export const StreamingQuestionCard: React.FC<Props> = ({
   question,
-  questionNumber,
-  totalQuestions,
   isComplete,
   selectedAnswer,
   showFeedback,
@@ -40,43 +36,65 @@ export const StreamingQuestionCard: React.FC<Props> = ({
   const options = question.options || [];
   const isCorrect = isComplete && selectedAnswer === question.correctAnswer;
 
+  const optionLabels = ['A', 'B', 'C', 'D'];
+
   const styles = useMemo(() => StyleSheet.create({
     container: {
-      padding: spacing.xl,
-    },
-    progressText: {
-      fontSize: typography.fontSize.sm,
-      color: colors.primary,
-      fontWeight: typography.fontWeight.semibold,
-      textAlign: 'center',
-      marginBottom: spacing.md,
     },
     questionContainer: {
-      backgroundColor: colors.cardBackground,
-      padding: spacing.xl,
-      borderRadius: borderRadius.lg,
-      marginBottom: spacing.lg,
-    },
-    questionNumber: {
-      fontSize: typography.fontSize.sm,
-      color: colors.primary,
-      fontWeight: typography.fontWeight.semibold,
-      marginBottom: spacing.sm,
+      ...themeStyles.card,
+      padding: spacing.lg,
     },
     questionText: {
       fontSize: typography.fontSize.lg,
       fontWeight: typography.fontWeight.semibold,
       color: colors.text,
       lineHeight: typography.lineHeight.loose,
-      marginBottom: spacing.md,
     },
     optionsContainer: {
       marginTop: spacing.lg,
     },
     optionButton: {
       ...themeStyles.optionButton,
-      padding: spacing.lg,
+      padding: spacing.md,
       marginBottom: spacing.md,
+    },
+    optionLabel: {
+      width: 32,
+      height: 32,
+      borderRadius: borderRadius.round,
+      backgroundColor: colors.primaryLight,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+      flexShrink: 0,
+    },
+    optionLabelText: {
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.bold,
+      color: colors.primary,
+    },
+    optionLabelSelected: {
+      backgroundColor: colors.primary,
+    },
+    optionLabelTextSelected: {
+      color: colors.white,
+    },
+    optionLabelCorrect: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    optionLabelTextCorrect: {
+      color: colors.white,
+    },
+    optionLabelIncorrect: {
+      backgroundColor: colors.errorLight,
+      borderColor: colors.error,
+    },
+    optionLabelTextIncorrect: {
+      color: colors.errorDark,
     },
     optionDisabled: {
       opacity: 0.6,
@@ -86,6 +104,12 @@ export const StreamingQuestionCard: React.FC<Props> = ({
     optionCorrect: themeStyles.optionCorrect,
     optionIncorrect: themeStyles.optionIncorrect,
     optionContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    optionTextWrapper: {
+      flex: 1,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
@@ -143,13 +167,8 @@ export const StreamingQuestionCard: React.FC<Props> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.progressText}>
-        Question {questionNumber} of {totalQuestions}
-      </Text>
-
+      {/* Question Container - Separated */}
       <View style={styles.questionContainer}>
-        <Text style={styles.questionNumber}>Question {questionNumber}</Text>
-
         {/* Question text - streaming or static */}
         {hasQuestion ? (
           isComplete ? (
@@ -168,15 +187,18 @@ export const StreamingQuestionCard: React.FC<Props> = ({
           // Show skeleton while waiting for question text
           <SkeletonLoader width="100%" height={24} style={{ marginBottom: spacing.md }} />
         )}
+      </View>
 
-        {/* Options */}
-        <View style={styles.optionsContainer}>
-          {hasQuestion && options.map((option, index) => {
+      {/* Options Container - Separated from question */}
+      <View style={styles.optionsContainer}>
+        {hasQuestion && options.map((option, index) => {
             const isSelected = selectedAnswer === index;
             const isCorrectOption = index === question.correctAnswer;
 
             const optionStyle = [styles.optionButton];
             const optionTextStyle = [styles.optionText];
+            const optionLabelStyle = [styles.optionLabel];
+            const optionLabelTextStyle = [styles.optionLabelText];
             let showIcon = '';
 
             // Apply feedback styles
@@ -184,24 +206,32 @@ export const StreamingQuestionCard: React.FC<Props> = ({
               if (isSelected && isCorrect) {
                 optionStyle.push(styles.optionCorrect as any);
                 optionTextStyle.push(styles.optionTextCorrect as any);
+                optionLabelStyle.push(styles.optionLabelCorrect as any);
+                optionLabelTextStyle.push(styles.optionLabelTextCorrect as any);
                 showIcon = '✓';
               } else if (isSelected && !isCorrect) {
                 optionStyle.push(styles.optionIncorrect as any);
                 optionTextStyle.push(styles.optionTextIncorrect as any);
+                optionLabelStyle.push(styles.optionLabelIncorrect as any);
+                optionLabelTextStyle.push(styles.optionLabelTextIncorrect as any);
                 showIcon = '✗';
               } else if (isCorrectOption) {
                 optionStyle.push(styles.optionCorrect as any);
                 optionTextStyle.push(styles.optionTextCorrect as any);
+                optionLabelStyle.push(styles.optionLabelCorrect as any);
+                optionLabelTextStyle.push(styles.optionLabelTextCorrect as any);
                 showIcon = '✓';
               }
             } else if (isSelected) {
               optionStyle.push(styles.optionSelected as any);
               optionTextStyle.push(styles.optionTextSelected as any);
+              optionLabelStyle.push(styles.optionLabelSelected as any);
+              optionLabelTextStyle.push(styles.optionLabelTextSelected as any);
             }
 
             // Disable if not complete
             if (!isComplete) {
-              optionStyle.push(styles.optionDisabled);
+              optionStyle.push(styles.optionDisabled as any);
             }
 
             return (
@@ -215,10 +245,15 @@ export const StreamingQuestionCard: React.FC<Props> = ({
                   disabled={!isComplete || showFeedback}
                 >
                   <View style={styles.optionContent}>
-                    <Text style={optionTextStyle}>
-                      {String.fromCharCode(65 + index)}. {option}
-                    </Text>
-                    {showIcon && <Text style={styles.iconText}>{showIcon}</Text>}
+                    {/* Option Label (A, B, C, D) */}
+                    <View style={optionLabelStyle}>
+                      <Text style={optionLabelTextStyle}>{optionLabels[index]}</Text>
+                    </View>
+                    {/* Option Text and Icon */}
+                    <View style={styles.optionTextWrapper}>
+                      <Text style={optionTextStyle}>{option}</Text>
+                      {showIcon && <Text style={styles.iconText}>{showIcon}</Text>}
+                    </View>
                   </View>
                 </Pressable>
               </FadeInItemWrapper>
@@ -240,7 +275,6 @@ export const StreamingQuestionCard: React.FC<Props> = ({
                 <SkeletonLoader width="100%" height={60} />
               </View>
             ))}
-        </View>
       </View>
 
       {/* Feedback section - only show when complete and user has answered */}

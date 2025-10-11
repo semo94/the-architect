@@ -1,21 +1,20 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  Pressable,
-  View,
-  ScrollView,
-} from 'react-native';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { QuizResults } from '@/components/quiz/QuizResults';
 import { StreamingQuestionCard } from '@/components/quiz/StreamingQuestionCard';
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useStreamingData } from '@/hooks/useStreamingData';
 import llmService from '@/services/llmService';
 import { useAppStore } from '@/store/useAppStore';
 import { Quiz, QuizQuestion } from '@/types';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 export default function QuizScreen() {
   const { technologyId } = useLocalSearchParams<{ technologyId: string }>();
@@ -74,25 +73,28 @@ export default function QuizScreen() {
     },
   });
 
+  // Destructure streaming functions to avoid nested object properties in dependencies
+  const { onProgress, handleComplete, handleError, reset } = quizStreaming;
+
   const generateQuiz = useCallback(async () => {
     if (!technology) return;
 
     setError(null);
-    quizStreaming.reset(); // This sets isLoading=true internally
+    reset(); // This sets isLoading=true internally
 
     try {
       const generatedQuestions = await llmService.generateQuizQuestions(
         technology,
-        quizStreaming.onProgress
+        onProgress
       );
       // Don't set questions here - let onComplete handle it to avoid premature UI transition
-      quizStreaming.handleComplete({ questions: generatedQuestions });
+      handleComplete({ questions: generatedQuestions });
     } catch (err) {
       console.error('Failed to generate quiz:', err);
       setError('Failed to generate quiz questions. Please try again.');
-      quizStreaming.handleError(err as Error);
+      handleError(err as Error);
     }
-  }, [technology, quizStreaming.onProgress, quizStreaming.handleComplete, quizStreaming.handleError, quizStreaming.reset]);
+  }, [technology, onProgress, handleComplete, handleError, reset]);
 
   useEffect(() => {
     if (technology) {
@@ -228,7 +230,7 @@ export default function QuizScreen() {
     },
     contentContainer: {
       flexGrow: 1,
-      padding: spacing.xl,
+      padding: spacing.lg,
     },
     footer: themeStyles.footer,
     nextButton: {
@@ -342,8 +344,6 @@ export default function QuizScreen() {
       >
         <StreamingQuestionCard
           question={currentQuestion}
-          questionNumber={currentQuestionIndex + 1}
-          totalQuestions={4}
           isComplete={isCurrentQuestionComplete}
           selectedAnswer={userAnswers[currentQuestionIndex]}
           showFeedback={showFeedback}

@@ -6,8 +6,9 @@
 // Use expo/fetch for native platforms which supports ReadableStream
 let expoFetch: typeof fetch | null = null;
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   expoFetch = require('expo/fetch').fetch;
-} catch (e) {
+} catch {
   // Fallback to global fetch on web or if expo/fetch not available
 }
 
@@ -64,6 +65,7 @@ class SSEClient {
     if (!useProxy) {
       // Direct API call - need to add authentication headers
       // Get from Constants (already available in the app)
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const Constants = require('expo-constants').default;
       const provider = Constants.expoConfig?.extra?.llmProvider || 'anthropic';
       const apiKey = Constants.expoConfig?.extra?.llmApiKey;

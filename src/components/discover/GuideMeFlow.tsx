@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -46,7 +46,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
+  const { colors, typography, spacing, styles: themeStyles } = useTheme();
 
   const { technologies, addTechnology, dismissTechnology } = useAppStore();
 
@@ -54,6 +54,9 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const questionStreaming = useStreamingData<{ question: string; options: string[] }>({
     hasMinimumData: (data) => !!data.question,
   });
+
+  // Destructure streaming functions for proper dependency tracking
+  const { onProgress, handleComplete, handleError, reset } = questionStreaming;
 
   const styles = useMemo(() => StyleSheet.create({
     container: themeStyles.container,
@@ -115,31 +118,31 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
       fontSize: typography.fontSize.base,
       fontWeight: typography.fontWeight.semibold,
     },
-  }), [colors, typography, spacing, borderRadius, themeStyles]);
+  }), [colors, typography, spacing, themeStyles]);
 
-  useEffect(() => {
-    generateFirstQuestion();
-  }, []);
-
-  const generateFirstQuestion = async () => {
+  const generateFirstQuestion = useCallback(async () => {
     setError(null);
-    questionStreaming.reset(); // This sets isLoading=true internally
+    reset(); // This sets isLoading=true internally
 
     try {
       const question = await llmService.generateGuidedQuestion(
         1,
         [],
         categorySchema,
-        questionStreaming.onProgress
+        onProgress
       );
       setCurrentQuestion(question);
-      questionStreaming.handleComplete(question);
+      handleComplete(question);
     } catch (err) {
       setError("Failed to generate question. Please try again.");
       console.error(err);
-      questionStreaming.handleError(err as Error);
+      handleError(err as Error);
     }
-  };
+  }, [onProgress, handleComplete, reset, handleError]);
+
+  useEffect(() => {
+    generateFirstQuestion();
+  }, [generateFirstQuestion]);
 
   const handleOptionSelect = async (option: string) => {
     if (!currentQuestion) return;
