@@ -1,3 +1,4 @@
+import { useTheme } from '@/contexts/ThemeContext';
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -9,16 +10,15 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import categorySchema from "../../constants/categories";
+import { useStreamingData } from "../../hooks/useStreamingData";
 import llmService from "../../services/llmService";
 import { useAppStore } from "../../store/useAppStore";
 import { Technology } from "../../types";
 import { hasMinimumData, parseStreamingJson } from "../../utils/streamingParser";
-import { useStreamingData } from "../../hooks/useStreamingData";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { ActionButtons } from "./ActionButtons";
-import { StreamingQuestionCard } from "./StreamingQuestionCard";
+import { ScopeQuestionCard } from "./ScopeQuestionCard";
 import { TechnologyCard } from "./TechnologyCard";
-import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
   onComplete: () => void;
@@ -55,7 +55,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   });
 
   // Destructure streaming functions for proper dependency tracking
-  const { onProgress, handleComplete, handleError, reset } = questionStreaming;
+  const { onProgress, handleComplete, handleError, reset, cancel } = questionStreaming;
 
   const styles = useMemo(() => StyleSheet.create({
     container: themeStyles.container,
@@ -106,17 +106,6 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
       color: colors.primary,
       fontWeight: typography.fontWeight.medium,
     },
-    footer: themeStyles.footer,
-    cancelButton: {
-      paddingVertical: spacing.md,
-      alignItems: "center",
-      cursor: "pointer" as any,
-    },
-    cancelButtonText: {
-      color: colors.textSecondary,
-      fontSize: typography.fontSize.base,
-      fontWeight: typography.fontWeight.semibold,
-    },
   }), [colors, typography, spacing, themeStyles]);
 
   const generateFirstQuestion = useCallback(async () => {
@@ -141,7 +130,14 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 
   useEffect(() => {
     generateFirstQuestion();
-  }, [generateFirstQuestion]);
+
+    // Cleanup: cancel streaming when component unmounts
+    return () => {
+      console.log('[GuideMe] Cleaning up - cancelling all streams');
+      llmService.cancelStream();
+      cancel();
+    };
+  }, [generateFirstQuestion, cancel]);
 
   const handleOptionSelect = async (option: string) => {
     if (!currentQuestion) return;
@@ -316,7 +312,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 
         {/* Scrollable Content */}
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-          <StreamingQuestionCard
+          <ScopeQuestionCard
             partialData={displayData || {}}
             isStreaming={questionStreaming.isStreaming}
             isComplete={isComplete}
@@ -334,18 +330,6 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
             </View>
           )}
         </ScrollView>
-
-        <View style={styles.footer}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.cancelButton,
-              pressed && styles.pressed,
-            ]}
-            onPress={onComplete}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </Pressable>
-        </View>
       </View>
     );
   }

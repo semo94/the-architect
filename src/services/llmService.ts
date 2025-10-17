@@ -477,6 +477,21 @@ class LLMService {
     }));
   }
 
+  /**
+   * Cancel any ongoing streaming request
+   */
+  cancelStream() {
+    console.log('[LLM] Cancelling stream...');
+    sseClient.cancel();
+  }
+
+  /**
+   * Check if there's an active streaming request
+   */
+  isStreaming(): boolean {
+    return sseClient.isActive();
+  }
+
 }
 
 export default new LLMService();
