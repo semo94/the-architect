@@ -14,7 +14,6 @@ import { Technology } from '../../types';
 import { hasMinimumData, parseStreamingJson } from '../../utils/streamingParser';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ActionButtons } from './ActionButtons';
-import { StreamingTechnologyCard } from './StreamingTechnologyCard';
 import { TechnologyCard } from './TechnologyCard';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -138,28 +137,24 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     );
   }
 
-  // Show streaming card while content is being generated
-  if (isStreaming && !technology) {
-    return (
-      <View style={styles.container}>
-        <StreamingTechnologyCard partialData={partialData} />
-      </View>
-    );
-  }
-
-  if (!technology) {
+  // Show card - either streaming or final state
+  if (!isStreaming && !technology) {
     return null;
   }
 
-  // Show final card with action buttons
   return (
     <View style={styles.container}>
-      <TechnologyCard technology={technology} />
-      <ActionButtons
-        onDismiss={handleDismiss}
-        onAddToBucket={handleAddToBucket}
-        onAcquireNow={handleAcquireNow}
+      <TechnologyCard
+        technology={technology || partialData}
+        isComplete={!!technology}
       />
+      {technology && (
+        <ActionButtons
+          onDismiss={handleDismiss}
+          onAddToBucket={handleAddToBucket}
+          onAcquireNow={handleAcquireNow}
+        />
+      )}
     </View>
   );
 };

@@ -17,7 +17,6 @@ import { useStreamingData } from "../../hooks/useStreamingData";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { ActionButtons } from "./ActionButtons";
 import { StreamingQuestionCard } from "./StreamingQuestionCard";
-import { StreamingTechnologyCard } from "./StreamingTechnologyCard";
 import { TechnologyCard } from "./TechnologyCard";
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -146,6 +145,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 
   const handleOptionSelect = async (option: string) => {
     if (!currentQuestion) return;
+    if (loading) return; // Prevent multiple technology generations
 
     const newHistory = [
       ...conversationHistory,
@@ -154,7 +154,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     setConversationHistory(newHistory);
 
     if (step < 2) {
-      // Generate next question
+      // Generate next question (steps 0 and 1)
       questionStreaming.reset(); // This sets isLoading=true internally
       try {
         const nextQuestion = await llmService.generateGuidedQuestion(
@@ -165,14 +165,15 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
         );
         setCurrentQuestion(nextQuestion);
         questionStreaming.handleComplete(nextQuestion);
-        setStep(step + 1);
+        setStep(step + 1); // Increment only after successful generation
       } catch (err) {
         setError("Failed to generate next question. Please try again.");
         console.error(err);
         questionStreaming.handleError(err as Error);
       }
     } else {
-      // Generate final technology
+      // Generate final technology (step 2 - third question)
+      setCurrentQuestion(null); // Clear question immediately to hide UI
       generateFinalTechnology(newHistory);
     }
   };
@@ -255,15 +256,6 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     );
   }
 
-  // Show streaming card while content is being generated
-  if (isStreaming && !technology) {
-    return (
-      <View style={styles.container}>
-        <StreamingTechnologyCard partialData={partialData} />
-      </View>
-    );
-  }
-
   if (error) {
     return (
       <View style={[styles.centerContainer, { paddingTop: Math.max(insets.top, 20) }]}>
@@ -281,16 +273,21 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     );
   }
 
-  // Show technology card if generation is complete
-  if (technology) {
+  // Show technology card if generation is started or complete
+  if (technology || (isStreaming && !currentQuestion && !questionStreaming.isStreaming)) {
     return (
       <View style={styles.container}>
-        <TechnologyCard technology={technology} />
-        <ActionButtons
-          onDismiss={handleDismiss}
-          onAddToBucket={handleAddToBucket}
-          onAcquireNow={handleAcquireNow}
+        <TechnologyCard
+          technology={technology || partialData}
+          isComplete={!!technology}
         />
+        {technology && (
+          <ActionButtons
+            onDismiss={handleDismiss}
+            onAddToBucket={handleAddToBucket}
+            onAcquireNow={handleAcquireNow}
+          />
+        )}
       </View>
     );
   }

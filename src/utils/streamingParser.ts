@@ -285,24 +285,34 @@ export function hasMinimumData(partial: any): boolean {
 
 /**
  * Check if a specific Technology section has data
+ * Checks both flat format (streaming) and nested format (complete)
  */
 export function hasSectionData(partial: any, section: string): boolean {
   switch (section) {
     case 'header':
       return !!(partial.name && partial.category);
     case 'what':
-      return !!partial.what;
+      return !!(partial.what || partial.content?.what);
     case 'why':
-      return !!partial.why;
+      return !!(partial.why || partial.content?.why);
     case 'pros':
-      // Check for at least one pro field
-      return !!(partial.pro_0 || partial.pro_1 || partial.pro_2 || partial.pro_3 || partial.pro_4);
+      // Check for at least one pro field (flat format) OR nested array
+      return !!(
+        partial.pro_0 || partial.pro_1 || partial.pro_2 || partial.pro_3 || partial.pro_4 ||
+        (partial.content?.pros && partial.content.pros.length > 0)
+      );
     case 'cons':
-      // Check for at least one con field
-      return !!(partial.con_0 || partial.con_1 || partial.con_2 || partial.con_3 || partial.con_4);
+      // Check for at least one con field (flat format) OR nested array
+      return !!(
+        partial.con_0 || partial.con_1 || partial.con_2 || partial.con_3 || partial.con_4 ||
+        (partial.content?.cons && partial.content.cons.length > 0)
+      );
     case 'compare':
-      // Check for at least one comparison
-      return !!(partial.compare_0_tech && partial.compare_0_text);
+      // Check for at least one comparison (flat format) OR nested array
+      return !!(
+        (partial.compare_0_tech && partial.compare_0_text) ||
+        (partial.content?.compareToSimilar && partial.content.compareToSimilar.length > 0)
+      );
     default:
       return false;
   }
