@@ -1,12 +1,19 @@
+import { useTheme } from '@/contexts/ThemeContext';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useTheme } from '@/contexts/ThemeContext';
 import { SkeletonLoader } from '../common/SkeletonLoader';
 import { FadeInView, TypewriterText } from '../common/StreamingAnimations';
 
 interface QuestionData {
   question?: string;
   options?: string[];
+  // Flat format fields during streaming
+  option_0?: string;
+  option_1?: string;
+  option_2?: string;
+  option_3?: string;
+  option_4?: string;
+  option_5?: string;
 }
 
 interface Props {
@@ -64,7 +71,20 @@ export const StreamingQuestionCard: React.FC<Props> = ({
   });
 
   const hasQuestion = !!partialData.question;
-  const hasOptions = partialData.options && partialData.options.length > 0;
+
+  // Transform flat format to array for display (during streaming)
+  // Support both flat format (during streaming) and array format (after completion)
+  const flatData = partialData as any;
+  const options = partialData.options || [
+    flatData.option_0,
+    flatData.option_1,
+    flatData.option_2,
+    flatData.option_3,
+    flatData.option_4,
+    flatData.option_5,
+  ].filter(Boolean);
+
+  const expectedOptions = 4; // Default expected count for skeleton loaders
 
   return (
     <>
@@ -83,10 +103,11 @@ export const StreamingQuestionCard: React.FC<Props> = ({
         )}
       </View>
 
-      {/* Options */}
-      {hasOptions && (
+      {/* Options - show as they arrive progressively */}
+      {hasQuestion && (
         <View style={styles.optionsContainer}>
-          {partialData.options!.map((option, index) => (
+          {/* Show available options with fade-in animation */}
+          {options.map((option, index) => (
             <FadeInView key={index} delay={index * 100}>
               <Pressable
                 style={({ pressed }) => [
@@ -100,17 +121,14 @@ export const StreamingQuestionCard: React.FC<Props> = ({
               </Pressable>
             </FadeInView>
           ))}
-        </View>
-      )}
 
-      {/* Loading skeleton for options */}
-      {!hasOptions && hasQuestion && (
-        <View style={styles.optionsContainer}>
-          {[1, 2, 3, 4].map((i) => (
-            <View key={i} style={{ marginBottom: spacing.md }}>
-              <SkeletonLoader width="100%" height={60} />
-            </View>
-          ))}
+          {/* Show skeleton loaders for missing options while streaming */}
+          {isStreaming && options.length < expectedOptions &&
+            Array.from({ length: expectedOptions - options.length }).map((_, idx) => (
+              <View key={`skeleton-${idx}`} style={{ marginBottom: spacing.md }}>
+                <SkeletonLoader width="100%" height={60} />
+              </View>
+            ))}
         </View>
       )}
     </>

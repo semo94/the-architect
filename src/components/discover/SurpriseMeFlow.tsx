@@ -11,7 +11,7 @@ import categorySchema from '../../constants/categories';
 import llmService from '../../services/llmService';
 import { useAppStore } from '../../store/useAppStore';
 import { Technology } from '../../types';
-import { hasMinimumData, parseStreamingJson } from '../../utils/streamingJsonParser';
+import { hasMinimumData, parseStreamingJson } from '../../utils/streamingParser';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ActionButtons } from './ActionButtons';
 import { StreamingTechnologyCard } from './StreamingTechnologyCard';

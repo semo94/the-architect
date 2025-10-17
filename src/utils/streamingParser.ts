@@ -3,10 +3,20 @@
  * Handles incomplete JSON and extracts valid data progressively
  */
 
+// Cache for markdown extraction to avoid repeated regex operations during streaming
+let lastInputText = '';
+let lastExtractedText = '';
+
 /**
  * Extracts parseable JSON from text that may contain markdown code blocks
+ * Includes caching to optimize repeated calls with same/similar input
  */
 function extractJsonText(text: string): string {
+  // Return cached result if input hasn't changed
+  if (text === lastInputText) {
+    return lastExtractedText;
+  }
+
   let cleaned = text.trim();
 
   // Remove markdown code blocks
@@ -20,39 +30,37 @@ function extractJsonText(text: string): string {
     }
   }
 
+  // Cache the result
+  lastInputText = text;
+  lastExtractedText = cleaned;
+
   return cleaned;
 }
 
 /**
- * Attempts to fix incomplete JSON by closing open structures
+ * Extract flat format fields progressively
+ * Works for both Technology and Quiz question formats
  */
-function attemptJsonFix(text: string): string {
-  let fixed = text;
+function extractFlatFields(jsonText: string): Record<string, any> {
+  const result: Record<string, any> = {};
 
-  // Count braces and brackets
-  const openBraces = (fixed.match(/\{/g) || []).length;
-  const closeBraces = (fixed.match(/\}/g) || []).length;
-  const openBrackets = (fixed.match(/\[/g) || []).length;
-  const closeBrackets = (fixed.match(/\]/g) || []).length;
-
-  // Check if we're in the middle of a string
-  const quoteCount = (fixed.match(/"/g) || []).length;
-  if (quoteCount % 2 !== 0) {
-    // Close the open string
-    fixed += '"';
+  // Extract all simple string fields
+  const stringFieldMatches = jsonText.matchAll(/"([^"]+)"\s*:\s*"((?:[^"\\]|\\.)*)"/g);
+  for (const match of stringFieldMatches) {
+    const fieldName = match[1];
+    const fieldValue = match[2].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+    result[fieldName] = fieldValue;
   }
 
-  // Close open arrays
-  for (let i = 0; i < openBrackets - closeBrackets; i++) {
-    fixed += ']';
+  // Extract numeric fields (like correctAnswer)
+  const numberFieldMatches = jsonText.matchAll(/"([^"]+)"\s*:\s*(\d+)/g);
+  for (const match of numberFieldMatches) {
+    const fieldName = match[1];
+    const fieldValue = parseInt(match[2], 10);
+    result[fieldName] = fieldValue;
   }
 
-  // Close open objects
-  for (let i = 0; i < openBraces - closeBraces; i++) {
-    fixed += '}';
-  }
-
-  return fixed;
+  return result;
 }
 
 /**
@@ -185,15 +193,14 @@ export function parseStreamingJson<T = any>(streamText: string): Partial<T> {
     return { questions } as unknown as Partial<T>;
   }
 
-  // Try to fix and parse incomplete JSON
-  try {
-    const fixed = attemptJsonFix(jsonText);
-    const parsed = JSON.parse(fixed);
-    return parsed as Partial<T>;
-  } catch {
-    // Still can't parse, return empty object
-    return {};
+  // For flat format responses (Technology), extract available fields progressively
+  const flatFields = extractFlatFields(jsonText);
+  if (Object.keys(flatFields).length > 0) {
+    return flatFields as Partial<T>;
   }
+
+  // No parseable content yet
+  return {};
 }
 
 /**
@@ -264,3 +271,66 @@ export function hasMinimumFields<T extends Record<string, any>>(
     return value !== undefined && value !== null && value !== '';
   });
 }
+
+// ============================================================================
+// Technology-specific helpers (migrated from streamingJsonParser)
+// ============================================================================
+
+/**
+ * Check if we have enough Technology data to show the card
+ */
+export function hasMinimumData(partial: any): boolean {
+  return !!(partial.name && partial.category);
+}
+
+/**
+ * Check if a specific Technology section has data
+ */
+export function hasSectionData(partial: any, section: string): boolean {
+  switch (section) {
+    case 'header':
+      return !!(partial.name && partial.category);
+    case 'what':
+      return !!partial.what;
+    case 'why':
+      return !!partial.why;
+    case 'pros':
+      // Check for at least one pro field
+      return !!(partial.pro_0 || partial.pro_1 || partial.pro_2 || partial.pro_3 || partial.pro_4);
+    case 'cons':
+      // Check for at least one con field
+      return !!(partial.con_0 || partial.con_1 || partial.con_2 || partial.con_3 || partial.con_4);
+    case 'compare':
+      // Check for at least one comparison
+      return !!(partial.compare_0_tech && partial.compare_0_text);
+    default:
+      return false;
+  }
+}
+
+// ============================================================================
+// Guided Question helpers
+// ============================================================================
+
+/**
+ * Check if we have minimum question data to start streaming
+ */
+export function hasMinimumQuestionData(partial: any): boolean {
+  return !!partial.question;
+}
+
+/**
+ * Count how many options are available in the partial data
+ */
+export function getAvailableOptionsCount(partial: any): number {
+  const options = [
+    partial.option_0,
+    partial.option_1,
+    partial.option_2,
+    partial.option_3,
+    partial.option_4,
+    partial.option_5,
+  ].filter(Boolean);
+  return options.length;
+}
+

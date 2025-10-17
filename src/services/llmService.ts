@@ -27,22 +27,39 @@ interface ProviderHeaders {
 }
 
 // Validation schemas
-const TechnologyContentSchema = z.object({
+
+// Flat schema for streaming-optimized LLM responses
+const TechnologyContentSchemaFlat = z.object({
   name: z.string(),
   category: z.string(),
   subcategory: z.string(),
-  content: z.object({
-    what: z.string(),
-    why: z.string(),
-    pros: z.array(z.string()).min(4),
-    cons: z.array(z.string()).min(4),
-    compareToSimilar: z.array(
-      z.object({
-        technology: z.string(),
-        comparison: z.string(),
-      })
-    ).min(2),
-  }),
+  what: z.string(),
+  why: z.string(),
+  pro_0: z.string(),
+  pro_1: z.string(),
+  pro_2: z.string(),
+  pro_3: z.string(),
+  pro_4: z.string(),
+  con_0: z.string(),
+  con_1: z.string(),
+  con_2: z.string(),
+  con_3: z.string(),
+  con_4: z.string(),
+  compare_0_tech: z.string(),
+  compare_0_text: z.string(),
+  compare_1_tech: z.string(),
+  compare_1_text: z.string(),
+});
+
+// Flat schema for guided questions (supports 4-6 options)
+const GuidedQuestionSchemaFlat = z.object({
+  question: z.string(),
+  option_0: z.string(),
+  option_1: z.string(),
+  option_2: z.string(),
+  option_3: z.string(),
+  option_4: z.string().optional(),
+  option_5: z.string().optional(),
 });
 
 // Schema for LLM response (flat format for better streaming)
@@ -299,11 +316,44 @@ class LLMService {
     const result = onProgress
       ? await this.callLLMStream(prompt, onProgress)
       : await this.callLLM(prompt);
-    const validated = TechnologyContentSchema.parse(result);
 
+    // Validate using flat schema
+    const validated = TechnologyContentSchemaFlat.parse(result);
+
+    // Transform flat format to nested structure for app
     return {
       id: uuidv4(),
-      ...validated,
+      name: validated.name,
+      category: validated.category,
+      subcategory: validated.subcategory,
+      content: {
+        what: validated.what,
+        why: validated.why,
+        pros: [
+          validated.pro_0,
+          validated.pro_1,
+          validated.pro_2,
+          validated.pro_3,
+          validated.pro_4,
+        ],
+        cons: [
+          validated.con_0,
+          validated.con_1,
+          validated.con_2,
+          validated.con_3,
+          validated.con_4,
+        ],
+        compareToSimilar: [
+          {
+            technology: validated.compare_0_tech,
+            comparison: validated.compare_0_text,
+          },
+          {
+            technology: validated.compare_1_tech,
+            comparison: validated.compare_1_text,
+          },
+        ],
+      },
       status: 'discovered',
       discoveryMethod: 'surprise',
       discoveredAt: new Date().toISOString(),
@@ -326,11 +376,44 @@ class LLMService {
     const result = onProgress
       ? await this.callLLMStream(prompt, onProgress)
       : await this.callLLM(prompt);
-    const validated = TechnologyContentSchema.parse(result);
 
+    // Validate using flat schema
+    const validated = TechnologyContentSchemaFlat.parse(result);
+
+    // Transform flat format to nested structure for app
     return {
       id: uuidv4(),
-      ...validated,
+      name: validated.name,
+      category: validated.category,
+      subcategory: validated.subcategory,
+      content: {
+        what: validated.what,
+        why: validated.why,
+        pros: [
+          validated.pro_0,
+          validated.pro_1,
+          validated.pro_2,
+          validated.pro_3,
+          validated.pro_4,
+        ],
+        cons: [
+          validated.con_0,
+          validated.con_1,
+          validated.con_2,
+          validated.con_3,
+          validated.con_4,
+        ],
+        compareToSimilar: [
+          {
+            technology: validated.compare_0_tech,
+            comparison: validated.compare_0_text,
+          },
+          {
+            technology: validated.compare_1_tech,
+            comparison: validated.compare_1_text,
+          },
+        ],
+      },
       status: 'discovered',
       discoveryMethod: 'guided',
       discoveredAt: new Date().toISOString(),
@@ -354,7 +437,23 @@ class LLMService {
       ? await this.callLLMStream(prompt, onProgress)
       : await this.callLLM(prompt);
 
-    return result;
+    // Validate using flat schema
+    const validated = GuidedQuestionSchemaFlat.parse(result);
+
+    // Transform flat format to array format for app
+    const options = [
+      validated.option_0,
+      validated.option_1,
+      validated.option_2,
+      validated.option_3,
+      validated.option_4,
+      validated.option_5,
+    ].filter(Boolean) as string[];
+
+    return {
+      question: validated.question,
+      options,
+    };
   }
 
   async generateQuizQuestions(
