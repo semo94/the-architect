@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { parseStreamingJson } from '../utils/streamingParser';
 import { flushSync } from 'react-dom';
+import llmService from '../services/llmService';
 
 export interface UseStreamingDataOptions<T> {
   /**
@@ -75,6 +76,11 @@ export interface UseStreamingDataResult<T> {
    * Reset the streaming state
    */
   reset: () => void;
+
+  /**
+   * Cancel ongoing stream
+   */
+  cancel: () => void;
 }
 
 /**
@@ -159,6 +165,13 @@ export function useStreamingData<T>(
     setError(null);
   }, []);
 
+  const cancel = useCallback(() => {
+    console.log('[useStreamingData] Cancelling stream...');
+    llmService.cancelStream();
+    setIsStreaming(false);
+    setIsLoading(false);
+  }, []);
+
   return {
     partialData,
     isStreaming,
@@ -169,5 +182,6 @@ export function useStreamingData<T>(
     handleComplete,
     handleError,
     reset,
+    cancel,
   };
 }

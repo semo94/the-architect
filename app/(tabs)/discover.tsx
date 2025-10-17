@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -7,16 +7,15 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Card } from '@/components/common/Card';
-import { GuideMeFlow } from '@/components/discover/GuideMeFlow';
-import { SurpriseMeFlow } from '@/components/discover/SurpriseMeFlow';
 import { useAppStore } from '@/store/useAppStore';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export default function DiscoverScreen() {
-  const [flowMode, setFlowMode] = useState<'idle' | 'surprise' | 'guided'>('idle');
   const { profile } = useAppStore();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
 
   const styles = useMemo(() => StyleSheet.create({
@@ -87,24 +86,12 @@ export default function DiscoverScreen() {
   }), [colors, typography, spacing, borderRadius, themeStyles]);
 
   const handleSurpriseMe = () => {
-    setFlowMode('surprise');
+    router.push('/discover-surprise');
   };
 
   const handleGuideMe = () => {
-    setFlowMode('guided');
+    router.push('/discover-guided');
   };
-
-  const handleFlowComplete = () => {
-    setFlowMode('idle');
-  };
-
-  if (flowMode === 'surprise') {
-    return <SurpriseMeFlow onComplete={handleFlowComplete} />;
-  }
-
-  if (flowMode === 'guided') {
-    return <GuideMeFlow onComplete={handleFlowComplete} />;
-  }
 
   return (
     <ScrollView style={styles.container}>

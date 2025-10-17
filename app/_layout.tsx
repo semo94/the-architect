@@ -40,6 +40,26 @@ export default function RootLayout() {
                   headerTitleStyle: { fontWeight: "bold" },
                 }}
               />
+              <Stack.Screen
+                name="discover-surprise"
+                options={{
+                  presentation: "card",
+                  title: "Surprise Me",
+                  headerStyle: { backgroundColor: colors.primary },
+                  headerTintColor: colors.white,
+                  headerTitleStyle: { fontWeight: "bold" },
+                }}
+              />
+              <Stack.Screen
+                name="discover-guided"
+                options={{
+                  presentation: "card",
+                  title: "Guide Me",
+                  headerStyle: { backgroundColor: colors.primary },
+                  headerTintColor: colors.white,
+                  headerTitleStyle: { fontWeight: "bold" },
+                }}
+              />
             </Stack>
             <StatusBar style="auto" />
           </NavigationThemeProvider>

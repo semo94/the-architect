@@ -40,6 +40,12 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
 
   useEffect(() => {
     generateSurpriseTechnology();
+
+    // Cleanup: cancel streaming when component unmounts
+    return () => {
+      console.log('[SurpriseMe] Cleaning up - cancelling stream');
+      llmService.cancelStream();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
