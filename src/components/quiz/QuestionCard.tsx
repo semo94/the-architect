@@ -1,14 +1,14 @@
+import { useTheme } from '@/contexts/ThemeContext';
 import React, { useMemo } from 'react';
 import {
-  View,
-  Text,
   Pressable,
   StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { QuizQuestion } from '../../types';
-import { useTheme } from '@/contexts/ThemeContext';
 import { SkeletonLoader } from '../common/SkeletonLoader';
-import { TypewriterText, FadeInItemWrapper } from '../common/StreamingAnimations';
+import { FadeInItemWrapper, TypewriterText } from '../common/StreamingAnimations';
 
 interface Props {
   question: Partial<QuizQuestion>;
@@ -19,11 +19,11 @@ interface Props {
 }
 
 /**
- * Unified streaming question card that handles both:
+ * Unified question card that handles both:
  * 1. Streaming state - Shows typewriter effect for incomplete questions
  * 2. Interactive state - Allows user to answer when question is complete
  */
-export const StreamingQuestionCard: React.FC<Props> = ({
+export const QuestionCard: React.FC<Props> = ({
   question,
   isComplete,
   selectedAnswer,

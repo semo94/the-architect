@@ -1,6 +1,6 @@
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { QuestionCard } from '@/components/quiz/QuestionCard';
 import { QuizResults } from '@/components/quiz/QuizResults';
-import { StreamingQuestionCard } from '@/components/quiz/StreamingQuestionCard';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useStreamingData } from '@/hooks/useStreamingData';
 import llmService from '@/services/llmService';
@@ -342,7 +342,7 @@ export default function QuizScreen() {
         bounces={true}
         showsVerticalScrollIndicator={true}
       >
-        <StreamingQuestionCard
+        <QuestionCard
           question={currentQuestion}
           isComplete={isCurrentQuestionComplete}
           selectedAnswer={userAnswers[currentQuestionIndex]}
