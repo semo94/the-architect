@@ -24,9 +24,9 @@ interface Props {
 }
 
 /**
- * Streaming question card that progressively reveals question and options
+ * Scope question card that progressively reveals question and options
  */
-export const StreamingQuestionCard: React.FC<Props> = ({
+export const ScopeQuestionCard: React.FC<Props> = ({
   partialData,
   isStreaming,
   isComplete,

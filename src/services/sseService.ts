@@ -217,7 +217,16 @@ class SSEClient {
    * Cancel ongoing stream
    */
   cancel() {
+    console.log('[SSE] Cancelling stream...');
     this.abortController?.abort();
+    this.abortController = null;
+  }
+
+  /**
+   * Check if there's an active stream
+   */
+  isActive(): boolean {
+    return this.abortController !== null;
   }
 }
 

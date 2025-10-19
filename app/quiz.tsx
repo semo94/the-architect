@@ -74,7 +74,7 @@ export default function QuizScreen() {
   });
 
   // Destructure streaming functions to avoid nested object properties in dependencies
-  const { onProgress, handleComplete, handleError, reset } = quizStreaming;
+  const { onProgress, handleComplete, handleError, reset, cancel } = quizStreaming;
 
   const generateQuiz = useCallback(async () => {
     if (!technology) return;
@@ -100,7 +100,13 @@ export default function QuizScreen() {
     if (technology) {
       generateQuiz();
     }
-  }, [technology, generateQuiz]);
+
+    // Cleanup: cancel streaming when component unmounts or technology changes
+    return () => {
+      console.log('[Quiz] Cleaning up - cancelling stream');
+      cancel();
+    };
+  }, [technology, generateQuiz, cancel]);
 
   // Helper to check if a question is complete (has all required fields for interaction)
   const isQuestionComplete = (q: Partial<QuizQuestion>): boolean => {
