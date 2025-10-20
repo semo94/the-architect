@@ -1,10 +1,10 @@
-# The Architect 🏗️
+# Breadthwise
 
 A cross-platform mobile app that helps senior software engineers systematically expand their technical breadth through LLM-powered content generation, quizzes, and progress tracking.
 
 ## 📱 About
 
-The Architect is designed to help experienced engineers transition from deep specialists to well-rounded software architects by discovering and learning new technologies across various domains of software architecture.
+Breadthwise is designed to help experienced engineers transition from deep specialists to well-rounded software architects by discovering and learning new technologies across various domains of software architecture.
 
 ### Key Features
 
@@ -28,7 +28,7 @@ The Architect is designed to help experienced engineers transition from deep spe
 
 1. **Clone and install dependencies**:
    ```bash
-   cd TheArchitect
+   cd Breadthwise
    pnpm install
    ```
 
@@ -67,7 +67,7 @@ The Architect is designed to help experienced engineers transition from deep spe
 ## 📂 Project Structure
 
 ```
-TheArchitect/
+Breadthwise/
 ├── app/                        # Expo Router screens
 │   ├── (tabs)/                 # Tab navigation
 │   │   ├── index.tsx          # Root redirect

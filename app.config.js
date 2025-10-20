@@ -2,23 +2,28 @@ import 'dotenv/config';
 
 export default {
   expo: {
-    name: "TheArchitect",
-    slug: "TheArchitect",
+    name: "Breadthwise",
+    slug: "breadthwise",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    scheme: "thearchitect",
+    scheme: "breadthwise",
     userInterfaceStyle: "automatic",
+    splash: {
+      image: "./assets/images/splash-icon.png",
+      resizeMode: "contain",
+      backgroundColor: "#29B6F6",
+    },
     newArchEnabled: true,
     ios: {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false
       },
       supportsTablet: true,
-      bundleIdentifier: "com.sbakri.thearchitect",
+      bundleIdentifier: "com.sbakri.breadthwise",
     },
     android: {
-      package: "com.sbakri.thearchitect",
+      package: "com.sbakri.breadthwise",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage: "./assets/images/android-icon-foreground.png",
@@ -34,18 +39,6 @@ export default {
     },
     plugins: [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          image: "./assets/images/splash-icon.png",
-          imageWidth: 200,
-          resizeMode: "contain",
-          backgroundColor: "#ffffff",
-          dark: {
-            backgroundColor: "#000000",
-          },
-        },
-      ],
     ],
     experiments: {
       typedRoutes: true,
@@ -53,9 +46,8 @@ export default {
     },
     extra: {
       eas: {
-        projectId: "e08c5587-bdf1-4bb0-8f26-0c71c8245bf3"
+        projectId: "6272247b-8bd2-4101-b44f-bdcfc30174b8"
       },
-      projectId: "e08c5587-bdf1-4bb0-8f26-0c71c8245bf3",
       llmProvider: process.env.LLM_PROVIDER || "anthropic",
       llmApiKey: process.env.LLM_API_KEY,
       llmApiUrl: process.env.LLM_API_URL || "https://api.anthropic.com/v1/messages",

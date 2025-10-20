@@ -1,4 +1,4 @@
-﻿# Software Architect Learning App - Technical Specification v3.0
+# Breadthwise - Technical Specification v3.0
 
 ## Executive Summary
 
