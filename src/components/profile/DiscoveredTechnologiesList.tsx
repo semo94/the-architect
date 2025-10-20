@@ -19,12 +19,14 @@ interface DiscoveredTechnologiesListProps {
   technologies: Technology[];
   onTestKnowledge: (technologyId: string) => void;
   onDelete: (technologyId: string) => void;
+  onTechnologyPress: (technologyId: string) => void;
 }
 
 export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProps> = ({
   technologies,
   onTestKnowledge,
   onDelete,
+  onTechnologyPress,
 }) => {
   const { colors, typography, spacing, borderRadius } = useTheme();
   const sectionStyles = useSectionStyles();
@@ -206,6 +208,12 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
       }
     );
 
+    const tapGesture = Gesture.Tap()
+      .onEnd(() => {
+        'worklet';
+        runOnJS(onTechnologyPress)(tech.id);
+      });
+
     const panGesture = Gesture.Pan()
       .activeOffsetX([-10, 10])
       .onUpdate((event) => {
@@ -229,6 +237,8 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
           actionTrigger.value = 2;
         }
       });
+
+    const composedGesture = Gesture.Exclusive(panGesture, tapGesture);
 
     const animatedStyle = useAnimatedStyle(() => ({
       transform: [{ translateX: translateX.value }],
@@ -259,7 +269,7 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
           </Animated.View>
         </Animated.View>
 
-        <GestureDetector gesture={panGesture}>
+        <GestureDetector gesture={composedGesture}>
           <Animated.View style={animatedStyle}>
             <Card
               style={[

@@ -298,7 +298,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     return (
       <View style={styles.container}>
         {/* Fixed Header with Progress Bar */}
-        <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
+        <View style={[styles.header]}>
           <Text style={styles.stepIndicator}>Step {step + 1} of 3</Text>
           <View style={styles.progressBar}>
             <View

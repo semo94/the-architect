@@ -60,6 +60,16 @@ export default function RootLayout() {
                   headerTitleStyle: { fontWeight: "bold" },
                 }}
               />
+              <Stack.Screen
+                name="technology-detail"
+                options={{
+                  presentation: "card",
+                  title: "Technology Details",
+                  headerStyle: { backgroundColor: colors.primary },
+                  headerTintColor: colors.white,
+                  headerTitleStyle: { fontWeight: "bold" },
+                }}
+              />
             </Stack>
             <StatusBar style="auto" />
           </NavigationThemeProvider>

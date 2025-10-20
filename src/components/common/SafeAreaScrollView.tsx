@@ -6,7 +6,7 @@ interface SafeAreaScrollViewProps extends ScrollViewProps {
   children: React.ReactNode;
   /**
    * Which edges to apply safe area insets to.
-   * Default: ['top']
+   * Default: [] (no edges, since Stack navigation headers handle safe area)
    */
   edges?: readonly Edge[];
   /**
@@ -41,7 +41,7 @@ interface SafeAreaScrollViewProps extends ScrollViewProps {
  */
 export const SafeAreaScrollView: React.FC<SafeAreaScrollViewProps> = ({
   children,
-  edges = ['top'],
+  edges = [],
   minimumTopPadding = 0,
   containerStyle,
   contentContainerStyle,

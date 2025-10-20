@@ -8,9 +8,9 @@ import {
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
-  onDismiss: () => void;
-  onAddToBucket: () => void;
-  onAcquireNow: () => void;
+  onDismiss?: () => void;
+  onAddToBucket?: () => void;
+  onAcquireNow?: () => void;
 }
 
 export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcquireNow }) => {
@@ -72,41 +72,47 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
 
   return (
     <View style={styles.container}>
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          styles.dismissButton,
-          pressed && styles.pressed
-        ]}
-        onPress={onDismiss}
-      >
-        <Text style={styles.dismissIcon}>✕</Text>
-        <Text style={styles.dismissText}>Dismiss</Text>
-      </Pressable>
+      {onDismiss && (
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            styles.dismissButton,
+            pressed && styles.pressed
+          ]}
+          onPress={onDismiss}
+        >
+          <Text style={styles.dismissIcon}>✕</Text>
+          <Text style={styles.dismissText}>Dismiss</Text>
+        </Pressable>
+      )}
 
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          styles.bucketButton,
-          pressed && styles.pressed
-        ]}
-        onPress={onAddToBucket}
-      >
-        <Text style={styles.bucketIcon}>📋</Text>
-        <Text style={styles.bucketText}>Add to Bucket</Text>
-      </Pressable>
+      {onAddToBucket && (
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            styles.bucketButton,
+            pressed && styles.pressed
+          ]}
+          onPress={onAddToBucket}
+        >
+          <Text style={styles.bucketIcon}>📋</Text>
+          <Text style={styles.bucketText}>Add to Bucket</Text>
+        </Pressable>
+      )}
 
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          styles.acquireButton,
-          pressed && styles.pressed
-        ]}
-        onPress={onAcquireNow}
-      >
-        <Text style={styles.acquireIcon}>🎯</Text>
-        <Text style={styles.acquireText}>Acquire Now</Text>
-      </Pressable>
+      {onAcquireNow && (
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            styles.acquireButton,
+            pressed && styles.pressed
+          ]}
+          onPress={onAcquireNow}
+        >
+          <Text style={styles.acquireIcon}>🎯</Text>
+          <Text style={styles.acquireText}>Acquire Now</Text>
+        </Pressable>
+      )}
     </View>
   );
 };

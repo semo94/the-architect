@@ -1,21 +1,28 @@
+import { BreadthExpansionStats } from '@/components/profile/BreadthExpansionStats';
+import { CategoryBreakdownList } from '@/components/profile/CategoryBreakdownList';
+import { DiscoveredTechnologiesList } from '@/components/profile/DiscoveredTechnologiesList';
+import { MilestonesList } from '@/components/profile/MilestonesList';
+import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import { QuizPerformanceCard } from '@/components/profile/QuizPerformanceCard';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useAppStore } from '@/store/useAppStore';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, Alert } from 'react-native';
+import { Alert, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAppStore } from '@/store/useAppStore';
-import { ProfileHeader } from '@/components/profile/ProfileHeader';
-import { BreadthExpansionStats } from '@/components/profile/BreadthExpansionStats';
-import { QuizPerformanceCard } from '@/components/profile/QuizPerformanceCard';
-import { CategoryBreakdownList } from '@/components/profile/CategoryBreakdownList';
-import { MilestonesList } from '@/components/profile/MilestonesList';
-import { DiscoveredTechnologiesList } from '@/components/profile/DiscoveredTechnologiesList';
-import { useTheme } from '@/contexts/ThemeContext';
 
 export default function ProfileScreen() {
   const { profile, technologies, deleteTechnology } = useAppStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
+
+  const handleViewTechnology = (technologyId: string) => {
+    router.push({
+      pathname: '/technology-detail',
+      params: { technologyId }
+    });
+  };
 
   const handleTestKnowledge = (technologyId: string) => {
     router.push({
@@ -72,6 +79,7 @@ export default function ProfileScreen() {
         technologies={technologies}
         onTestKnowledge={handleTestKnowledge}
         onDelete={handleDelete}
+        onTechnologyPress={handleViewTechnology}
       />
     </ScrollView>
   );
