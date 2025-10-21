@@ -1,21 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create, type StateCreator } from 'zustand';
-import { Profile, Quiz, Technology } from '../types';
+import { Profile, Quiz, Topic } from '../types';
 
 const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
 
 interface AppState {
-  technologies: Technology[];
-  dismissedTechnologies: string[];
+  topics: Topic[];
+  dismissedTopics: string[];
   quizzes: Quiz[];
   currentQuiz: Quiz | null;
   profile: Profile;
   isLoading: boolean;
   error: string | null;
-  addTechnology: (technology: Technology) => void;
-  updateTechnologyStatus: (id: string, status: 'learned') => void;
-  dismissTechnology: (name: string) => void;
-  deleteTechnology: (id: string) => void;
+  addTopic: (topic: Topic) => void;
+  updateTopicStatus: (id: string, status: 'learned') => void;
+  dismissTopic: (name: string) => void;
+  deleteTopic: (id: string) => void;
   addQuiz: (quiz: Quiz) => void;
   updateQuizAnswer: (questionIndex: number, answer: number) => void;
   calculateStatistics: () => void;
@@ -35,8 +35,8 @@ const initialProfile: Profile = {
       learningRate: 0,
     },
     growthMetrics: {
-      technologiesThisWeek: 0,
-      technologiesThisMonth: 0,
+      topicsThisWeek: 0,
+      topicsThisMonth: 0,
       monthlyGrowthRate: '+0',
       averagePerWeek: 0,
     },
@@ -66,53 +66,53 @@ const initialProfile: Profile = {
 };
 
 const storeCreator: StateCreator<AppState> = (set, get) => ({
-  technologies: [],
-  dismissedTechnologies: [],
+  topics: [],
+  dismissedTopics: [],
   quizzes: [],
   currentQuiz: null,
   profile: initialProfile,
   isLoading: false,
   error: null,
 
-  addTechnology: (technology: Technology) => {
+  addTopic: (topic: Topic) => {
     set((state) => {
       // Prevent duplicates by id or name when navigating back to a previously rendered component
-      const exists = state.technologies.some(
-        (t: Technology) => t.id === technology.id || t.name === technology.name
+      const exists = state.topics.some(
+        (t: Topic) => t.id === topic.id || t.name === topic.name
       );
       if (exists) {
         return state;
       }
       return {
-        technologies: [...state.technologies, technology],
+        topics: [...state.topics, topic],
       } as any;
     });
     get().calculateStatistics();
     get().checkMilestones();
   },
 
-  updateTechnologyStatus: (id: string, status: 'learned') => {
+  updateTopicStatus: (id: string, status: 'learned') => {
     set((state) => ({
-      technologies: state.technologies.map((tech: Technology) =>
-        tech.id === id
-          ? { ...tech, status, learnedAt: new Date().toISOString() }
-          : tech
+      topics: state.topics.map((topic: Topic) =>
+        topic.id === id
+          ? { ...topic, status, learnedAt: new Date().toISOString() }
+          : topic
       ),
     }));
     get().calculateStatistics();
     get().checkMilestones();
   },
 
-  dismissTechnology: (name: string) => {
+  dismissTopic: (name: string) => {
     set((state) => ({
-      dismissedTechnologies: [...state.dismissedTechnologies, name],
+      dismissedTopics: [...state.dismissedTopics, name],
     }));
   },
 
-  deleteTechnology: (id: string) => {
+  deleteTopic: (id: string) => {
     set((state) => ({
-      technologies: state.technologies.filter((tech: Technology) => tech.id !== id),
-      quizzes: state.quizzes.filter((quiz: Quiz) => quiz.technologyId !== id),
+      topics: state.topics.filter((topic: Topic) => topic.id !== id),
+      quizzes: state.quizzes.filter((quiz: Quiz) => quiz.topicId !== id),
     }));
     get().calculateStatistics();
     get().checkMilestones();
@@ -123,7 +123,7 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
       quizzes: [...state.quizzes, quiz],
     }));
     if (quiz.passed) {
-      get().updateTechnologyStatus(quiz.technologyId, 'learned');
+      get().updateTopicStatus(quiz.topicId, 'learned');
     }
     get().calculateStatistics();
   },
@@ -142,26 +142,26 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
   },
 
   calculateStatistics: () => {
-    const technologies = get().technologies;
+    const topics = get().topics;
     const quizzes = get().quizzes;
-    const dismissedCount = get().dismissedTechnologies.length;
+    const dismissedCount = get().dismissedTopics.length;
 
-    const learned = technologies.filter((t: Technology) => t.status === 'learned').length;
-    const discovered = technologies.length;
+    const learned = topics.filter((t: Topic) => t.status === 'learned').length;
+    const discovered = topics.length;
     const inBucketList = discovered - learned;
 
     const categoryBreakdown: Record<string, any> = {};
-    technologies.forEach((tech: Technology) => {
-      if (!categoryBreakdown[tech.category]) {
-        categoryBreakdown[tech.category] = {
+    topics.forEach((topic: Topic) => {
+      if (!categoryBreakdown[topic.category]) {
+        categoryBreakdown[topic.category] = {
           discovered: 0,
           learned: 0,
           learningRate: 0,
         };
       }
-      categoryBreakdown[tech.category].discovered++;
-      if (tech.status === 'learned') {
-        categoryBreakdown[tech.category].learned++;
+      categoryBreakdown[topic.category].discovered++;
+      if (topic.status === 'learned') {
+        categoryBreakdown[topic.category].learned++;
       }
     });
 
@@ -193,8 +193,8 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
             ...state.profile.statistics.growthMetrics,
           },
           discoveryStats: {
-            surpriseMeCount: technologies.filter((t: Technology) => t.discoveryMethod === 'surprise').length,
-            guideMeCount: technologies.filter((t: Technology) => t.discoveryMethod === 'guided').length,
+            surpriseMeCount: topics.filter((t: Topic) => t.discoveryMethod === 'surprise').length,
+            guideMeCount: topics.filter((t: Topic) => t.discoveryMethod === 'guided').length,
             dismissedCount: dismissedCount,
           },
           quizPerformance: {
@@ -206,7 +206,7 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
           categoryBreakdown: categoryBreakdown,
           activity: {
             ...state.profile.statistics.activity,
-            categoriesExplored: Array.from(new Set(technologies.map((t: Technology) => t.category))),
+            categoriesExplored: Array.from(new Set(topics.map((t: Topic) => t.category))),
           },
         },
         updatedAt: new Date().toISOString(),
@@ -215,17 +215,17 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
   },
 
   checkMilestones: () => {
-    const { technologies } = get();
-    const learned = technologies.filter((t: Technology) => t.status === 'learned').length;
-    const discovered = technologies.length;
+    const { topics } = get();
+    const learned = topics.filter((t: Topic) => t.status === 'learned').length;
+    const discovered = topics.length;
 
     const milestoneDefinitions = [
       { type: 'discovered' as const, threshold: 10, title: 'First 10 Discovered', icon: '🎯' },
       { type: 'discovered' as const, threshold: 25, title: 'Quarter Century', icon: '🎖️' },
       { type: 'discovered' as const, threshold: 50, title: 'Half Hundred', icon: '⭐' },
-      { type: 'learned' as const, threshold: 10, title: '10 Technologies Mastered', icon: '✓' },
-      { type: 'learned' as const, threshold: 25, title: '25 Technologies Mastered', icon: '✓✓' },
-      { type: 'learned' as const, threshold: 50, title: '50 Technologies Mastered', icon: '🏆' },
+      { type: 'learned' as const, threshold: 10, title: '10 Topics Mastered', icon: '✓' },
+      { type: 'learned' as const, threshold: 25, title: '25 Topics Mastered', icon: '✓✓' },
+      { type: 'learned' as const, threshold: 50, title: '50 Topics Mastered', icon: '🏆' },
     ];
 
     set((state) => ({
@@ -259,12 +259,12 @@ export const useAppStore = create<AppState>()(storeCreator);
 const STORAGE_KEY = 'architect-app-storage';
 
 type PersistedSlice = Pick<AppState,
-  'technologies' | 'dismissedTechnologies' | 'quizzes' | 'currentQuiz' | 'profile'>;
+  'topics' | 'dismissedTopics' | 'quizzes' | 'currentQuiz' | 'profile'>;
 
 function selectPersisted(state: AppState): PersistedSlice {
   return {
-    technologies: state.technologies,
-    dismissedTechnologies: state.dismissedTechnologies,
+    topics: state.topics,
+    dismissedTopics: state.dismissedTopics,
     quizzes: state.quizzes,
     currentQuiz: state.currentQuiz,
     profile: state.profile,

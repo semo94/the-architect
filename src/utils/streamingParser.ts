@@ -39,7 +39,7 @@ function extractJsonText(text: string): string {
 
 /**
  * Extract flat format fields progressively
- * Works for both Technology and Quiz question formats
+ * Works for both Topic and Quiz question formats
  */
 function extractFlatFields(jsonText: string): Record<string, any> {
   const result: Record<string, any> = {};
@@ -193,7 +193,7 @@ export function parseStreamingJson<T = any>(streamText: string): Partial<T> {
     return { questions } as unknown as Partial<T>;
   }
 
-  // For flat format responses (Technology), extract available fields progressively
+  // For flat format responses (Topic), extract available fields progressively
   const flatFields = extractFlatFields(jsonText);
   if (Object.keys(flatFields).length > 0) {
     return flatFields as Partial<T>;
@@ -273,18 +273,18 @@ export function hasMinimumFields<T extends Record<string, any>>(
 }
 
 // ============================================================================
-// Technology-specific helpers (migrated from streamingJsonParser)
+// Topic-specific helpers (migrated from streamingJsonParser)
 // ============================================================================
 
 /**
- * Check if we have enough Technology data to show the card
+ * Check if we have enough Topic data to show the card
  */
 export function hasMinimumData(partial: any): boolean {
   return !!(partial.name && partial.category);
 }
 
 /**
- * Check if a specific Technology section has data
+ * Check if a specific Topic section has data
  * Checks both flat format (streaming) and nested format (complete)
  */
 export function hasSectionData(partial: any, section: string): boolean {

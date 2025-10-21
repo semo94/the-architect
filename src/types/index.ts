@@ -1,22 +1,37 @@
-export type TechnologyStatus = 'discovered' | 'learned';
+export type TopicStatus = 'discovered' | 'learned';
 export type DiscoveryMethod = 'surprise' | 'guided';
 
-export interface Technology {
+export type TopicType =
+  | 'concepts'
+  | 'patterns'
+  | 'technologies'
+  | 'strategies'
+  | 'models'
+  | 'frameworks'
+  | 'protocols'
+  | 'practices'
+  | 'methodologies'
+  | 'architectures';
+
+export interface TopicContent {
+  what: string;
+  why: string;
+  pros: string[];
+  cons: string[];
+  compareToSimilar: {
+    topic: string;
+    comparison: string;
+  }[];
+}
+
+export interface Topic {
   id: string;
   name: string;
+  topicType: TopicType;
   category: string;
   subcategory: string;
-  content: {
-    what: string;
-    why: string;
-    pros: string[];
-    cons: string[];
-    compareToSimilar: {
-      technology: string;
-      comparison: string;
-    }[];
-  };
-  status: TechnologyStatus;
+  content: TopicContent;
+  status: TopicStatus;
   discoveryMethod: DiscoveryMethod;
   discoveredAt: string;
   learnedAt: string | null;
@@ -24,8 +39,8 @@ export interface Technology {
 
 export interface Quiz {
   id: string;
-  technologyId: string;
-  technologyName: string;
+  topicId: string;
+  topicName: string;
   questions: QuizQuestion[];
   score: number;
   passed: boolean;
@@ -50,8 +65,8 @@ export interface ProfileStatistics {
     learningRate: number;
   };
   growthMetrics: {
-    technologiesThisWeek: number;
-    technologiesThisMonth: number;
+    topicsThisWeek: number;
+    topicsThisMonth: number;
     monthlyGrowthRate: string;
     averagePerWeek: number;
   };
