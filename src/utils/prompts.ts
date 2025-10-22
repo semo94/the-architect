@@ -5,6 +5,117 @@ import { Topic, TopicType } from '../types';
  * Centralized location for all prompt engineering
  */
 
+// ============================================================================
+// TOPIC TYPE DEFINITIONS
+// Single source of truth for all topic type descriptions
+// ============================================================================
+
+interface TopicTypeDefinition {
+  short: string;      // Concise description for lists
+  detailed: string;   // Detailed description with examples
+}
+
+const TOPIC_TYPE_DEFINITIONS: Record<TopicType, TopicTypeDefinition> = {
+  concepts: {
+    short: 'Theoretical foundations and principles',
+    detailed: 'Theoretical foundations and principles (e.g., CAP Theorem, Consistency Models)',
+  },
+  patterns: {
+    short: 'Reusable architectural solutions',
+    detailed: 'Reusable architectural solutions (e.g., Circuit Breaker, Saga Pattern)',
+  },
+  technologies: {
+    short: 'Specific tools and platforms',
+    detailed: 'Specific tools and platforms (e.g., Redis, Kubernetes, Kafka)',
+  },
+  strategies: {
+    short: 'Approaches and methods',
+    detailed: 'Approaches and methods (e.g., Blue-Green Deployment, Cache-Aside)',
+  },
+  models: {
+    short: 'Architectural paradigms',
+    detailed: 'Architectural paradigms (e.g., Pub/Sub, Client-Server, RBAC)',
+  },
+  frameworks: {
+    short: 'Structured methodologies',
+    detailed: 'Structured methodologies (e.g., 12-Factor App, Spring Framework)',
+  },
+  protocols: {
+    short: 'Standards and specifications',
+    detailed: 'Standards and specifications (e.g., OAuth 2.0, HTTP/2, gRPC)',
+  },
+  practices: {
+    short: 'Development and operational practices',
+    detailed: 'Development and operational practices (e.g., TDD, Chaos Engineering)',
+  },
+  methodologies: {
+    short: 'Comprehensive approaches',
+    detailed: 'Comprehensive approaches (e.g., Domain-Driven Design, Event Storming)',
+  },
+  architectures: {
+    short: 'System-level designs',
+    detailed: 'System-level designs (e.g., Microservices, Event-Driven, Serverless)',
+  },
+};
+
+const QUIZ_FOCUS_AREAS: Record<TopicType, string> = {
+  concepts: 'theoretical understanding, implications, and relationships',
+  patterns: 'problem recognition, solution application, and trade-off analysis',
+  technologies: 'practical knowledge, use cases, and operational aspects',
+  strategies: 'situational application, comparison, and execution',
+  models: 'characteristics, use cases, and properties',
+  protocols: 'specification knowledge, compatibility, and security',
+  practices: 'implementation understanding, benefits, and challenges',
+  methodologies: 'philosophy, components, and adoption',
+  architectures: 'structural understanding, characteristics, and evolution',
+  frameworks: 'structure, philosophy, and ecosystem',
+};
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Formats all topic types as a bulleted list (short descriptions)
+ */
+function formatAllTopicTypes(): string {
+  return Object.entries(TOPIC_TYPE_DEFINITIONS)
+    .map(([type, def]) => `- ${type}: ${def.short}`)
+    .join('\n');
+}
+
+/**
+ * Logs prompt to console in a formatted, readable way
+ * @param promptType - Type of prompt being logged
+ * @param prompt - The prompt string
+ * @param metadata - Additional context (e.g., mode, topic name)
+ */
+function logPrompt(
+  promptType: string,
+  prompt: string,
+  metadata?: Record<string, any>
+): void {
+  if (process.env.NODE_ENV === 'development' || __DEV__) {
+    console.group(`🤖 [LLM Prompt] ${promptType}`);
+
+    if (metadata) {
+      console.log('📋 Metadata:', JSON.stringify(metadata, null, 2));
+    }
+
+    console.log('📝 Prompt:');
+    console.log('─'.repeat(80));
+    console.log(prompt);
+    console.log('─'.repeat(80));
+    console.log(`📊 Token estimate: ~${Math.ceil(prompt.length / 4)} tokens`);
+
+    console.groupEnd();
+  }
+}
+
+// ============================================================================
+// PROMPT TEMPLATES
+// ============================================================================
+
 export const promptTemplates = {
   /**
    * Unified topic generation for both Surprise Me and Guide Me flows
@@ -20,57 +131,46 @@ export const promptTemplates = {
       topicType: TopicType;
       learningGoal: string;
     }
-  ): string => `
+  ): string => {
+    const prompt = `
 You are an expert software architecture mentor generating learning content.
 
-GENERATION MODE: ${mode}
+MODE: ${mode.toUpperCase()}
+${mode === 'guided'
+        ? `
+TARGET TOPIC TYPE: ${constraints!.topicType}
+Definition: ${TOPIC_TYPE_DEFINITIONS[constraints!.topicType].detailed}
 
-${mode === 'guided' ? `
-GUIDED CONSTRAINTS:
-- Category: ${constraints?.category}
-- Subcategory: ${constraints?.subcategory}
-- Topic Type: ${constraints?.topicType} (MUST generate this type)
-- Learning Goal: ${constraints?.learningGoal}
-` : `
-SURPRISE MODE:
-- Randomly select from the entire category schema
-- Randomly select topic type from the subcategory's topicTypes array
-- Ensure variety across all topic types
+CONSTRAINTS:
+- Category: ${constraints!.category}
+- Subcategory: ${constraints!.subcategory}
+- Learning Goal: ${constraints!.learningGoal}
+- You may use schema examples as inspiration OR generate any valid ${constraints!.topicType} topic in this domain
+`
+        : `
+INSTRUCTIONS:
+- Randomly select a category, subcategory, and topic type from the schema
+- Ensure variety across different topic types
+
+TOPIC TYPES:
+${formatAllTopicTypes()}
 `}
-
-TOPIC TYPE DEFINITIONS:
-- concepts: Theoretical foundations and principles (CAP Theorem, Consistency Models)
-- patterns: Reusable architectural solutions (Circuit Breaker, Saga Pattern)
-- technologies: Specific tools and platforms (Redis, Kubernetes, Kafka)
-- strategies: Approaches and methods (Blue-Green Deployment, Cache-Aside)
-- models: Architectural paradigms (Pub/Sub, Client-Server, RBAC)
-- frameworks: Structured methodologies (12-Factor App, Spring Framework)
-- protocols: Standards and specifications (OAuth 2.0, HTTP/2, gRPC)
-- practices: Development and operational practices (TDD, Chaos Engineering)
-- methodologies: Comprehensive approaches (Domain-Driven Design, Event Storming)
-- architectures: System-level designs (Microservices, Event-Driven, Serverless)
-
-CONTEXT:
-- Already discovered topics: ${JSON.stringify(alreadyDiscovered)}
+AVOIDANCE LIST:
+- Already discovered: ${JSON.stringify(alreadyDiscovered)}
 - Recently dismissed: ${JSON.stringify(dismissed)}
-${mode === 'surprise' ? `- Available schema: ${JSON.stringify(categorySchema)}` : ''}
+${mode === 'surprise'
+        ? `
+AVAILABLE SCHEMA:
+${JSON.stringify(categorySchema)}
+`
+        : ''}
+REQUIREMENTS:
+- Topic must be real, widely-recognized, and architecturally significant
+- Name must NOT appear in avoidance lists
+- Content must be accurate, substantial, and technically detailed
+${mode === 'guided' ? `- Topic MUST be of type: ${constraints!.topicType}` : ''}
 
-SELECTION REQUIREMENTS:
-${mode === 'guided' ? `
-1. MUST generate a topic of type: ${constraints?.topicType}
-2. Topic should be from subcategory: ${constraints?.subcategory}
-3. Align with learning goal: ${constraints?.learningGoal}
-4. Can use schema examples as inspiration OR generate any valid ${constraints?.topicType} in this domain
-` : `
-1. Randomly select a category from the schema
-2. Randomly select a subcategory within that category
-3. Randomly select ONE topicType from that subcategory's topicTypes array
-4. Generate a topic of that specific type
-`}
-5. Topic name must NOT be in discovered or dismissed lists
-6. Ensure topic is real, recognized, and architecturally significant
-
-OUTPUT FORMAT (JSON - flat structure for streaming):
+OUTPUT FORMAT (Flat JSON structure optimized for streaming):
 {
   "name": "Specific Topic Name",
   "topicType": "${constraints?.topicType || 'auto-detect from subcategory'}",
@@ -101,48 +201,57 @@ CRITICAL REQUIREMENTS:
 - Return ONLY valid JSON without markdown code blocks or preamble
 - topicType must exactly match ${constraints?.topicType ? `"${constraints.topicType}"` : 'the subcategory definition'}
 
-Generate the topic now:`,
+Generate the topic now:`;
+
+    logPrompt('Generate Topic', prompt, {
+      mode,
+      topicType: constraints?.topicType,
+      category: constraints?.category,
+      subcategory: constraints?.subcategory,
+      discoveredCount: alreadyDiscovered.length,
+      dismissedCount: dismissed.length,
+    });
+
+    return prompt;
+  },
 
   /**
    * Generate quiz questions for a topic
    */
-  generateQuizQuestions: (topic: Topic): string => `
-You are creating a quiz to test understanding of ${topic.name}, which is a ${topic.topicType} in ${topic.category}.
+  generateQuizQuestions: (topic: Topic): string => {
+    const prompt = `
+You are creating a quiz to test understanding of ${topic.name} (${topic.topicType}).
 
-TOPIC DETAILS:
-- Name: ${topic.name}
-- Type: ${topic.topicType}
-- Category: ${topic.category}
-- Subcategory: ${topic.subcategory}
+TOPIC CONTEXT:
+- Category: ${topic.category} > ${topic.subcategory}
 - Content: ${JSON.stringify(topic.content)}
 
-Create 4 multiple-choice questions appropriate for this topic type.
+QUIZ REQUIREMENTS:
+Generate exactly 4 multiple-choice questions that test ${QUIZ_FOCUS_AREAS[topic.topicType]}.
 
-Question guidelines by type:
-- concepts: Test theoretical understanding, implications, relationships
-- patterns: Test problem recognition, solution application, trade-off analysis
-- technologies: Test practical knowledge, use cases, operational aspects
-- strategies: Test situational application, comparison, execution
-- models: Test characteristics, use cases, properties
-- protocols: Test specification knowledge, compatibility, security
-- practices: Test implementation understanding, benefits, challenges
-- methodologies: Test philosophy, components, adoption
-- architectures: Test structural understanding, characteristics, evolution
-- frameworks: Test structure, philosophy, ecosystem
+Distribution:
+- 2 questions: Conceptual understanding (What/Why)
+- 1 question: Practical application (When to use)
+- 1 question: Trade-offs analysis (Pros/Cons)
 
-QUESTION DISTRIBUTION:
-- 2 questions testing conceptual understanding (What/Why)
-- 1 question testing practical application (When to use)
-- 1 question testing trade-offs analysis (Pros/Cons)
+Quality standards:
+- Each question has exactly 4 options with 1 correct answer
+- Brief explanations (2-3 sentences) for correct answers
+- Focus on architectural thinking, not trivia
 
-Each question should:
-- Have 4 options
-- Have exactly 1 correct answer
-- Include a brief explanation (2-3 sentences)
-- Test architectural thinking, not trivia
-- Be appropriate for the topic type
+⚠️ CRITICAL - FIELD ORDER FOR STREAMING:
+Fields MUST appear in this EXACT order within each question object:
+1. question
+2. option_0
+3. option_1
+4. option_2
+5. option_3
+6. correctAnswer
+7. explanation
 
-OUTPUT FORMAT (JSON):
+Complete each question object entirely before starting the next one.
+
+OUTPUT FORMAT:
 {
   "questions": [
     {
@@ -153,17 +262,22 @@ OUTPUT FORMAT (JSON):
       "option_3": "Fourth option",
       "correctAnswer": 0,
       "explanation": "Brief explanation of why this answer is correct"
-    },
-    // ... 3 more questions
+    }
+    // ... 3 more questions with identical structure
   ]
 }
 
-IMPORTANT STREAMING REQUIREMENTS:
-- Generate fields in this EXACT order: question, option_0, option_1, option_2, option_3, correctAnswer, explanation
-- Complete the ENTIRE question object before starting the next question object
-- This enables optimal progressive display during streaming
-- Use option_0, option_1, option_2, option_3 format (not an options array)
-- Return ONLY valid JSON without markdown code blocks
+Return ONLY valid JSON without markdown code blocks or preamble.
 
-Generate the quiz questions now:`,
+Generate the quiz questions now:`;
+
+    logPrompt('Generate Quiz Questions', prompt, {
+      topicName: topic.name,
+      topicType: topic.topicType,
+      category: topic.category,
+      subcategory: topic.subcategory,
+    });
+
+    return prompt;
+  },
 };
