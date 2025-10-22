@@ -71,6 +71,68 @@ const QUIZ_FOCUS_AREAS: Record<TopicType, string> = {
   frameworks: 'structure, philosophy, and ecosystem',
 };
 
+/**
+ * Question phrasing guidance for each topic type
+ * Ensures quiz questions are phrased appropriately while testing the same content areas
+ * (what, why, pros, cons, comparisons)
+ */
+const QUIZ_QUESTION_GUIDANCE: Record<TopicType, {
+  conceptual: string;    // How to phrase Q1-Q2 (testing 'what' and 'why')
+  strengths: string;     // How to phrase Q3 (testing 'pros')
+  limitations: string;   // How to phrase Q4 (testing 'cons')
+}> = {
+  technologies: {
+    conceptual: 'What it is, why it exists, core capabilities',
+    strengths: 'Key advantages, use cases, when to adopt',
+    limitations: 'Drawbacks, limitations, trade-offs',
+  },
+  frameworks: {
+    conceptual: 'What it is, philosophy, purpose',
+    strengths: 'Benefits of adoption, strengths, ecosystem advantages',
+    limitations: 'Constraints, learning curve, when NOT to use',
+  },
+  patterns: {
+    conceptual: 'What problem it solves, how it works',
+    strengths: 'Benefits, when to apply, scenarios',
+    limitations: 'Drawbacks, anti-patterns, over-application risks',
+  },
+  concepts: {
+    conceptual: 'What it is, why it matters for architects',
+    strengths: 'Insights it provides, how it helps decision-making',
+    limitations: 'Limitations of the model, when it doesn\'t apply',
+  },
+  models: {
+    conceptual: 'What it is, characteristics, how it works',
+    strengths: 'Advantages of this model, when to use',
+    limitations: 'Constraints, when other models are better',
+  },
+  methodologies: {
+    conceptual: 'What it is, philosophy, goals',
+    strengths: 'Benefits of adoption, what it improves',
+    limitations: 'Adoption challenges, prerequisites, when to avoid',
+  },
+  practices: {
+    conceptual: 'What it is, purpose, principles',
+    strengths: 'Benefits, what problems it solves',
+    limitations: 'Implementation challenges, common pitfalls',
+  },
+  strategies: {
+    conceptual: 'What it is, how it works, when to use',
+    strengths: 'Advantages, scenarios where it excels',
+    limitations: 'Drawbacks, complexity, when alternatives are better',
+  },
+  protocols: {
+    conceptual: 'How it works, key components, flow',
+    strengths: 'Security advantages, capabilities, standardization benefits',
+    limitations: 'Vulnerabilities, complexity, compatibility issues',
+  },
+  architectures: {
+    conceptual: 'Characteristics, structure, how it works',
+    strengths: 'When to use, scalability benefits, strengths',
+    limitations: 'When NOT to use, constraints, migration challenges',
+  },
+};
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -135,9 +197,35 @@ export const promptTemplates = {
     const prompt = `
 You are an expert software architecture mentor generating learning content.
 
+## BREADTHWISE MISSION
+You are generating topics for Breadthwise, an app designed to help senior software engineers progress to Principal/Staff Architect roles by expanding their breadth of architectural knowledge.
+
+- Target audience: Experienced engineers (5-10+ years) who need strategic, system-level knowledge
+- Goal: BREADTH over depth - exposure to diverse concepts, patterns, technologies, and approaches
+- Topics should be things architects "should know about" to make informed decisions and participate in architectural discussions
+- Focus on knowledge that distinguishes senior engineers from principal/staff architects
+
 MODE: ${mode.toUpperCase()}
-${mode === 'guided'
-        ? `
+
+## SCHEMA USAGE & CREATIVE FREEDOM
+The provided schema defines the conceptual landscape of software architecture. The example topics in the schema are ILLUSTRATIVE, NOT EXHAUSTIVE.
+
+${mode === 'surprise'
+        ? `For SURPRISE mode:
+- Use the schema to SELECT which domain to explore (category, subcategory, topicType)
+- Then generate ANY architecturally significant topic within that chosen domain
+- You are NOT limited to the example topics listed in the schema
+- Ensure variety across different topic types
+
+TOPIC TYPES:
+${formatAllTopicTypes()}
+`
+        : `For GUIDED mode:
+- User has constrained: category, subcategory, topicType, and learningGoal
+- Use the schema for CONTEXT about the domain and for finding COMPARISONS
+- Generate ANY architecturally significant topic that matches the constraints
+- You are NOT limited to the example topics listed in the schema
+
 TARGET TOPIC TYPE: ${constraints!.topicType}
 Definition: ${TOPIC_TYPE_DEFINITIONS[constraints!.topicType].detailed}
 
@@ -145,26 +233,52 @@ CONSTRAINTS:
 - Category: ${constraints!.category}
 - Subcategory: ${constraints!.subcategory}
 - Learning Goal: ${constraints!.learningGoal}
-- You may use schema examples as inspiration OR generate any valid ${constraints!.topicType} topic in this domain
-`
-        : `
-INSTRUCTIONS:
-- Randomly select a category, subcategory, and topic type from the schema
-- Ensure variety across different topic types
-
-TOPIC TYPES:
-${formatAllTopicTypes()}
 `}
 AVOIDANCE LIST:
 - Already discovered: ${JSON.stringify(alreadyDiscovered)}
 - Recently dismissed: ${JSON.stringify(dismissed)}
-${mode === 'surprise'
-        ? `
-AVAILABLE SCHEMA:
-${JSON.stringify(categorySchema)}
-`
-        : ''}
-REQUIREMENTS:
+
+CATEGORY SCHEMA (for context and comparisons):
+${JSON.stringify(categorySchema, null, 2)}
+
+## CONTENT FIELD INTERPRETATION BY TOPIC TYPE
+
+The output format uses 'pros' and 'cons' fields, but interpret these flexibly based on topic type:
+
+**For technologies/frameworks/patterns:**
+- pros = advantages, strengths, benefits
+- cons = disadvantages, limitations, drawbacks
+
+**For concepts/models:**
+- pros = insights it provides, how it helps architects, applications
+- cons = limitations of the model, when it doesn't apply, oversimplifications
+
+**For methodologies/practices/strategies:**
+- pros = benefits of adoption, what it improves, value it provides
+- cons = adoption challenges, prerequisites, implementation difficulties
+
+**For protocols:**
+- pros = security advantages, standardization benefits, capabilities
+- cons = vulnerabilities, complexity costs, compatibility issues
+
+**For architectures:**
+- pros = strengths, scalability benefits, when to use
+- cons = constraints, when NOT to use, migration challenges
+
+The goal: ensure content in pros/cons fields can be tested via quiz questions about strengths and limitations.
+
+## ARCHITECTURAL SIGNIFICANCE CRITERIA
+Topics MUST be architecturally significant. This means:
+
+✓ Relevant for system-level decision making (not just implementation details)
+✓ Involves trade-offs that architects need to understand
+✓ Answers strategic questions: "When should I use this?", "Why choose this over alternatives?", "What are the implications?"
+✓ Broadly applicable across multiple domains/industries (not overly niche)
+✓ Knowledge that principal/staff architects are expected to know
+
+✗ Avoid: Language-specific syntax, overly niche tools used by <1% of companies, implementation minutiae, basic programming concepts
+
+ADDITIONAL REQUIREMENTS:
 - Topic must be real, widely-recognized, and architecturally significant
 - Name must NOT appear in avoidance lists
 - Content must be accurate, substantial, and technically detailed
@@ -229,15 +343,31 @@ TOPIC CONTEXT:
 QUIZ REQUIREMENTS:
 Generate exactly 4 multiple-choice questions that test ${QUIZ_FOCUS_AREAS[topic.topicType]}.
 
+QUESTION PHRASING FOR ${topic.topicType.toUpperCase()}:
+When creating questions, phrase them appropriately for this topic type:
+- Questions 1-2: Focus on ${QUIZ_QUESTION_GUIDANCE[topic.topicType].conceptual}
+- Question 3: Focus on ${QUIZ_QUESTION_GUIDANCE[topic.topicType].strengths}
+- Question 4: Focus on ${QUIZ_QUESTION_GUIDANCE[topic.topicType].limitations}
+
+All questions should be answerable from the provided topic content (what, why, pros, cons, comparisons).
+
 Distribution:
-- 2 questions: Conceptual understanding (What/Why)
-- 1 question: Practical application (When to use)
-- 1 question: Trade-offs analysis (Pros/Cons)
+- 2 questions: Conceptual understanding - test 'what' and 'why' content
+- 1 question: Strengths/Benefits - test 'pros' content
+- 1 question: Limitations/Trade-offs - test 'cons' content
+
+Ensure questions reflect the nature of ${topic.topicType} topics (see phrasing guidance above).
 
 Quality standards:
 - Each question has exactly 4 options with 1 correct answer
 - Brief explanations (2-3 sentences) for correct answers
 - Focus on architectural thinking, not trivia
+
+Content boundaries (stay true to architectural breadth):
+- Test strategic awareness and trade-off thinking
+- Focus on "conversation competence" - can they discuss it knowledgeably?
+- Ask about what, why, when, and trade-offs
+- Avoid implementation details, code syntax, or deep technical trivia
 
 ⚠️ CRITICAL - FIELD ORDER FOR STREAMING:
 Fields MUST appear in this EXACT order within each question object:

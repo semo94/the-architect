@@ -29,6 +29,7 @@ export default function QuizScreen() {
   const [userAnswers, setUserAnswers] = useState<number[]>([]);
   const [showFeedback, setShowFeedback] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
+  const [finalScore, setFinalScore] = useState<number>(0); // Store the final score to avoid recalculation
   const [error, setError] = useState<string | null>(null);
 
   // Streaming state for quiz questions
@@ -137,8 +138,17 @@ export default function QuizScreen() {
   const completeQuiz = () => {
     if (!topic) return;
 
-    const questions = quizStreaming.partialData.questions || [];
-    const score = calculateScore();
+    // Use the stable questions state (set by onComplete) instead of streaming partialData
+    const quizQuestions = questions.length > 0 ? questions : (quizStreaming.partialData.questions || []);
+
+    // Calculate score once and store it
+    let correct = 0;
+    quizQuestions.forEach((q, idx) => {
+      if (userAnswers[idx] === q.correctAnswer) {
+        correct++;
+      }
+    });
+    const score = Math.round((correct / quizQuestions.length) * 100);
     const passed = score >= 80;
 
     // Count previous attempts for this topic
@@ -150,7 +160,7 @@ export default function QuizScreen() {
       id: `quiz-${Date.now()}`,
       topicId: topic.id,
       topicName: topic.name,
-      questions: questions.map((q, idx) => ({
+      questions: quizQuestions.map((q, idx) => ({
         ...q,
         userAnswer: userAnswers[idx],
       })),
@@ -162,18 +172,13 @@ export default function QuizScreen() {
     };
 
     addQuiz(quiz);
-    setQuizComplete(true);
-  };
 
-  const calculateScore = () => {
-    const questions = quizStreaming.partialData.questions || [];
-    let correct = 0;
-    questions.forEach((q, idx) => {
-      if (userAnswers[idx] === q.correctAnswer) {
-        correct++;
-      }
-    });
-    return Math.round((correct / questions.length) * 100);
+    // Store the final score and questions to prevent recalculation during render
+    setFinalScore(score);
+    if (questions.length === 0) {
+      setQuestions(quizQuestions);
+    }
+    setQuizComplete(true);
   };
 
   const handleRetry = () => {
@@ -181,6 +186,7 @@ export default function QuizScreen() {
     setUserAnswers([]);
     setShowFeedback(false);
     setQuizComplete(false);
+    setFinalScore(0);
     generateQuiz();
   };
 
@@ -246,7 +252,7 @@ export default function QuizScreen() {
           backgroundColor: colors.primary,
           paddingVertical: spacing.lg,
           borderRadius: borderRadius.lg,
-          alignItems: "center",
+          alignItems: 'center',
         },
         nextButtonText: {
           color: colors.white,
@@ -308,11 +314,11 @@ export default function QuizScreen() {
   if (quizComplete) {
     return (
       <QuizResults
-        score={calculateScore()}
+        score={finalScore}
         questions={questions}
         userAnswers={userAnswers}
         onClose={handleClose}
-        onRetry={calculateScore() < 80 ? handleRetry : undefined}
+        onRetry={finalScore < 80 ? handleRetry : undefined}
       />
     );
   }

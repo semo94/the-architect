@@ -40,7 +40,6 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, typography, spacing, styles: themeStyles } = useTheme();
-
   const { topics, addTopic, dismissTopic } = useAppStore();
 
   const styles = useMemo(() => StyleSheet.create({
