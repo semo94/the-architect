@@ -1,6 +1,6 @@
 import { useTheme } from '@/contexts/ThemeContext';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -9,10 +9,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import categorySchema from '../../constants/categories';
+import { useStreamingData } from '../../hooks/useStreamingData';
 import llmService from '../../services/llmService';
 import { useAppStore } from '../../store/useAppStore';
 import { Topic } from '../../types';
-import { hasMinimumData, parseStreamingJson } from '../../utils/streamingParser';
+import { hasMinimumData } from '../../utils/streamingParser';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ActionButtons } from './ActionButtons';
 import { TopicCard } from './TopicCard';
@@ -23,9 +24,6 @@ interface Props {
 
 export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const [topic, setTopic] = useState<Topic | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [partialData, setPartialData] = useState<Partial<Topic>>({});
-  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -38,22 +36,21 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     dismissTopic
   } = useAppStore();
 
-  useEffect(() => {
-    generateSurpriseTopic();
+  // Use streaming hook for state management and cleanup
+  const topicStreaming = useStreamingData<Topic>({
+    hasMinimumData: (data) => hasMinimumData(data),
+    onComplete: (completedTopic) => {
+      console.log('[SurpriseMe] Topic generation complete');
+      setTopic(completedTopic);
+    },
+  });
 
-    // Cleanup: cancel streaming when component unmounts
-    return () => {
-      console.log('[SurpriseMe] Cleaning up - cancelling stream');
-      llmService.cancelStream();
-    };
-     
-  }, []);
+  // Destructure streaming functions to avoid nested object properties in dependencies
+  const { onProgress, handleComplete, handleError, reset, cancel } = topicStreaming;
 
-  const generateSurpriseTopic = async () => {
-    setLoading(true);
-    setPartialData({});
-    setIsStreaming(false);
+  const generateSurpriseTopic = useCallback(async () => {
     setError(null);
+    reset(); // This sets isLoading=true internally
 
     try {
       const alreadyDiscovered = topics.map(t => t.name);
@@ -64,28 +61,26 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
         dismissedTopics,
         categorySchema,
         undefined, // No constraints for surprise mode
-        (partialText) => {
-          // Parse the streaming JSON progressively
-          const parsed = parseStreamingJson(partialText);
-          setPartialData(parsed);
-
-          // Once we have minimum data, show the streaming card
-          if (hasMinimumData(parsed)) {
-            setIsStreaming(true);
-            setLoading(false);
-          }
-        }
+        onProgress
       );
 
-      setTopic(newTopic);
-      setIsStreaming(false); // Stop streaming, show final card
+      handleComplete(newTopic);
     } catch (err) {
       setError('Failed to generate topic. Please try again.');
       console.error(err);
-    } finally {
-      setLoading(false);
+      handleError(err as Error);
     }
-  };
+  }, [topics, dismissedTopics, onProgress, handleComplete, handleError, reset]);
+
+  useEffect(() => {
+    generateSurpriseTopic();
+
+    // Cleanup: cancel streaming when component unmounts
+    return () => {
+      console.log('[SurpriseMe] Cleaning up - cancelling stream');
+      cancel();
+    };
+  }, [generateSurpriseTopic, cancel]);
 
   const handleDismiss = () => {
     if (topic) {
@@ -124,7 +119,8 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     retryButtonText: themeStyles.buttonText,
   }), [themeStyles]);
 
-  if (loading) {
+  // Show loading spinner before streaming starts
+  if (topicStreaming.isLoading && !topicStreaming.isStreaming) {
     return <LoadingSpinner message="Finding something exciting for you..." />;
   }
 
@@ -146,14 +142,14 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   }
 
   // Show card - either streaming or final state
-  if (!isStreaming && !topic) {
+  if (!topicStreaming.isStreaming && !topic) {
     return null;
   }
 
   return (
     <View style={styles.container}>
       <TopicCard
-        topic={topic || partialData}
+        topic={topic || topicStreaming.partialData}
         isComplete={!!topic}
       />
       {topic && (

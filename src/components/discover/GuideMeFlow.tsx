@@ -1,6 +1,6 @@
 import { useTheme } from '@/contexts/ThemeContext';
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -10,11 +10,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import categorySchema from "../../constants/categories";
+import { useStreamingData } from "../../hooks/useStreamingData";
 import llmService from "../../services/llmService";
 import { useAppStore } from "../../store/useAppStore";
 import { Topic, TopicType } from "../../types";
 import { GuideMeHelper, GuideQuestion } from "../../utils/guideMeHelper";
-import { hasMinimumData, parseStreamingJson } from "../../utils/streamingParser";
+import { hasMinimumData } from "../../utils/streamingParser";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { ActionButtons } from "./ActionButtons";
 import { TopicCard } from "./TopicCard";
@@ -33,14 +34,23 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   });
   const [currentQuestion, setCurrentQuestion] = useState<GuideQuestion | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [partialData, setPartialData] = useState<Partial<Topic>>({});
-  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, typography, spacing, styles: themeStyles } = useTheme();
   const { topics, addTopic, dismissTopic } = useAppStore();
+
+  // Use streaming hook for state management and cleanup
+  const topicStreaming = useStreamingData<Topic>({
+    hasMinimumData: (data) => hasMinimumData(data),
+    onComplete: (completedTopic) => {
+      console.log('[GuideMe] Topic generation complete');
+      setTopic(completedTopic);
+    },
+  });
+
+  // Destructure streaming functions to avoid nested object properties in dependencies
+  const { onProgress, handleComplete, handleError, reset, cancel } = topicStreaming;
 
   const styles = useMemo(() => StyleSheet.create({
     container: themeStyles.container,
@@ -98,9 +108,17 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     setCurrentQuestion(GuideMeHelper.getStep1Question());
   }, []);
 
+  useEffect(() => {
+    // Cleanup: cancel streaming when component unmounts
+    return () => {
+      console.log('[GuideMe] Cleaning up - cancelling stream');
+      cancel();
+    };
+  }, [cancel]);
+
   const handleOptionSelect = async (option: string) => {
     if (!currentQuestion) return;
-    if (loading) return; // Prevent multiple topic generations
+    if (topicStreaming.isLoading) return; // Prevent multiple topic generations
 
     if (step === 0) {
       // Step 1: Category selected
@@ -146,10 +164,8 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     }
   };
 
-  const generateFinalTopic = async (learningGoal: string) => {
-    setLoading(true);
-    setPartialData({});
-    setIsStreaming(false);
+  const generateFinalTopic = useCallback(async (learningGoal: string) => {
+    reset(); // This sets isLoading=true internally
     setError(null);
     setCurrentQuestion(null); // Clear question immediately to hide UI
 
@@ -170,28 +186,16 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
         [], // No dismissed list for guided mode
         categorySchema,
         constraints,
-        (partialText) => {
-          // Parse the streaming JSON progressively
-          const parsed = parseStreamingJson(partialText);
-          setPartialData(parsed);
-
-          // Once we have minimum data, show the streaming card
-          if (hasMinimumData(parsed)) {
-            setIsStreaming(true);
-            setLoading(false);
-          }
-        }
+        onProgress
       );
 
-      setTopic(newTopic);
-      setIsStreaming(false); // Stop streaming, show final card
+      handleComplete(newTopic);
     } catch (err) {
       setError("Failed to generate topic. Please try again.");
       console.error(err);
-    } finally {
-      setLoading(false);
+      handleError(err as Error);
     }
-  };
+  }, [selections, topics, onProgress, handleComplete, handleError, reset]);
 
   const handleDismiss = () => {
     if (topic) {
@@ -217,7 +221,8 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     }
   };
 
-  if (loading) {
+  // Show loading spinner before streaming starts (only during topic generation)
+  if (topicStreaming.isLoading && !topicStreaming.isStreaming && !currentQuestion) {
     return (
       <LoadingSpinner
         message="Finding the perfect topic for you..."
@@ -243,11 +248,11 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   }
 
   // Show topic card if generation is started or complete
-  if (topic || (isStreaming && !currentQuestion)) {
+  if (topic || (topicStreaming.isStreaming && !currentQuestion)) {
     return (
       <View style={styles.container}>
         <TopicCard
-          topic={topic || partialData}
+          topic={topic || topicStreaming.partialData}
           isComplete={!!topic}
         />
         {topic && (

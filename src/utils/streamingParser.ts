@@ -317,30 +317,3 @@ export function hasSectionData(partial: any, section: string): boolean {
       return false;
   }
 }
-
-// ============================================================================
-// Guided Question helpers
-// ============================================================================
-
-/**
- * Check if we have minimum question data to start streaming
- */
-export function hasMinimumQuestionData(partial: any): boolean {
-  return !!partial.question;
-}
-
-/**
- * Count how many options are available in the partial data
- */
-export function getAvailableOptionsCount(partial: any): number {
-  const options = [
-    partial.option_0,
-    partial.option_1,
-    partial.option_2,
-    partial.option_3,
-    partial.option_4,
-    partial.option_5,
-  ].filter(Boolean);
-  return options.length;
-}
-

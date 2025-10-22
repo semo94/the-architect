@@ -52,19 +52,10 @@ const TopicContentSchema = z.object({
   compare_1_text: z.string(),
 });
 
-// Flat schema for guided questions (supports 4-6 options)
-const GuidedQuestionSchemaFlat = z.object({
-  question: z.string(),
-  option_0: z.string(),
-  option_1: z.string(),
-  option_2: z.string(),
-  option_3: z.string(),
-  option_4: z.string().optional(),
-  option_5: z.string().optional(),
-});
+
 
 // Schema for LLM response (flat format for better streaming)
-const QuizQuestionsSchemaFlat = z.object({
+const QuizQuestionsSchema = z.object({
   questions: z.array(
     z.object({
       question: z.string(),
@@ -425,7 +416,7 @@ class LLMService {
       : await this.callLLM(prompt);
 
     // Validate using flat schema, then transform to array format for final result
-    const validated = QuizQuestionsSchemaFlat.parse(result);
+    const validated = QuizQuestionsSchema.parse(result);
     return validated.questions.map(q => ({
       question: q.question,
       options: [q.option_0, q.option_1, q.option_2, q.option_3],
