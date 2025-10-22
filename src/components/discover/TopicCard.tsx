@@ -1,5 +1,5 @@
 import React from 'react';
-import { Technology } from '../../types';
+import { Topic } from '../../types';
 import { hasSectionData } from '../../utils/streamingParser';
 import { SafeAreaScrollView } from '../common/SafeAreaScrollView';
 import { FadeInItemWrapper, FadeInView, TypewriterText } from '../common/StreamingAnimations';
@@ -7,32 +7,32 @@ import { ComparisonSection } from './sections/ComparisonSection';
 import { HeaderSection } from './sections/HeaderSection';
 import { ListSection } from './sections/ListSection';
 import { TextSection } from './sections/TextSection';
-import { useTechnologyCardStyles } from './technologyCardStyles';
+import { useTopicCardStyles } from './topicCardStyles';
 
 interface Props {
-  technology: Partial<Technology>;
+  topic: Partial<Topic>;
   isComplete: boolean;  // Has all required fields loaded
 }
 
 /**
- * Unified technology card that handles both:
+ * Unified topic card that handles both:
  * 1. Streaming state - Shows typewriter/fade-in effects for incomplete data
  * 2. Static state - Shows complete data without animations
  */
-export const TechnologyCard: React.FC<Props> = ({ technology, isComplete }) => {
-  const styles = useTechnologyCardStyles();
+export const TopicCard: React.FC<Props> = ({ topic, isComplete }) => {
+  const styles = useTopicCardStyles();
 
-  const hasHeader = hasSectionData(technology, 'header');
-  const hasWhat = hasSectionData(technology, 'what');
-  const hasWhy = hasSectionData(technology, 'why');
-  const hasPros = hasSectionData(technology, 'pros');
-  const hasCons = hasSectionData(technology, 'cons');
-  const hasCompare = hasSectionData(technology, 'compare');
+  const hasHeader = hasSectionData(topic, 'header');
+  const hasWhat = hasSectionData(topic, 'what');
+  const hasWhy = hasSectionData(topic, 'why');
+  const hasPros = hasSectionData(topic, 'pros');
+  const hasCons = hasSectionData(topic, 'cons');
+  const hasCompare = hasSectionData(topic, 'compare');
 
   // Transform flat format to nested for display
-  // During streaming, technology will have flat fields (pro_0, pro_1, etc.)
+  // During streaming, topic will have flat fields (pro_0, pro_1, etc.)
   // We need to collect them into arrays for the UI components
-  const flatData = technology as any;
+  const flatData = topic as any;
   const pros = flatData.content?.pros || [
     flatData.pro_0,
     flatData.pro_1,
@@ -51,10 +51,10 @@ export const TechnologyCard: React.FC<Props> = ({ technology, isComplete }) => {
 
   const comparisons = flatData.content?.compareToSimilar || [];
   if (flatData.compare_0_tech && flatData.compare_0_text) {
-    comparisons.push({ technology: flatData.compare_0_tech, comparison: flatData.compare_0_text });
+    comparisons.push({ topic: flatData.compare_0_tech, comparison: flatData.compare_0_text });
   }
   if (flatData.compare_1_tech && flatData.compare_1_text && comparisons.length < 2) {
-    comparisons.push({ technology: flatData.compare_1_tech, comparison: flatData.compare_1_text });
+    comparisons.push({ topic: flatData.compare_1_tech, comparison: flatData.compare_1_text });
   }
 
   const FadeInComparisonWrapper: React.FC<{ children: React.ReactNode; index: number }> = ({
@@ -69,9 +69,10 @@ export const TechnologyCard: React.FC<Props> = ({ technology, isComplete }) => {
   return (
     <SafeAreaScrollView style={styles.container}>
       <HeaderSection
-        category={technology.category}
-        subcategory={technology.subcategory}
-        name={technology.name}
+        category={topic.category}
+        subcategory={topic.subcategory}
+        name={topic.name}
+        topicType={topic.topicType}
         isLoading={!isComplete && !hasHeader}
         LoadingWrapper={!isComplete ? FadeInView : undefined}
       />

@@ -1,16 +1,16 @@
+import { Card } from '@/components/common/Card';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useAppStore } from '@/store/useAppStore';
+import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  Pressable,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Card } from '@/components/common/Card';
-import { useAppStore } from '@/store/useAppStore';
-import { useTheme } from '@/contexts/ThemeContext';
 
 export default function DiscoverScreen() {
   const { profile } = useAppStore();
@@ -98,7 +98,7 @@ export default function DiscoverScreen() {
       <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.xl) }]}>
         <Text style={styles.title}>Expand Your Architecture Knowledge</Text>
         <Text style={styles.subtitle}>
-          You&apos;ve discovered {profile.statistics.breadthExpansion.totalDiscovered} technologies
+          You&apos;ve discovered {profile.statistics.breadthExpansion.totalDiscovered} topics
         </Text>
       </View>
 
@@ -125,7 +125,7 @@ export default function DiscoverScreen() {
           <View style={styles.modeContent}>
             <Text style={styles.modeTitle}>Surprise Me</Text>
             <Text style={styles.modeDescription}>
-              Discover a random technology you haven&apos;t learned yet
+              Discover a random topic you haven&apos;t learned yet
             </Text>
           </View>
         </Card>
@@ -137,7 +137,7 @@ export default function DiscoverScreen() {
           <View style={styles.modeContent}>
             <Text style={styles.modeTitle}>Guide Me</Text>
             <Text style={styles.modeDescription}>
-              Answer a few questions to find relevant technologies
+              Answer a few questions to find relevant topics
             </Text>
           </View>
         </Card>
@@ -146,7 +146,7 @@ export default function DiscoverScreen() {
       <View style={styles.tipContainer}>
         <Text style={styles.tipTitle}>💡 Pro Tip</Text>
         <Text style={styles.tipText}>
-          Aim to discover 3-5 new technologies each week to steadily expand your architectural breadth
+          Aim to discover 3-5 new topics each week to steadily expand your architectural breadth
         </Text>
       </View>
     </ScrollView>

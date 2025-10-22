@@ -2,27 +2,27 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { useAppStore } from '@/store/useAppStore';
-import { TechnologyCard } from '@/components/discover/TechnologyCard';
+import { TopicCard } from '@/components/discover/TopicCard';
 import { ActionButtons } from '@/components/discover/ActionButtons';
 import { useTheme } from '@/contexts/ThemeContext';
 
-export default function TechnologyDetailScreen() {
+export default function TopicDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { colors } = useTheme();
-  const { technologies } = useAppStore();
+  const { topics } = useAppStore();
 
-  const technologyId = params.technologyId as string;
-  const technology = technologies.find(t => t.id === technologyId);
+  const topicId = params.topicId as string;
+  const topic = topics.find(t => t.id === topicId);
 
   const handleAcquireNow = () => {
-    if (!technology) return;
+    if (!topic) return;
 
     // Navigate to quiz screen
-    // Technology will be marked as 'learned' only after passing the quiz (score >= 80%)
+    // Topic will be marked as 'learned' only after passing the quiz (score >= 80%)
     router.push({
       pathname: '/quiz',
-      params: { technologyId: technology.id }
+      params: { topicId: topic.id }
     });
   };
 
@@ -33,9 +33,9 @@ export default function TechnologyDetailScreen() {
     },
   });
 
-  if (!technology) {
-    // Handle case where technology doesn't exist
-    Alert.alert('Error', 'Technology not found', [
+  if (!topic) {
+    // Handle case where topic doesn't exist
+    Alert.alert('Error', 'Topic not found', [
       { text: 'OK', onPress: () => router.back() }
     ]);
     return null;
@@ -43,12 +43,12 @@ export default function TechnologyDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <TechnologyCard
-        technology={technology}
+      <TopicCard
+        topic={topic}
         isComplete={true}
       />
-      {/* Only show "Acquire Now" button if technology is still in 'discovered' status */}
-      {technology.status === 'discovered' && (
+      {/* Only show "Acquire Now" button if topic is still in 'discovered' status */}
+      {topic.status === 'discovered' && (
         <ActionButtons onAcquireNow={handleAcquireNow} />
       )}
     </View>

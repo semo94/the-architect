@@ -5,12 +5,12 @@ import {
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { DarkColors, LightColors } from "@/styles/globalStyles";
 
 export default function RootLayout() {
@@ -61,10 +61,10 @@ export default function RootLayout() {
                 }}
               />
               <Stack.Screen
-                name="technology-detail"
+                name="topic-detail"
                 options={{
                   presentation: "card",
-                  title: "Technology Details",
+                  title: "Topic Details",
                   headerStyle: { backgroundColor: colors.primary },
                   headerTintColor: colors.white,
                   headerTitleStyle: { fontWeight: "bold" },

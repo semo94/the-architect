@@ -2,13 +2,15 @@ import React from 'react';
 import { Text } from 'react-native';
 import { Card } from '../../common/Card';
 import { SkeletonLoader } from '../../common/SkeletonLoader';
-import { useTechnologyCardStyles } from '../technologyCardStyles';
+import { useTopicCardStyles } from '../topicCardStyles';
 import { useTheme } from '@/contexts/ThemeContext';
+import { TopicType } from '@/types';
 
 interface Props {
   category?: string;
   subcategory?: string;
   name?: string;
+  topicType?: TopicType;
   isLoading?: boolean;
   LoadingWrapper?: React.FC<{ children: React.ReactNode }>;
 }
@@ -17,10 +19,11 @@ export const HeaderSection: React.FC<Props> = ({
   category,
   subcategory,
   name,
+  topicType,
   isLoading = false,
   LoadingWrapper,
 }) => {
-  const styles = useTechnologyCardStyles();
+  const styles = useTopicCardStyles();
   const { spacing } = useTheme();
 
   const content = isLoading ? (

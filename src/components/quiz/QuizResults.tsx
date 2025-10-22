@@ -237,7 +237,7 @@ export const QuizResults: React.FC<Props> = ({
       {passed ? (
         <View style={styles.messageContainer}>
           <Text style={styles.messageText}>
-            Excellent work! You&apos;ve demonstrated a solid understanding of this technology.
+            Excellent work! You&apos;ve demonstrated a solid understanding of this topic.
             It has been marked as &quot;learned&quot; in your profile.
           </Text>
         </View>

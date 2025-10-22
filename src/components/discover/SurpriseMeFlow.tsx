@@ -1,3 +1,4 @@
+import { useTheme } from '@/contexts/ThemeContext';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -10,21 +11,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import categorySchema from '../../constants/categories';
 import llmService from '../../services/llmService';
 import { useAppStore } from '../../store/useAppStore';
-import { Technology } from '../../types';
+import { Topic } from '../../types';
 import { hasMinimumData, parseStreamingJson } from '../../utils/streamingParser';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ActionButtons } from './ActionButtons';
-import { TechnologyCard } from './TechnologyCard';
-import { useTheme } from '@/contexts/ThemeContext';
+import { TopicCard } from './TopicCard';
 
 interface Props {
   onComplete: () => void;
 }
 
 export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
-  const [technology, setTechnology] = useState<Technology | null>(null);
+  const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(true);
-  const [partialData, setPartialData] = useState<Partial<Technology>>({});
+  const [partialData, setPartialData] = useState<Partial<Topic>>({});
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -32,36 +32,38 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const { styles: themeStyles } = useTheme();
 
   const {
-    technologies,
-    dismissedTechnologies,
-    addTechnology,
-    dismissTechnology
+    topics,
+    dismissedTopics,
+    addTopic,
+    dismissTopic
   } = useAppStore();
 
   useEffect(() => {
-    generateSurpriseTechnology();
+    generateSurpriseTopic();
 
     // Cleanup: cancel streaming when component unmounts
     return () => {
       console.log('[SurpriseMe] Cleaning up - cancelling stream');
       llmService.cancelStream();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
-  const generateSurpriseTechnology = async () => {
+  const generateSurpriseTopic = async () => {
     setLoading(true);
     setPartialData({});
     setIsStreaming(false);
     setError(null);
 
     try {
-      const alreadyDiscovered = technologies.map(t => t.name);
+      const alreadyDiscovered = topics.map(t => t.name);
 
-      const newTechnology = await llmService.generateSurpriseTechnology(
+      const newTopic = await llmService.generateTopic(
+        'surprise',
         alreadyDiscovered,
-        dismissedTechnologies,
+        dismissedTopics,
         categorySchema,
+        undefined, // No constraints for surprise mode
         (partialText) => {
           // Parse the streaming JSON progressively
           const parsed = parseStreamingJson(partialText);
@@ -75,10 +77,10 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
         }
       );
 
-      setTechnology(newTechnology);
+      setTopic(newTopic);
       setIsStreaming(false); // Stop streaming, show final card
     } catch (err) {
-      setError('Failed to generate technology. Please try again.');
+      setError('Failed to generate topic. Please try again.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -86,26 +88,26 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   };
 
   const handleDismiss = () => {
-    if (technology) {
-      dismissTechnology(technology.name);
+    if (topic) {
+      dismissTopic(topic.name);
     }
     onComplete();
   };
 
   const handleAddToBucket = () => {
-    if (technology) {
-      addTechnology(technology);
+    if (topic) {
+      addTopic(topic);
     }
     onComplete();
   };
 
   const handleAcquireNow = () => {
-    if (technology) {
-      addTechnology(technology);
+    if (topic) {
+      addTopic(topic);
       // Navigate to quiz using expo-router
       router.push({
         pathname: '/quiz',
-        params: { technologyId: technology.id }
+        params: { topicId: topic.id }
       });
     }
   };
@@ -144,17 +146,17 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   }
 
   // Show card - either streaming or final state
-  if (!isStreaming && !technology) {
+  if (!isStreaming && !topic) {
     return null;
   }
 
   return (
     <View style={styles.container}>
-      <TechnologyCard
-        technology={technology || partialData}
-        isComplete={!!technology}
+      <TopicCard
+        topic={topic || partialData}
+        isComplete={!!topic}
       />
-      {technology && (
+      {topic && (
         <ActionButtons
           onDismiss={handleDismiss}
           onAddToBucket={handleAddToBucket}

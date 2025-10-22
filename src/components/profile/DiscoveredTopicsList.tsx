@@ -1,32 +1,49 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, View, Platform } from 'react-native';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  useAnimatedReaction,
-  runOnJS,
-} from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/components/common/Card';
-import { Technology } from '@/types';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSectionStyles } from '@/hooks/useComponentStyles';
+import { Topic, TopicType } from '@/types';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import React, { useMemo } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
-interface DiscoveredTechnologiesListProps {
-  technologies: Technology[];
-  onTestKnowledge: (technologyId: string) => void;
-  onDelete: (technologyId: string) => void;
-  onTechnologyPress: (technologyId: string) => void;
+// Helper function to get color for topic type
+const getTopicTypeColor = (topicType: TopicType): string => {
+  const colors: Record<TopicType, string> = {
+    technologies: '#3B82F6', // Blue
+    patterns: '#A855F7', // Purple
+    concepts: '#10B981', // Green
+    practices: '#F59E0B', // Orange
+    strategies: '#F59E0B', // Orange
+    models: '#8B5CF6', // Violet
+    frameworks: '#06B6D4', // Cyan
+    protocols: '#0EA5E9', // Sky blue
+    methodologies: '#EC4899', // Pink
+    architectures: '#6366F1', // Indigo
+  };
+  return colors[topicType] || '#6B7280'; // Gray fallback
+};
+
+interface DiscoveredTopicsListProps {
+  topics: Topic[];
+  onTestKnowledge: (topicId: string) => void;
+  onDelete: (topicId: string) => void;
+  onTopicPress: (topicId: string) => void;
 }
 
-export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProps> = ({
-  technologies,
+export const DiscoveredTopicsList: React.FC<DiscoveredTopicsListProps> = ({
+  topics,
   onTestKnowledge,
   onDelete,
-  onTechnologyPress,
+  onTopicPress,
 }) => {
   const { colors, typography, spacing, borderRadius } = useTheme();
   const sectionStyles = useSectionStyles();
@@ -181,7 +198,7 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
     },
   }), [colors, typography, spacing, borderRadius]);
 
-  const SwipeableCard = ({ tech }: { tech: Technology }) => {
+  const SwipeableCard = ({ tech }: { tech: Topic }) => {
     const translateX = useSharedValue(0);
     const actionTrigger = useSharedValue(0); // 0: none, 1: test, 2: delete
     const SWIPE_THRESHOLD = 80;
@@ -211,7 +228,7 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
     const tapGesture = Gesture.Tap()
       .onEnd(() => {
         'worklet';
-        runOnJS(onTechnologyPress)(tech.id);
+        runOnJS(onTopicPress)(tech.id);
       });
 
     const panGesture = Gesture.Pan()
@@ -295,6 +312,11 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
               </View>
 
               <View style={styles.categoryContainer}>
+                <View style={[styles.categoryPill, { backgroundColor: getTopicTypeColor(tech.topicType) + '15', borderColor: getTopicTypeColor(tech.topicType) + '40' }]}>
+                  <Text style={[styles.categoryText, { color: getTopicTypeColor(tech.topicType) }]}>
+                    {tech.topicType}
+                  </Text>
+                </View>
                 <View style={styles.categoryPill}>
                   <Text style={styles.categoryText}>
                     {tech.category}
@@ -315,19 +337,19 @@ export const DiscoveredTechnologiesList: React.FC<DiscoveredTechnologiesListProp
 
   return (
     <View style={sectionStyles.section}>
-      <Text style={sectionStyles.sectionTitle}>Discovered Technologies ({technologies.length})</Text>
-      {technologies.length === 0 ? (
+      <Text style={sectionStyles.sectionTitle}>Discovered Topics ({topics.length})</Text>
+      {topics.length === 0 ? (
         <Card style={styles.emptyCard}>
           <View style={styles.emptyIconContainer}>
             <Ionicons name="search-outline" size={48} color={colors.primary} />
           </View>
-          <Text style={styles.emptyText}>No technologies discovered yet</Text>
+          <Text style={styles.emptyText}>No topics discovered yet</Text>
           <Text style={styles.emptySubtext}>
-            Visit the Discover tab to explore and{'\n'}start building your tech knowledge
+            Visit the Discover tab to explore and{'\n'}start building your architectural knowledge
           </Text>
         </Card>
       ) : (
-        technologies.map((tech) => (
+        topics.map((tech) => (
           <SwipeableCard key={tech.id} tech={tech} />
         ))
       )}

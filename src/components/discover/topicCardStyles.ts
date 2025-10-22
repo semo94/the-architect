@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 
-export const useTechnologyCardStyles = () => {
+export const useTopicCardStyles = () => {
   const { colors, typography, spacing, styles: themeStyles } = useTheme();
 
   return StyleSheet.create({

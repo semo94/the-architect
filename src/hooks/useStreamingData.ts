@@ -1,7 +1,7 @@
-import { useState, useCallback, useRef } from 'react';
-import { parseStreamingJson } from '../utils/streamingParser';
+import { useCallback, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import llmService from '../services/llmService';
+import { parseStreamingJson } from '../utils/streamingParser';
 
 export interface UseStreamingDataOptions<T> {
   /**
@@ -88,12 +88,12 @@ export interface UseStreamingDataResult<T> {
  *
  * @example
  * ```ts
- * const { partialData, isStreaming, onProgress, handleComplete } = useStreamingData<Technology>({
+ * const { partialData, isStreaming, onProgress, handleComplete } = useStreamingData<Topic>({
  *   hasMinimumData: (data) => !!(data.name && data.category),
- *   onComplete: (tech) => setTechnology(tech)
+ *   onComplete: (tech) => setTopic(tech)
  * });
  *
- * const tech = await llmService.generateTechnology(..., onProgress);
+ * const tech = await llmService.generateTopic(..., onProgress);
  * handleComplete(tech);
  * ```
  */

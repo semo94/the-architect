@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Card } from '../../common/Card';
 import { SkeletonBullet } from '../../common/SkeletonLoader';
-import { useTechnologyCardStyles } from '../technologyCardStyles';
+import { useTopicCardStyles } from '../topicCardStyles';
 
 interface Props {
   title: string;
@@ -19,7 +19,7 @@ export const ListSection: React.FC<Props> = ({
   isLoading = false,
   ItemWrapper,
 }) => {
-  const styles = useTechnologyCardStyles();
+  const styles = useTopicCardStyles();
 
   return (
     <Card style={styles.contentCard}>
