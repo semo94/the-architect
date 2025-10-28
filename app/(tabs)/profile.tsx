@@ -1,6 +1,6 @@
 import { BreadthExpansionStats } from '@/components/profile/BreadthExpansionStats';
 import { CategoryBreakdownList } from '@/components/profile/CategoryBreakdownList';
-import { DiscoveredTechnologiesList } from '@/components/profile/DiscoveredTechnologiesList';
+import { DiscoveredTopicsList } from '@/components/profile/DiscoveredTopicsList';
 import { MilestonesList } from '@/components/profile/MilestonesList';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { QuizPerformanceCard } from '@/components/profile/QuizPerformanceCard';
@@ -12,32 +12,32 @@ import { Alert, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
-  const { profile, technologies, deleteTechnology } = useAppStore();
+  const { profile, topics, deleteTopic } = useAppStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
 
-  const handleViewTechnology = (technologyId: string) => {
+  const handleViewTopic = (topicId: string) => {
     router.push({
-      pathname: '/technology-detail',
-      params: { technologyId }
+      pathname: '/topic-detail',
+      params: { topicId }
     });
   };
 
-  const handleTestKnowledge = (technologyId: string) => {
+  const handleTestKnowledge = (topicId: string) => {
     router.push({
       pathname: '/quiz',
-      params: { technologyId }
+      params: { topicId }
     });
   };
 
-  const handleDelete = (technologyId: string) => {
-    const technology = technologies.find(t => t.id === technologyId);
-    if (!technology) return;
+  const handleDelete = (topicId: string) => {
+    const topic = topics.find(t => t.id === topicId);
+    if (!topic) return;
 
     Alert.alert(
-      'Delete Technology',
-      `Are you sure you want to delete "${technology.name}"? This will permanently remove the technology and all associated quiz data from your profile.`,
+      'Delete Topic',
+      `Are you sure you want to delete "${topic.name}"? This will permanently remove the topic and all associated quiz data from your profile.`,
       [
         {
           text: 'Cancel',
@@ -46,7 +46,7 @@ export default function ProfileScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => deleteTechnology(technologyId)
+          onPress: () => deleteTopic(topicId)
         }
       ]
     );
@@ -75,11 +75,11 @@ export default function ProfileScreen() {
 
       <MilestonesList milestones={profile.milestones} />
 
-      <DiscoveredTechnologiesList
-        technologies={technologies}
+      <DiscoveredTopicsList
+        topics={topics}
         onTestKnowledge={handleTestKnowledge}
         onDelete={handleDelete}
-        onTechnologyPress={handleViewTechnology}
+        onTopicPress={handleViewTopic}
       />
     </ScrollView>
   );

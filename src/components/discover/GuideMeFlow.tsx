@@ -13,49 +13,44 @@ import categorySchema from "../../constants/categories";
 import { useStreamingData } from "../../hooks/useStreamingData";
 import llmService from "../../services/llmService";
 import { useAppStore } from "../../store/useAppStore";
-import { Technology } from "../../types";
-import { hasMinimumData, parseStreamingJson } from "../../utils/streamingParser";
+import { Topic, TopicType } from "../../types";
+import { GuideMeHelper, GuideQuestion } from "../../utils/guideMeHelper";
+import { hasMinimumData } from "../../utils/streamingParser";
 import { LoadingSpinner } from "../common/LoadingSpinner";
 import { ActionButtons } from "./ActionButtons";
-import { ScopeQuestionCard } from "./ScopeQuestionCard";
-import { TechnologyCard } from "./TechnologyCard";
+import { TopicCard } from "./TopicCard";
 
 interface Props {
   onComplete: () => void;
 }
 
-interface ConversationStep {
-  question: string;
-  answer: string;
-}
-
 export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const [step, setStep] = useState(0);
-  const [conversationHistory, setConversationHistory] = useState<
-    ConversationStep[]
-  >([]);
-  const [currentQuestion, setCurrentQuestion] = useState<{
-    question: string;
-    options: string[];
-  } | null>(null);
-  const [technology, setTechnology] = useState<Technology | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [partialData, setPartialData] = useState<Partial<Technology>>({});
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [selections, setSelections] = useState({
+    category: '',
+    subcategory: '',
+    topicType: '' as TopicType | '',
+    learningGoal: ''
+  });
+  const [currentQuestion, setCurrentQuestion] = useState<GuideQuestion | null>(null);
+  const [topic, setTopic] = useState<Topic | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, typography, spacing, styles: themeStyles } = useTheme();
+  const { topics, addTopic, dismissTopic } = useAppStore();
 
-  const { technologies, addTechnology, dismissTechnology } = useAppStore();
-
-  // Streaming state for questions
-  const questionStreaming = useStreamingData<{ question: string; options: string[] }>({
-    hasMinimumData: (data) => !!data.question,
+  // Use streaming hook for state management and cleanup
+  const topicStreaming = useStreamingData<Topic>({
+    hasMinimumData: (data) => hasMinimumData(data),
+    onComplete: (completedTopic) => {
+      console.log('[GuideMe] Topic generation complete');
+      setTopic(completedTopic);
+    },
   });
 
-  // Destructure streaming functions for proper dependency tracking
-  const { onProgress, handleComplete, handleError, reset, cancel } = questionStreaming;
+  // Destructure streaming functions to avoid nested object properties in dependencies
+  const { onProgress, handleComplete, handleError, reset, cancel } = topicStreaming;
 
   const styles = useMemo(() => StyleSheet.create({
     container: themeStyles.container,
@@ -108,146 +103,129 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     },
   }), [colors, typography, spacing, themeStyles]);
 
-  const generateFirstQuestion = useCallback(async () => {
-    setError(null);
-    reset(); // This sets isLoading=true internally
-
-    try {
-      const question = await llmService.generateGuidedQuestion(
-        1,
-        [],
-        categorySchema,
-        onProgress
-      );
-      setCurrentQuestion(question);
-      handleComplete(question);
-    } catch (err) {
-      setError("Failed to generate question. Please try again.");
-      console.error(err);
-      handleError(err as Error);
-    }
-  }, [onProgress, handleComplete, reset, handleError]);
+  useEffect(() => {
+    // Load first question immediately (no LLM call)
+    setCurrentQuestion(GuideMeHelper.getStep1Question());
+  }, []);
 
   useEffect(() => {
-    generateFirstQuestion();
-
     // Cleanup: cancel streaming when component unmounts
     return () => {
-      console.log('[GuideMe] Cleaning up - cancelling all streams');
-      llmService.cancelStream();
+      console.log('[GuideMe] Cleaning up - cancelling stream');
       cancel();
     };
-  }, [generateFirstQuestion, cancel]);
+  }, [cancel]);
 
   const handleOptionSelect = async (option: string) => {
     if (!currentQuestion) return;
-    if (loading) return; // Prevent multiple technology generations
+    if (topicStreaming.isLoading) return; // Prevent multiple topic generations
 
-    const newHistory = [
-      ...conversationHistory,
-      { question: currentQuestion.question, answer: option },
-    ];
-    setConversationHistory(newHistory);
+    if (step === 0) {
+      // Step 1: Category selected
+      setSelections({ ...selections, category: option });
+      setCurrentQuestion(GuideMeHelper.getStep2Question(option));
+      setStep(1);
 
-    if (step < 2) {
-      // Generate next question (steps 0 and 1)
-      questionStreaming.reset(); // This sets isLoading=true internally
-      try {
-        const nextQuestion = await llmService.generateGuidedQuestion(
-          step + 2,
-          newHistory,
-          categorySchema,
-          questionStreaming.onProgress
-        );
+    } else if (step === 1) {
+      // Step 2: Subcategory selected
+      setSelections({ ...selections, subcategory: option });
+
+      // Check if this subcategory has multiple topic types
+      const nextQuestion = GuideMeHelper.getStep3Question(selections.category, option);
+
+      if (nextQuestion === null) {
+        // Only one topic type - auto-select it and move to step 4
+        const singleType = GuideMeHelper.getSingleTopicType(selections.category, option);
+        if (singleType) {
+          setSelections(prev => ({ ...prev, subcategory: option, topicType: singleType }));
+          setCurrentQuestion(GuideMeHelper.getStep4Question(selections.category, option, singleType));
+          setStep(3);  // Skip to step 3 (which is learning goal)
+        }
+      } else {
+        // Multiple topic types - show selection
         setCurrentQuestion(nextQuestion);
-        questionStreaming.handleComplete(nextQuestion);
-        setStep(step + 1); // Increment only after successful generation
-      } catch (err) {
-        setError("Failed to generate next question. Please try again.");
-        console.error(err);
-        questionStreaming.handleError(err as Error);
+        setStep(2);
       }
-    } else {
-      // Generate final technology (step 2 - third question)
-      setCurrentQuestion(null); // Clear question immediately to hide UI
-      generateFinalTechnology(newHistory);
+
+    } else if (step === 2) {
+      // Step 3: Topic type selected (only shown if multiple types)
+      setSelections({ ...selections, topicType: option as TopicType });
+      setCurrentQuestion(GuideMeHelper.getStep4Question(
+        selections.category,
+        selections.subcategory,
+        option as TopicType
+      ));
+      setStep(3);
+
+    } else if (step === 3) {
+      // Step 4: Learning goal selected - generate topic
+      setSelections({ ...selections, learningGoal: option });
+      await generateFinalTopic(option);
     }
   };
 
-  const generateFinalTechnology = async (history: ConversationStep[]) => {
-    setLoading(true);
-    setPartialData({});
-    setIsStreaming(false);
+  const generateFinalTopic = useCallback(async (learningGoal: string) => {
+    reset(); // This sets isLoading=true internally
     setError(null);
+    setCurrentQuestion(null); // Clear question immediately to hide UI
 
     try {
-      const alreadyDiscovered = technologies.map((t) => t.name);
+      // Build constraints for the unified generateTopic method
+      const constraints = {
+        category: selections.category,
+        subcategory: selections.subcategory,
+        topicType: selections.topicType as TopicType,
+        learningGoal
+      };
 
-      const newTechnology = await llmService.generateGuidedTechnology(
-        history,
+      const alreadyDiscovered = topics.map((t) => t.name);
+
+      const newTopic = await llmService.generateTopic(
+        'guided',
         alreadyDiscovered,
+        [], // No dismissed list for guided mode
         categorySchema,
-        (partialText) => {
-          // Parse the streaming JSON progressively
-          const parsed = parseStreamingJson(partialText);
-          setPartialData(parsed);
-
-          // Once we have minimum data, show the streaming card
-          if (hasMinimumData(parsed)) {
-            setIsStreaming(true);
-            setLoading(false);
-          }
-        }
+        constraints,
+        onProgress
       );
 
-      setTechnology(newTechnology);
-      setCurrentQuestion(null);
-      setIsStreaming(false); // Stop streaming, show final card
+      handleComplete(newTopic);
     } catch (err) {
-      setError("Failed to generate technology. Please try again.");
+      setError("Failed to generate topic. Please try again.");
       console.error(err);
-    } finally {
-      setLoading(false);
+      handleError(err as Error);
     }
-  };
+  }, [selections, topics, onProgress, handleComplete, handleError, reset]);
 
   const handleDismiss = () => {
-    if (technology) {
-      dismissTechnology(technology.name);
+    if (topic) {
+      dismissTopic(topic.name);
     }
     onComplete();
   };
 
   const handleAddToBucket = () => {
-    if (technology) {
-      addTechnology(technology);
+    if (topic) {
+      addTopic(topic);
     }
     onComplete();
   };
 
   const handleAcquireNow = () => {
-    if (technology) {
-      addTechnology(technology);
+    if (topic) {
+      addTopic(topic);
       router.push({
         pathname: "/quiz",
-        params: { technologyId: technology.id },
+        params: { topicId: topic.id },
       });
     }
   };
 
-  // Show loading spinner before any streaming data arrives
-  if (questionStreaming.isLoading && !questionStreaming.isStreaming) {
-    return <LoadingSpinner message="Preparing question..." />;
-  }
-
-  if (loading) {
+  // Show loading spinner before streaming starts (only during topic generation)
+  if (topicStreaming.isLoading && !topicStreaming.isStreaming && !currentQuestion) {
     return (
       <LoadingSpinner
-        message={
-          technology
-            ? "Finding the perfect technology for you..."
-            : "Generating your personalized learning path..."
-        }
+        message="Finding the perfect topic for you..."
       />
     );
   }
@@ -269,15 +247,15 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     );
   }
 
-  // Show technology card if generation is started or complete
-  if (technology || (isStreaming && !currentQuestion && !questionStreaming.isStreaming)) {
+  // Show topic card if generation is started or complete
+  if (topic || (topicStreaming.isStreaming && !currentQuestion)) {
     return (
       <View style={styles.container}>
-        <TechnologyCard
-          technology={technology || partialData}
-          isComplete={!!technology}
+        <TopicCard
+          topic={topic || topicStreaming.partialData}
+          isComplete={!!topic}
         />
-        {technology && (
+        {topic && (
           <ActionButtons
             onDismiss={handleDismiss}
             onAddToBucket={handleAddToBucket}
@@ -288,23 +266,23 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     );
   }
 
-  // Show question and options (with streaming support)
-  if (currentQuestion || questionStreaming.isStreaming) {
-    const displayData = questionStreaming.isStreaming || questionStreaming.isLoading
-      ? questionStreaming.partialData
-      : currentQuestion;
-    const isComplete = !!questionStreaming.finalData;
+  // Show question and options
+  if (currentQuestion) {
+    // Calculate total steps (3 or 4 depending on whether topic type selection is needed)
+    const totalSteps = selections.subcategory &&
+      GuideMeHelper.getStep3Question(selections.category, selections.subcategory) === null
+      ? 3 : 4;
 
     return (
       <View style={styles.container}>
         {/* Fixed Header with Progress Bar */}
         <View style={[styles.header]}>
-          <Text style={styles.stepIndicator}>Step {step + 1} of 3</Text>
+          <Text style={styles.stepIndicator}>Step {step + 1} of {totalSteps}</Text>
           <View style={styles.progressBar}>
             <View
               style={[
                 styles.progressFill,
-                { width: `${((step + 1) / 3) * 100}%` },
+                { width: `${((step + 1) / totalSteps) * 100}%` },
               ]}
             />
           </View>
@@ -312,23 +290,66 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 
         {/* Scrollable Content */}
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-          <ScopeQuestionCard
-            partialData={displayData || {}}
-            isStreaming={questionStreaming.isStreaming}
-            isComplete={isComplete}
-            onSelectOption={handleOptionSelect}
-          />
+          <View style={{ padding: spacing.xl }}>
+            <Text style={{
+              fontSize: typography.fontSize.xl,
+              fontWeight: typography.fontWeight.bold,
+              color: colors.text,
+              marginBottom: spacing.xl
+            }}>
+              {currentQuestion.question}
+            </Text>
 
-          {conversationHistory.length > 0 && (
-            <View style={styles.historyContainer}>
-              <Text style={styles.historyTitle}>Your selections:</Text>
-              {conversationHistory.map((item, index) => (
-                <View key={index} style={styles.historyItem}>
-                  <Text style={styles.historyAnswer}>✓ {item.answer}</Text>
-                </View>
-              ))}
-            </View>
-          )}
+            {currentQuestion.options.map((option, index) => (
+              <Pressable
+                key={index}
+                onPress={() => handleOptionSelect(option.value)}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: pressed ? colors.primaryLight : colors.cardBackground,
+                    padding: spacing.lg,
+                    borderRadius: 12,
+                    marginBottom: spacing.md,
+                    borderWidth: 1,
+                    borderColor: colors.border
+                  }
+                ]}
+              >
+                <Text style={{
+                  fontSize: typography.fontSize.base,
+                  fontWeight: typography.fontWeight.semibold,
+                  color: colors.text,
+                  marginBottom: option.description ? spacing.xs : 0
+                }}>
+                  {option.label}
+                </Text>
+                {option.description && (
+                  <Text style={{
+                    fontSize: typography.fontSize.sm,
+                    color: colors.textSecondary
+                  }}>
+                    {option.description}
+                  </Text>
+                )}
+              </Pressable>
+            ))}
+
+            {/* Show selections history */}
+            {step > 0 && (
+              <View style={{ marginTop: spacing.xl }}>
+                <Text style={styles.historyTitle}>Your selections:</Text>
+                {selections.category && (
+                  <Text style={styles.historyAnswer}>✓ {selections.category}</Text>
+                )}
+                {selections.subcategory && (
+                  <Text style={styles.historyAnswer}>✓ {selections.subcategory}</Text>
+                )}
+                {selections.topicType && (
+                  <Text style={styles.historyAnswer}>✓ {selections.topicType}</Text>
+                )}
+              </View>
+            )}
+          </View>
         </ScrollView>
       </View>
     );

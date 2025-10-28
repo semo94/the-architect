@@ -2,11 +2,11 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Card } from '../../common/Card';
 import { SkeletonLoader, SkeletonText } from '../../common/SkeletonLoader';
-import { useTechnologyCardStyles } from '../technologyCardStyles';
+import { useTopicCardStyles } from '../topicCardStyles';
 import { useTheme } from '@/contexts/ThemeContext';
 
 interface Comparison {
-  technology: string;
+  topic: string;
   comparison: string;
 }
 
@@ -21,7 +21,7 @@ export const ComparisonSection: React.FC<Props> = ({
   isLoading = false,
   ItemWrapper,
 }) => {
-  const styles = useTechnologyCardStyles();
+  const styles = useTopicCardStyles();
   const { spacing } = useTheme();
 
   return (
@@ -44,7 +44,7 @@ export const ComparisonSection: React.FC<Props> = ({
             const comparisonItem = (
               <View style={styles.comparisonItem}>
                 <Text style={styles.comparisonTitle}>
-                  vs {comparison.technology}
+                  vs {comparison.topic}
                 </Text>
                 <Text style={styles.comparisonText}>
                   {comparison.comparison}

@@ -17,18 +17,19 @@ import {
 } from 'react-native';
 
 export default function QuizScreen() {
-  const { technologyId } = useLocalSearchParams<{ technologyId: string }>();
+  const { topicId } = useLocalSearchParams<{ topicId: string }>();
   const router = useRouter();
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
 
-  const { technologies, quizzes, addQuiz } = useAppStore();
-  const technology = technologies.find((t) => t.id === technologyId);
+  const { topics, quizzes, addQuiz } = useAppStore();
+  const topic = topics.find((t) => t.id === topicId);
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]); // Final complete questions (for quiz results)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<number[]>([]);
   const [showFeedback, setShowFeedback] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
+  const [finalScore, setFinalScore] = useState<number>(0); // Store the final score to avoid recalculation
   const [error, setError] = useState<string | null>(null);
 
   // Streaming state for quiz questions
@@ -77,14 +78,14 @@ export default function QuizScreen() {
   const { onProgress, handleComplete, handleError, reset, cancel } = quizStreaming;
 
   const generateQuiz = useCallback(async () => {
-    if (!technology) return;
+    if (!topic) return;
 
     setError(null);
     reset(); // This sets isLoading=true internally
 
     try {
       const generatedQuestions = await llmService.generateQuizQuestions(
-        technology,
+        topic,
         onProgress
       );
       // Don't set questions here - let onComplete handle it to avoid premature UI transition
@@ -94,19 +95,19 @@ export default function QuizScreen() {
       setError('Failed to generate quiz questions. Please try again.');
       handleError(err as Error);
     }
-  }, [technology, onProgress, handleComplete, handleError, reset]);
+  }, [topic, onProgress, handleComplete, handleError, reset]);
 
   useEffect(() => {
-    if (technology) {
+    if (topic) {
       generateQuiz();
     }
 
-    // Cleanup: cancel streaming when component unmounts or technology changes
+    // Cleanup: cancel streaming when component unmounts or topic changes
     return () => {
       console.log('[Quiz] Cleaning up - cancelling stream');
       cancel();
     };
-  }, [technology, generateQuiz, cancel]);
+  }, [topic, generateQuiz, cancel]);
 
   // Helper to check if a question is complete (has all required fields for interaction)
   const isQuestionComplete = (q: Partial<QuizQuestion>): boolean => {
@@ -135,22 +136,31 @@ export default function QuizScreen() {
   };
 
   const completeQuiz = () => {
-    if (!technology) return;
+    if (!topic) return;
 
-    const questions = quizStreaming.partialData.questions || [];
-    const score = calculateScore();
+    // Use the stable questions state (set by onComplete) instead of streaming partialData
+    const quizQuestions = questions.length > 0 ? questions : (quizStreaming.partialData.questions || []);
+
+    // Calculate score once and store it
+    let correct = 0;
+    quizQuestions.forEach((q, idx) => {
+      if (userAnswers[idx] === q.correctAnswer) {
+        correct++;
+      }
+    });
+    const score = Math.round((correct / quizQuestions.length) * 100);
     const passed = score >= 80;
 
-    // Count previous attempts for this technology
+    // Count previous attempts for this topic
     const previousAttempts = quizzes.filter(
-      (q) => q.technologyId === technology.id
+      (q) => q.topicId === topic.id
     ).length;
 
     const quiz: Quiz = {
       id: `quiz-${Date.now()}`,
-      technologyId: technology.id,
-      technologyName: technology.name,
-      questions: questions.map((q, idx) => ({
+      topicId: topic.id,
+      topicName: topic.name,
+      questions: quizQuestions.map((q, idx) => ({
         ...q,
         userAnswer: userAnswers[idx],
       })),
@@ -162,18 +172,13 @@ export default function QuizScreen() {
     };
 
     addQuiz(quiz);
-    setQuizComplete(true);
-  };
 
-  const calculateScore = () => {
-    const questions = quizStreaming.partialData.questions || [];
-    let correct = 0;
-    questions.forEach((q, idx) => {
-      if (userAnswers[idx] === q.correctAnswer) {
-        correct++;
-      }
-    });
-    return Math.round((correct / questions.length) * 100);
+    // Store the final score and questions to prevent recalculation during render
+    setFinalScore(score);
+    if (questions.length === 0) {
+      setQuestions(quizQuestions);
+    }
+    setQuizComplete(true);
   };
 
   const handleRetry = () => {
@@ -181,6 +186,7 @@ export default function QuizScreen() {
     setUserAnswers([]);
     setShowFeedback(false);
     setQuizComplete(false);
+    setFinalScore(0);
     generateQuiz();
   };
 
@@ -188,75 +194,79 @@ export default function QuizScreen() {
     router.back();
   };
 
-  const styles = useMemo(() => StyleSheet.create({
-    container: themeStyles.container,
-    centerContainer: themeStyles.centerContainer,
-    loadingText: {
-      marginTop: spacing.xl,
-      fontSize: typography.fontSize.base,
-      color: colors.textSecondary,
-    },
-    errorText: themeStyles.errorText,
-    technologyName: {
-      fontSize: typography.fontSize.lg,
-      fontWeight: typography.fontWeight.bold,
-      color: colors.text,
-      marginTop: spacing.md,
-    },
-    button: {
-      ...themeStyles.button,
-      ...themeStyles.buttonPrimary,
-      marginTop: spacing.md,
-    },
-    pressed: themeStyles.pressed,
-    buttonText: themeStyles.buttonText,
-    cancelButton: {
-      ...themeStyles.touchable,
-      paddingHorizontal: spacing.xxl,
-      paddingVertical: spacing.md,
-      marginTop: spacing.md,
-    },
-    cancelButtonText: {
-      color: colors.textSecondary,
-      fontSize: typography.fontSize.base,
-    },
-    header: themeStyles.header,
-    headerContent: {
-      marginBottom: spacing.md,
-    },
-    progressText: {
-      fontSize: typography.fontSize.sm,
-      color: colors.textSecondary,
-      marginTop: spacing.xs,
-    },
-    progressBar: themeStyles.progressBar,
-    progressFill: themeStyles.progressFill,
-    content: {
-      flex: 1,
-    },
-    contentContainer: {
-      flexGrow: 1,
-      padding: spacing.lg,
-    },
-    footer: themeStyles.footer,
-    nextButton: {
-      ...themeStyles.touchable,
-      backgroundColor: colors.primary,
-      paddingVertical: spacing.lg,
-      borderRadius: borderRadius.lg,
-      alignItems: 'center',
-    },
-    nextButtonText: {
-      color: colors.white,
-      fontSize: typography.fontSize.base,
-      fontWeight: typography.fontWeight.bold,
-    },
-  }), [colors, typography, spacing, borderRadius, themeStyles]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: themeStyles.container,
+        centerContainer: themeStyles.centerContainer,
+        loadingText: {
+          marginTop: spacing.xl,
+          fontSize: typography.fontSize.base,
+          color: colors.textSecondary,
+        },
+        errorText: themeStyles.errorText,
+        topicName: {
+          fontSize: typography.fontSize.lg,
+          fontWeight: typography.fontWeight.bold,
+          color: colors.text,
+          marginTop: spacing.md,
+        },
+        button: {
+          ...themeStyles.button,
+          ...themeStyles.buttonPrimary,
+          marginTop: spacing.md,
+        },
+        pressed: themeStyles.pressed,
+        buttonText: themeStyles.buttonText,
+        cancelButton: {
+          ...themeStyles.touchable,
+          paddingHorizontal: spacing.xxl,
+          paddingVertical: spacing.md,
+          marginTop: spacing.md,
+        },
+        cancelButtonText: {
+          color: colors.textSecondary,
+          fontSize: typography.fontSize.base,
+        },
+        header: themeStyles.header,
+        headerContent: {
+          marginBottom: spacing.md,
+        },
+        progressText: {
+          fontSize: typography.fontSize.sm,
+          color: colors.textSecondary,
+          marginTop: spacing.xs,
+        },
+        progressBar: themeStyles.progressBar,
+        progressFill: themeStyles.progressFill,
+        content: {
+          flex: 1,
+        },
+        contentContainer: {
+          flexGrow: 1,
+          padding: spacing.lg,
+        },
+        footer: themeStyles.footer,
+        nextButton: {
+          ...themeStyles.touchable,
+          backgroundColor: colors.primary,
+          paddingVertical: spacing.lg,
+          borderRadius: borderRadius.lg,
+          alignItems: 'center',
+        },
+        nextButtonText: {
+          color: colors.white,
+          fontSize: typography.fontSize.base,
+          fontWeight: typography.fontWeight.bold,
+        },
+      }),
+    [colors, typography, spacing, borderRadius, themeStyles]
+  );
 
-  if (!technology) {
+  if (!topic) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Technology not found</Text>
+        <Text style={styles.errorText}>Topic not found</Text>
         <Pressable
           style={({ pressed }) => [
             styles.button,
@@ -304,11 +314,11 @@ export default function QuizScreen() {
   if (quizComplete) {
     return (
       <QuizResults
-        score={calculateScore()}
+        score={finalScore}
         questions={questions}
         userAnswers={userAnswers}
         onClose={handleClose}
-        onRetry={calculateScore() < 80 ? handleRetry : undefined}
+        onRetry={finalScore < 80 ? handleRetry : undefined}
       />
     );
   }
@@ -327,7 +337,7 @@ export default function QuizScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Text style={styles.technologyName}>{technology.name}</Text>
+          <Text style={styles.topicName}>{topic.name}</Text>
           <Text style={styles.progressText}>
             Question {currentQuestionIndex + 1} of 4
           </Text>
@@ -362,12 +372,12 @@ export default function QuizScreen() {
           <Pressable
             style={({ pressed }) => [
               styles.nextButton,
-              pressed && styles.pressed
+              pressed && styles.pressed,
             ]}
             onPress={handleNext}
           >
             <Text style={styles.nextButtonText}>
-              {currentQuestionIndex < 3 ? 'Next Question' : 'Complete Quiz'}
+              {currentQuestionIndex < 3 ? "Next Question" : "Complete Quiz"}
             </Text>
           </Pressable>
         </View>

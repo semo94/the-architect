@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { QuizQuestion, Technology } from '../types';
+import { QuizQuestion, Topic, TopicType } from '../types';
 import { promptTemplates } from '../utils/prompts';
 import sseClient from './sseService';
 
@@ -29,8 +29,9 @@ interface ProviderHeaders {
 // Validation schemas
 
 // Flat schema for streaming-optimized LLM responses
-const TechnologyContentSchemaFlat = z.object({
+const TopicContentSchema = z.object({
   name: z.string(),
+  topicType: z.string(),
   category: z.string(),
   subcategory: z.string(),
   what: z.string(),
@@ -51,19 +52,10 @@ const TechnologyContentSchemaFlat = z.object({
   compare_1_text: z.string(),
 });
 
-// Flat schema for guided questions (supports 4-6 options)
-const GuidedQuestionSchemaFlat = z.object({
-  question: z.string(),
-  option_0: z.string(),
-  option_1: z.string(),
-  option_2: z.string(),
-  option_3: z.string(),
-  option_4: z.string().optional(),
-  option_5: z.string().optional(),
-});
+
 
 // Schema for LLM response (flat format for better streaming)
-const QuizQuestionsSchemaFlat = z.object({
+const QuizQuestionsSchema = z.object({
   questions: z.array(
     z.object({
       question: z.string(),
@@ -301,166 +293,122 @@ class LLMService {
     throw new Error(`Unable to extract text content from ${this.config.provider} response format`);
   }
 
-  async generateSurpriseTechnology(
+  /**
+   * Unified topic generation for both Surprise Me and Guide Me flows
+   */
+  async generateTopic(
+    mode: 'surprise' | 'guided',
+    alreadyDiscovered: string[],
+    dismissed: string[],
+    categorySchema: any,
+    constraints?: {
+      category: string;
+      subcategory: string;
+      topicType: TopicType;
+      learningGoal: string;
+    },
+    onProgress?: (partialText: string) => void
+  ): Promise<Topic> {
+    const prompt = promptTemplates.generateTopic(
+      mode,
+      alreadyDiscovered,
+      dismissed,
+      categorySchema,
+      constraints
+    );
+
+    const result = onProgress
+      ? await this.callLLMStream(prompt, onProgress)
+      : await this.callLLM(prompt);
+
+    // Validate using flat schema
+    const validated = TopicContentSchema.parse(result);
+
+    // Transform flat format to nested structure for app
+    return {
+      id: uuidv4(),
+      name: validated.name,
+      topicType: validated.topicType as any, // Will be validated by Topic type
+      category: validated.category,
+      subcategory: validated.subcategory,
+      content: {
+        what: validated.what,
+        why: validated.why,
+        pros: [
+          validated.pro_0,
+          validated.pro_1,
+          validated.pro_2,
+          validated.pro_3,
+          validated.pro_4,
+        ],
+        cons: [
+          validated.con_0,
+          validated.con_1,
+          validated.con_2,
+          validated.con_3,
+          validated.con_4,
+        ],
+        compareToSimilar: [
+          {
+            topic: validated.compare_0_tech,
+            comparison: validated.compare_0_text,
+          },
+          {
+            topic: validated.compare_1_tech,
+            comparison: validated.compare_1_text,
+          },
+        ],
+      },
+      status: 'discovered',
+      discoveryMethod: mode,
+      discoveredAt: new Date().toISOString(),
+      learnedAt: null,
+    };
+  }
+
+  // Backward compatibility wrappers
+  async generateSurpriseTopic(
     alreadyDiscovered: string[],
     dismissed: string[],
     categorySchema: any,
     onProgress?: (partialText: string) => void
-  ): Promise<Technology> {
-    const prompt = promptTemplates.generateSurpriseTechnology(
+  ): Promise<Topic> {
+    return this.generateTopic(
+      'surprise',
       alreadyDiscovered,
       dismissed,
-      categorySchema
+      categorySchema,
+      undefined,
+      onProgress
     );
-
-    const result = onProgress
-      ? await this.callLLMStream(prompt, onProgress)
-      : await this.callLLM(prompt);
-
-    // Validate using flat schema
-    const validated = TechnologyContentSchemaFlat.parse(result);
-
-    // Transform flat format to nested structure for app
-    return {
-      id: uuidv4(),
-      name: validated.name,
-      category: validated.category,
-      subcategory: validated.subcategory,
-      content: {
-        what: validated.what,
-        why: validated.why,
-        pros: [
-          validated.pro_0,
-          validated.pro_1,
-          validated.pro_2,
-          validated.pro_3,
-          validated.pro_4,
-        ],
-        cons: [
-          validated.con_0,
-          validated.con_1,
-          validated.con_2,
-          validated.con_3,
-          validated.con_4,
-        ],
-        compareToSimilar: [
-          {
-            technology: validated.compare_0_tech,
-            comparison: validated.compare_0_text,
-          },
-          {
-            technology: validated.compare_1_tech,
-            comparison: validated.compare_1_text,
-          },
-        ],
-      },
-      status: 'discovered',
-      discoveryMethod: 'surprise',
-      discoveredAt: new Date().toISOString(),
-      learnedAt: null,
-    };
   }
 
-  async generateGuidedTechnology(
-    conversationHistory: any[],
+  async generateGuidedTopic(
+    constraints: {
+      category: string;
+      subcategory: string;
+      topicType: TopicType;
+      learningGoal: string;
+    },
     alreadyDiscovered: string[],
     categorySchema: any,
     onProgress?: (partialText: string) => void
-  ): Promise<Technology> {
-    const prompt = promptTemplates.generateGuidedTechnology(
-      conversationHistory,
+  ): Promise<Topic> {
+    return this.generateTopic(
+      'guided',
       alreadyDiscovered,
-      categorySchema
+      [],
+      categorySchema,
+      constraints,
+      onProgress
     );
-
-    const result = onProgress
-      ? await this.callLLMStream(prompt, onProgress)
-      : await this.callLLM(prompt);
-
-    // Validate using flat schema
-    const validated = TechnologyContentSchemaFlat.parse(result);
-
-    // Transform flat format to nested structure for app
-    return {
-      id: uuidv4(),
-      name: validated.name,
-      category: validated.category,
-      subcategory: validated.subcategory,
-      content: {
-        what: validated.what,
-        why: validated.why,
-        pros: [
-          validated.pro_0,
-          validated.pro_1,
-          validated.pro_2,
-          validated.pro_3,
-          validated.pro_4,
-        ],
-        cons: [
-          validated.con_0,
-          validated.con_1,
-          validated.con_2,
-          validated.con_3,
-          validated.con_4,
-        ],
-        compareToSimilar: [
-          {
-            technology: validated.compare_0_tech,
-            comparison: validated.compare_0_text,
-          },
-          {
-            technology: validated.compare_1_tech,
-            comparison: validated.compare_1_text,
-          },
-        ],
-      },
-      status: 'discovered',
-      discoveryMethod: 'guided',
-      discoveredAt: new Date().toISOString(),
-      learnedAt: null,
-    };
-  }
-
-  async generateGuidedQuestion(
-    step: number,
-    previousSelections: any[],
-    categorySchema: any,
-    onProgress?: (partialText: string) => void
-  ): Promise<{ question: string; options: string[] }> {
-    const prompt = promptTemplates.generateGuidedQuestion(
-      step,
-      previousSelections,
-      categorySchema
-    );
-
-    const result = onProgress
-      ? await this.callLLMStream(prompt, onProgress)
-      : await this.callLLM(prompt);
-
-    // Validate using flat schema
-    const validated = GuidedQuestionSchemaFlat.parse(result);
-
-    // Transform flat format to array format for app
-    const options = [
-      validated.option_0,
-      validated.option_1,
-      validated.option_2,
-      validated.option_3,
-      validated.option_4,
-      validated.option_5,
-    ].filter(Boolean) as string[];
-
-    return {
-      question: validated.question,
-      options,
-    };
   }
 
   async generateQuizQuestions(
-    technology: Technology,
+    topic: Topic,
     onProgress?: (partialText: string) => void
   ): Promise<QuizQuestion[]> {
-    const prompt = promptTemplates.generateQuizQuestions(technology);
+    const prompt = promptTemplates.generateQuizQuestions(topic);
 
     // Pass through the onProgress callback directly - the hook will handle transformation
     const result = onProgress
@@ -468,7 +416,7 @@ class LLMService {
       : await this.callLLM(prompt);
 
     // Validate using flat schema, then transform to array format for final result
-    const validated = QuizQuestionsSchemaFlat.parse(result);
+    const validated = QuizQuestionsSchema.parse(result);
     return validated.questions.map(q => ({
       question: q.question,
       options: [q.option_0, q.option_1, q.option_2, q.option_3],
