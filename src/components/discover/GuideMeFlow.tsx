@@ -214,7 +214,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleAcquireNow = () => {
     if (topic) {
       addTopic(topic);
-      router.push({
+      router.replace({
         pathname: "/quiz",
         params: { topicId: topic.id },
       });

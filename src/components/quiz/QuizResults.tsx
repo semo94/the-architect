@@ -13,7 +13,6 @@ interface Props {
   score: number;
   questions: QuizQuestion[];
   userAnswers: number[];
-  onClose: () => void;
   onRetry?: () => void;
 }
 
@@ -21,7 +20,6 @@ export const QuizResults: React.FC<Props> = ({
   score,
   questions,
   userAnswers,
-  onClose,
   onRetry,
 }) => {
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
@@ -196,18 +194,6 @@ export const QuizResults: React.FC<Props> = ({
       fontSize: typography.fontSize.base,
       fontWeight: typography.fontWeight.bold,
     },
-    closeButton: {
-      backgroundColor: colors.primary,
-      paddingVertical: spacing.lg,
-      borderRadius: borderRadius.lg,
-      alignItems: 'center',
-      cursor: 'pointer' as any,
-    },
-    closeButtonText: {
-      color: colors.white,
-      fontSize: typography.fontSize.base,
-      fontWeight: typography.fontWeight.bold,
-    },
   }), [colors, typography, spacing, borderRadius, themeStyles]);
 
   return (
@@ -306,8 +292,8 @@ export const QuizResults: React.FC<Props> = ({
         })}
       </View>
 
-      <View style={styles.actionButtons}>
-        {!passed && onRetry && (
+      {!passed && onRetry && (
+        <View style={styles.actionButtons}>
           <Pressable
             style={({ pressed }) => [
               styles.retryButton,
@@ -317,20 +303,8 @@ export const QuizResults: React.FC<Props> = ({
           >
             <Text style={styles.retryButtonText}>Retry Quiz</Text>
           </Pressable>
-        )}
-        <Pressable
-          style={({ pressed }) => [
-            styles.closeButton,
-            !passed && { marginTop: spacing.md },
-            pressed && styles.pressed
-          ]}
-          onPress={onClose}
-        >
-          <Text style={styles.closeButtonText}>
-            {passed ? 'Continue Learning' : 'Back to Profile'}
-          </Text>
-        </Pressable>
-      </View>
+        </View>
+      )}
     </ScrollView>
   );
 };

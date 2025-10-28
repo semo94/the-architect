@@ -190,9 +190,6 @@ export default function QuizScreen() {
     generateQuiz();
   };
 
-  const handleClose = () => {
-    router.back();
-  };
 
   const styles = useMemo(
     () =>
@@ -272,7 +269,7 @@ export default function QuizScreen() {
             styles.button,
             pressed && styles.pressed
           ]}
-          onPress={handleClose}
+          onPress={() => router.back()}
         >
           <Text style={styles.buttonText}>Go Back</Text>
         </Pressable>
@@ -303,7 +300,7 @@ export default function QuizScreen() {
             styles.cancelButton,
             pressed && styles.pressed
           ]}
-          onPress={handleClose}
+          onPress={() => router.back()}
         >
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </Pressable>
@@ -317,7 +314,6 @@ export default function QuizScreen() {
         score={finalScore}
         questions={questions}
         userAnswers={userAnswers}
-        onClose={handleClose}
         onRetry={finalScore < 80 ? handleRetry : undefined}
       />
     );

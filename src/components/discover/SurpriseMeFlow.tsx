@@ -100,7 +100,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     if (topic) {
       addTopic(topic);
       // Navigate to quiz using expo-router
-      router.push({
+      router.replace({
         pathname: '/quiz',
         params: { topicId: topic.id }
       });
