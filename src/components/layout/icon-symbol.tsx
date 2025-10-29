@@ -16,6 +16,7 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'sparkles': 'auto-awesome',
   'person': 'person',
+  'list.bullet': 'format-list-bulleted',
 } as const;
 
 type IconSymbolName = keyof typeof MAPPING;
