@@ -94,6 +94,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             active={statusFilter === 'learned'}
             onPress={() => onStatusChange('learned')}
           />
+          <FilterChip
+            label="Dismissed"
+            active={statusFilter === 'dismissed'}
+            onPress={() => onStatusChange('dismissed')}
+          />
 
           {/* Divider */}
           <View style={styles.divider} />

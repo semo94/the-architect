@@ -17,7 +17,7 @@ import { SearchBar } from './SearchBar';
 import { TopicListCard } from './TopicListCard';
 
 export const TopicsScreen: React.FC = () => {
-  const { topics, deleteTopic } = useAppStore();
+  const { topics, dismissedTopics, deleteTopic } = useAppStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
@@ -46,7 +46,14 @@ export const TopicsScreen: React.FC = () => {
         topic.topicType.toLowerCase().includes(searchQuery.toLowerCase());
 
       // Status filter
-      const matchesStatus = statusFilter === 'all' || topic.status === statusFilter;
+      let matchesStatus = true;
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'dismissed') {
+          matchesStatus = dismissedTopics.includes(topic.name);
+        } else {
+          matchesStatus = topic.status === statusFilter;
+        }
+      }
 
       // Topic type filter
       const matchesType = typeFilter === 'all' || topic.topicType === typeFilter;
