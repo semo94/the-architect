@@ -1,4 +1,4 @@
-export type TopicStatus = 'discovered' | 'learned';
+export type TopicStatus = 'discovered' | 'learned' | 'dismissed';
 export type DiscoveryMethod = 'surprise' | 'guided';
 
 export type TopicType =
