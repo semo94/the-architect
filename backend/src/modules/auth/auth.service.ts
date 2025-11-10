@@ -140,7 +140,8 @@ export class AuthService {
 
   detectPlatform(request: FastifyRequest): 'web' | 'mobile' {
     const platformHeader = request.headers['x-platform'] as string | undefined;
-    const platformQuery = (request.query as any)?.platform as string | undefined;
+    const query = request.query as { platform?: string } | undefined;
+    const platformQuery = query?.platform;
 
     const platform = platformHeader || platformQuery;
 

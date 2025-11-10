@@ -1,6 +1,21 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
+import type { OAuth2Namespace } from '@fastify/oauth2';
+import { FastifyReply, FastifyRequest } from 'fastify';
+import { refreshTokenSchema, type RefreshTokenDto } from './auth.schemas.js';
 import { AuthService } from './auth.service.js';
-import { refreshTokenSchema } from './auth.schemas.js';
+
+interface AuthQuery {
+  redirect_uri?: string;
+  platform?: string;
+}
+
+interface LogoutBody {
+  refreshToken?: string;
+}
+
+// Extend FastifyRequest to include the OAuth2 namespace
+interface OAuth2Request extends FastifyRequest {
+  githubOAuth2: OAuth2Namespace;
+}
 
 export class AuthController {
   private authService: AuthService;
@@ -11,7 +26,9 @@ export class AuthController {
 
   async githubCallback(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     // OAuth2 token is already exchanged by @fastify/oauth2
-    const token = await (request as any).githubOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
+    const oauth2Request = request as OAuth2Request;
+    const tokenData = await oauth2Request.githubOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
+    const token = tokenData.token;
 
     // Fetch user profile from GitHub
     const response = await fetch('https://api.github.com/user', {
@@ -34,7 +51,8 @@ export class AuthController {
 
     if (platform === 'mobile') {
       // For mobile: return JSON response or redirect with tokens
-      const redirectUri = (request.query as any).redirect_uri;
+      const query = request.query as AuthQuery;
+      const redirectUri = query.redirect_uri;
 
       if (redirectUri) {
         // Redirect to mobile deep link with tokens
@@ -71,7 +89,7 @@ export class AuthController {
 
     if (platform === 'mobile') {
       // Get refresh token from request body
-      const body = refreshTokenSchema.parse(request.body);
+      const body = refreshTokenSchema.parse(request.body) as RefreshTokenDto;
       refreshTokenValue = body.refreshToken;
     } else {
       // Get refresh token from cookie
@@ -105,13 +123,13 @@ export class AuthController {
     let refreshTokenValue: string | undefined;
 
     if (platform === 'mobile') {
-      const body = request.body as any;
+      const body = request.body as LogoutBody;
       refreshTokenValue = body?.refreshToken;
     } else {
       refreshTokenValue = request.cookies.refresh_token;
     }
 
-    const userId = (request.user as any)?.sub;
+    const userId = request.user?.sub;
 
     await this.authService.logout(refreshTokenValue, userId);
 
@@ -125,7 +143,7 @@ export class AuthController {
   }
 
   async revokeAll(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const userId = (request.user as any).sub;
+    const userId = request.user.sub;
 
     await this.authService.revokeAllTokens(userId);
 
@@ -141,12 +159,9 @@ export class AuthController {
   }
 
   async session(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const exp = (request.user as any).exp;
-
-    // In a real implementation, fetch user from database
     reply.send({
       user: request.user,
-      expiresAt: new Date(exp * 1000).toISOString(),
+      expiresAt: new Date(request.user.exp * 1000).toISOString(),
     });
   }
 }
