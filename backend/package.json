@@ -1,7 +1,7 @@
 {
-  "name": "knowledge-expansion-backend",
+  "name": "breadthwise-backend",
   "version": "1.0.0",
-  "description": "Backend API for Knowledge Expansion platform with GitHub SSO",
+  "description": "Backend API for Breadthwise app",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -26,8 +26,8 @@
     "authentication",
     "typescript"
   ],
-  "author": "",
-  "license": "MIT",
+  "author": "Salim Bakri",
+  "license": "Private",
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.1.0",

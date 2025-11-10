@@ -1,4 +1,4 @@
-# Knowledge Expansion Backend API
+# Breadthwise Backend
 
 A modern, secure backend API built with Fastify and TypeScript, featuring GitHub OAuth authentication, JWT tokens, and multi-platform support (web and mobile).
 
@@ -14,7 +14,7 @@ A modern, secure backend API built with Fastify and TypeScript, featuring GitHub
 
 ## Tech Stack
 
-- **Runtime**: Node.js 20+
+- **Runtime**: Node.js 22+
 - **Framework**: Fastify 4.x
 - **Language**: TypeScript
 - **Database**: Neon PostgreSQL (Serverless)
@@ -24,7 +24,7 @@ A modern, secure backend API built with Fastify and TypeScript, featuring GitHub
 
 ## Prerequisites
 
-- Node.js 20 or higher
+- Node.js 22 or higher
 - npm or pnpm
 - Neon PostgreSQL database (or any PostgreSQL)
 - GitHub OAuth App credentials
