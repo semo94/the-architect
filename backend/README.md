@@ -54,7 +54,7 @@ npm install
 docker-compose -f docker/docker-compose.yml up postgres -d
 
 # This creates a PostgreSQL instance at:
-# postgresql://postgres:postgres@localhost:5432/knowledge_expansion
+# postgresql://postgres:postgres@localhost:5432/breadthwise
 ```
 
 **Or install PostgreSQL locally**:
@@ -75,7 +75,7 @@ NODE_ENV=development
 PORT=3000
 
 # Local PostgreSQL
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/knowledge_expansion
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/breadthwise
 
 # Temporary values for now - we'll set up GitHub OAuth next
 GITHUB_CLIENT_ID=temporary
