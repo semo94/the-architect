@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { buildApp } from './app.js';
 import { env } from './modules/shared/config/env.js';
 

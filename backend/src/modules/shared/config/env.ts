@@ -18,7 +18,7 @@ const envSchema = z.object({
 
   // Client URLs
   WEB_CLIENT_URL: z.string().url(),
-  MOBILE_DEEP_LINK_SCHEME: z.string().default('thearchitect://'),
+  MOBILE_DEEP_LINK_SCHEME: z.string().default('breadthwise://'),
 
   // Cookie settings
   COOKIE_DOMAIN: z.string().optional(),

@@ -83,8 +83,8 @@ GITHUB_CLIENT_SECRET=temporary
 GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
 
 # Generate with: openssl rand -base64 32
-JWT_ACCESS_SECRET=your_random_32_char_secret_here
-JWT_REFRESH_SECRET=your_random_32_char_secret_here
+JWT_ACCESS_SECRET=swOHWopT+Bjb0YGmINDbMQqPPTMaFRfsuykRTTPDVzk=
+JWT_REFRESH_SECRET=QY8+GI4/ZIiBWieCwNSbD6CLCcV+pSYA+ZKVP+fphig=
 
 # Local client
 WEB_CLIENT_URL=http://localhost:3001
@@ -186,7 +186,7 @@ Forwarding    https://abc123.ngrok.io -> http://localhost:3000
 1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
 2. Click **"New OAuth App"**
 3. Fill in:
-   - **Application name**: `Knowledge Expansion Dev`
+   - **Application name**: `Breadthwise Dev`
    - **Homepage URL**: `https://abc123.ngrok.io`
    - **Authorization callback URL**: `https://abc123.ngrok.io/auth/github/callback`
 4. Click **"Register application"**
@@ -562,7 +562,7 @@ backend/
 | `SECURE_COOKIES` | Use secure cookies (HTTPS) | `false` |
 | `COOKIE_DOMAIN` | Cookie domain | `localhost` |
 | `ENABLE_FINGERPRINTING` | Enable device fingerprinting | `true` |
-| `MOBILE_DEEP_LINK_SCHEME` | Mobile app deep link | `thearchitect://` |
+| `MOBILE_DEEP_LINK_SCHEME` | Mobile app deep link | `breadthwise://` |
 
 ---
 

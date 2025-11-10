@@ -1,5 +1,3 @@
-import 'dotenv/config';
-
 async function runMigrations() {
   console.log('🔄 Running migrations...');
 
@@ -12,7 +10,6 @@ async function runMigrations() {
 
   // Detect connection type based on URL
   const isNeon = databaseUrl.includes('neon.tech') || databaseUrl.includes('?sslmode=require');
-  const isLocal = databaseUrl.includes('localhost') || databaseUrl.includes('postgres:5432');
 
   try {
     if (isNeon) {

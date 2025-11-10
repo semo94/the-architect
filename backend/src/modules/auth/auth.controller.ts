@@ -12,9 +12,11 @@ interface LogoutBody {
   refreshToken?: string;
 }
 
-// Extend FastifyRequest to include the OAuth2 namespace
-interface OAuth2Request extends FastifyRequest {
-  githubOAuth2: OAuth2Namespace;
+// Extend FastifyInstance to include the OAuth2 namespace
+declare module 'fastify' {
+  interface FastifyInstance {
+    githubOAuth2: OAuth2Namespace;
+  }
 }
 
 export class AuthController {
@@ -26,8 +28,7 @@ export class AuthController {
 
   async githubCallback(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     // OAuth2 token is already exchanged by @fastify/oauth2
-    const oauth2Request = request as OAuth2Request;
-    const tokenData = await oauth2Request.githubOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
+    const tokenData = await request.server.githubOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
     const token = tokenData.token;
 
     // Fetch user profile from GitHub

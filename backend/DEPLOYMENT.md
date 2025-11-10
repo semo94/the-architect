@@ -58,7 +58,7 @@ The database migrations will run automatically on first deployment. No manual se
 1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
 2. Click **"New OAuth App"**
 3. Fill in:
-   - **Application name**: `Knowledge Expansion` (or your preference)
+   - **Application name**: `Breadthwise` (or your preference)
    - **Homepage URL**: `https://your-app.onrender.com` (you'll get this from Render)
    - **Authorization callback URL**: `https://your-app.onrender.com/auth/github/callback`
 4. Click **"Register application"**
@@ -129,7 +129,7 @@ ENABLE_FINGERPRINTING=true
 COOKIE_DOMAIN=.yourdomain.com
 
 # Optional - Mobile
-MOBILE_DEEP_LINK_SCHEME=thearchitect://
+MOBILE_DEEP_LINK_SCHEME=breadthwise://
 ```
 
 **Generate JWT Secrets**:

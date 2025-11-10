@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-This specification outlines the implementation of GitHub Single Sign-On (SSO) authentication for the Knowledge Expansion platform. The solution introduces a modular monolith backend architecture using Fastify, containerized with Docker, deployed on Render, and backed by Neon Postgres serverless database.
+This specification outlines the implementation of GitHub Single Sign-On (SSO) authentication for the Breadthwise platform. The solution introduces a modular monolith backend architecture using Fastify, containerized with Docker, deployed on Render, and backed by Neon Postgres serverless database.
 
 ## 2. Architecture Overview
 

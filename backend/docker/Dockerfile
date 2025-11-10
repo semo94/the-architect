@@ -24,14 +24,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev
 
-# Copy built application, scripts, and migrations
+# Copy built application (includes compiled scripts) and migrations
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/src/modules/shared/database/migrations ./src/modules/shared/database/migrations
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 
-# Make start script executable
-COPY scripts/start.sh ./start.sh
+# Make start script executable (copy from source, not from dist)
+COPY --from=builder /app/scripts/start.sh ./start.sh
 RUN chmod +x ./start.sh
 
 # Create non-root user

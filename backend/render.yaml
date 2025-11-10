@@ -27,7 +27,7 @@ services:
       - key: WEB_CLIENT_URL
         sync: false  # Must be set manually in Render dashboard
       - key: MOBILE_DEEP_LINK_SCHEME
-        value: thearchitect://
+        value: breadthwise://
       - key: ALLOWED_ORIGINS
         sync: false  # Must be set manually in Render dashboard
       - key: SECURE_COOKIES
