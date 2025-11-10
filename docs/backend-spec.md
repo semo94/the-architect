@@ -656,7 +656,7 @@ CMD ["node", "dist/server.js"]
 # render.yaml
 services:
   - type: web
-    name: knowledge-expansion-api
+    name: breadthwise-api
     runtime: docker
     dockerfilePath: ./backend/docker/Dockerfile
     dockerContext: ./backend

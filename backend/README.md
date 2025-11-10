@@ -1,4 +1,4 @@
-# Knowledge Expansion Backend
+# Breadthwise Backend
 
 A modern, secure backend API built with Fastify and TypeScript, featuring GitHub OAuth authentication, JWT tokens, and multi-platform support (web and mobile).
 
@@ -275,7 +275,7 @@ If you only need to test non-auth endpoints:
 
 ```bash
 # Build image
-docker build -f docker/Dockerfile -t knowledge-expansion-api .
+docker build -f docker/Dockerfile -t breadthwise-api .
 
 # Run container
 docker run -p 3000:3000 \
@@ -284,7 +284,7 @@ docker run -p 3000:3000 \
   -e GITHUB_CLIENT_SECRET="your_secret" \
   -e JWT_ACCESS_SECRET="your_secret" \
   -e JWT_REFRESH_SECRET="your_secret" \
-  knowledge-expansion-api
+  breadthwise-api
 ```
 
 ### Using Docker Compose

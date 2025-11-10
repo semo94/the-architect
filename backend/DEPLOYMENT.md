@@ -91,7 +91,7 @@ The database migrations will run automatically on first deployment. No manual se
 2. Click **"New +"** → **"Web Service"**
 3. Connect your GitHub repository
 4. Configure:
-   - **Name**: `knowledge-expansion-api`
+   - **Name**: `breadthwise-api`
    - **Runtime**: `Docker`
    - **Region**: `Oregon` (Free tier available)
    - **Branch**: `main` (or your branch)

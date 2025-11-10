@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: knowledge-expansion-api
+    name: breadthwise-api
     runtime: docker
     dockerfilePath: ./docker/Dockerfile
     dockerContext: .
