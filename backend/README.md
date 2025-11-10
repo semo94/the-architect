@@ -1,143 +1,382 @@
-# Breadthwise Backend
+# Knowledge Expansion Backend
 
 A modern, secure backend API built with Fastify and TypeScript, featuring GitHub OAuth authentication, JWT tokens, and multi-platform support (web and mobile).
 
 ## Features
 
-- **GitHub SSO Authentication** - OAuth 2.0 integration
+- **GitHub SSO Authentication** - OAuth 2.0 integration with multi-platform support
 - **Multi-Platform Support** - Separate flows for web (cookies) and mobile (JSON tokens)
-- **JWT Authentication** - Access and refresh tokens with fingerprinting
-- **Type-Safe** - Full TypeScript implementation
+- **JWT Authentication** - Access and refresh tokens with device fingerprinting
+- **Type-Safe** - Full TypeScript implementation with Zod validation
 - **Database** - Neon PostgreSQL with Drizzle ORM
-- **Security** - Rate limiting, helmet, CORS, httpOnly cookies
-- **Docker Ready** - Multi-stage builds for production
+- **Security** - Rate limiting, Helmet, CORS, httpOnly cookies
+- **Docker Ready** - Multi-stage builds with auto-migrations
+- **Production Ready** - Configured for Render deployment
 
 ## Tech Stack
 
 - **Runtime**: Node.js 22+
-- **Framework**: Fastify 4.x
-- **Language**: TypeScript
+- **Framework**: Fastify 5.x
+- **Language**: TypeScript 5.x
 - **Database**: Neon PostgreSQL (Serverless)
-- **ORM**: Drizzle ORM
+- **ORM**: Drizzle ORM 0.44.x
 - **Authentication**: GitHub OAuth 2.0 + JWT
-- **Validation**: Zod
+- **Validation**: Zod 4.x
 
-## Prerequisites
+## Quick Start
+
+### Prerequisites
 
 - Node.js 22 or higher
 - npm or pnpm
-- Neon PostgreSQL database (or any PostgreSQL)
+- PostgreSQL database (Neon for production, local for development)
 - GitHub OAuth App credentials
 
-## Getting Started
+---
 
-### 1. Clone and Install
+## Local Development
+
+### Option 1: Using Local PostgreSQL (Recommended for Development)
+
+#### 1. Install Dependencies
 
 ```bash
 cd backend
 npm install
 ```
 
-### 2. Environment Setup
+#### 2. Setup Local Database
 
-Copy `.env.example` to `.env` and configure:
+**Using Docker Compose (Easiest)**:
+
+```bash
+# Start PostgreSQL in Docker
+docker-compose -f docker/docker-compose.yml up postgres -d
+
+# This creates a PostgreSQL instance at:
+# postgresql://postgres:postgres@localhost:5432/knowledge_expansion
+```
+
+**Or install PostgreSQL locally**:
+- macOS: `brew install postgresql@16`
+- Ubuntu: `apt-get install postgresql-16`
+- Windows: Download from [postgresql.org](https://www.postgresql.org/download/)
+
+#### 3. Create `.env` File
 
 ```bash
 cp .env.example .env
 ```
 
-#### Required Environment Variables
+Edit `.env` with your configuration:
 
 ```env
-# Database
-DATABASE_URL=postgresql://user:password@host/database
+NODE_ENV=development
+PORT=3000
 
-# GitHub OAuth (Create at: https://github.com/settings/developers)
-GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
+# Local PostgreSQL
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/knowledge_expansion
+
+# Temporary values for now - we'll set up GitHub OAuth next
+GITHUB_CLIENT_ID=temporary
+GITHUB_CLIENT_SECRET=temporary
 GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
 
-# JWT Secrets (Generate with: openssl rand -base64 32)
-JWT_ACCESS_SECRET=your_jwt_access_secret_min_32_chars
-JWT_REFRESH_SECRET=your_jwt_refresh_secret_min_32_chars
+# Generate with: openssl rand -base64 32
+JWT_ACCESS_SECRET=your_random_32_char_secret_here
+JWT_REFRESH_SECRET=your_random_32_char_secret_here
 
-# Client URLs
+# Local client
 WEB_CLIENT_URL=http://localhost:3001
 ALLOWED_ORIGINS=http://localhost:3001,http://localhost:3000
+SECURE_COOKIES=false
 ```
 
-### 3. Database Setup
+**Generate JWT Secrets**:
+```bash
+openssl rand -base64 32  # For JWT_ACCESS_SECRET
+openssl rand -base64 32  # For JWT_REFRESH_SECRET
+```
 
-#### Generate migrations from schema:
+#### 4. Setup Database Schema
 
 ```bash
+# Generate migrations (already done, but if you change schema)
 npm run migrate:generate
-```
 
-#### Run migrations:
-
-```bash
+# Run migrations to create tables
 npm run migrate
 ```
 
-#### (Optional) Seed database:
-
-```bash
-npm run seed
-```
-
-### 4. Run Development Server
+#### 5. Start Development Server
 
 ```bash
 npm run dev
 ```
 
-The server will start at `http://localhost:3000`
+Server starts at `http://localhost:3000`
+
+**Test Health Endpoint**:
+```bash
+curl http://localhost:3000/health
+```
+
+---
+
+### Option 2: Using Neon Database (Production-like)
+
+#### 1. Create Neon Project
+
+1. Go to [Neon Console](https://console.neon.tech/)
+2. Create a new project
+3. Copy the connection string
+
+#### 2. Update `.env`
+
+```env
+DATABASE_URL=postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require
+```
+
+#### 3. Run Migrations and Start
+
+```bash
+npm run migrate
+npm run dev
+```
+
+---
+
+## Setting Up GitHub OAuth for Local Development
+
+To test the full authentication flow locally, you need to make your local server accessible to GitHub. We'll use ngrok (or similar) to create a public URL.
+
+### Option A: Using ngrok (Recommended)
+
+#### 1. Install ngrok
+
+```bash
+# macOS
+brew install ngrok
+
+# Or download from https://ngrok.com/download
+```
+
+#### 2. Start Your Local Server
+
+```bash
+npm run dev
+```
+
+#### 3. Create Tunnel
+
+```bash
+# In another terminal
+ngrok http 3000
+```
+
+You'll see output like:
+```
+Forwarding    https://abc123.ngrok.io -> http://localhost:3000
+```
+
+**Copy the HTTPS URL** (e.g., `https://abc123.ngrok.io`)
+
+#### 4. Create GitHub OAuth App
+
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Click **"New OAuth App"**
+3. Fill in:
+   - **Application name**: `Knowledge Expansion Dev`
+   - **Homepage URL**: `https://abc123.ngrok.io`
+   - **Authorization callback URL**: `https://abc123.ngrok.io/auth/github/callback`
+4. Click **"Register application"**
+5. Copy the **Client ID**
+6. Generate and copy the **Client Secret**
+
+#### 5. Update `.env`
+
+```env
+GITHUB_CLIENT_ID=your_client_id_here
+GITHUB_CLIENT_SECRET=your_client_secret_here
+GITHUB_CALLBACK_URL=https://abc123.ngrok.io/auth/github/callback
+ALLOWED_ORIGINS=http://localhost:3001,https://abc123.ngrok.io
+```
+
+#### 6. Restart Server
+
+```bash
+# Stop the server (Ctrl+C) and restart
+npm run dev
+```
+
+#### 7. Test OAuth Flow
+
+**Web Flow**:
+```bash
+# Visit in browser
+https://abc123.ngrok.io/auth/github?platform=web
+```
+
+You should:
+1. Be redirected to GitHub
+2. Authorize the app
+3. Be redirected back with cookies set
+
+**Check Session**:
+```bash
+curl -X GET https://abc123.ngrok.io/auth/session \
+  -b cookies.txt \
+  -c cookies.txt
+```
+
+### Option B: Using localhost.run (No Installation)
+
+```bash
+# Start your dev server
+npm run dev
+
+# In another terminal
+ssh -R 80:localhost:3000 nokey@localhost.run
+```
+
+Follow the same steps as ngrok to configure GitHub OAuth.
+
+### Option C: Skip OAuth for API Development
+
+If you only need to test non-auth endpoints:
+
+1. Use the `/health` endpoint to verify the server works
+2. Create a test JWT token manually for authenticated endpoints
+3. Use tools like Postman/Insomnia with mock tokens
+
+---
 
 ## Available Scripts
 
-- `npm run dev` - Start development server with hot reload
-- `npm run build` - Build for production
-- `npm start` - Start production server
-- `npm run migrate` - Run database migrations
-- `npm run migrate:generate` - Generate migrations from schema
-- `npm run db:studio` - Open Drizzle Studio
-- `npm test` - Run tests
-- `npm run lint` - Lint code
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server with hot reload |
+| `npm run build` | Build TypeScript to JavaScript |
+| `npm start` | Start production server (requires build) |
+| `npm run migrate` | Run database migrations |
+| `npm run migrate:generate` | Generate migrations from schema changes |
+| `npm run migrate:push` | Push schema directly to database (dev only) |
+| `npm run db:studio` | Open Drizzle Studio (database GUI) |
+| `npm test` | Run all tests |
+| `npm run test:unit` | Run unit tests |
+| `npm run lint` | Lint TypeScript code |
+| `npm run format` | Format code with Prettier |
 
-## API Endpoints
+---
 
-### Authentication
+## Docker Development
+
+### Build and Run with Docker
+
+```bash
+# Build image
+docker build -f docker/Dockerfile -t knowledge-expansion-api .
+
+# Run container
+docker run -p 3000:3000 \
+  -e DATABASE_URL="your_db_url" \
+  -e GITHUB_CLIENT_ID="your_id" \
+  -e GITHUB_CLIENT_SECRET="your_secret" \
+  -e JWT_ACCESS_SECRET="your_secret" \
+  -e JWT_REFRESH_SECRET="your_secret" \
+  knowledge-expansion-api
+```
+
+### Using Docker Compose
+
+```bash
+# Start all services (API + PostgreSQL)
+docker-compose -f docker/docker-compose.yml up
+
+# Stop services
+docker-compose -f docker/docker-compose.yml down
+
+# View logs
+docker-compose -f docker/docker-compose.yml logs -f
+```
+
+**Note**: Docker Compose includes a PostgreSQL instance for local development. The API service will automatically wait for the database to be ready.
+
+---
+
+## Database Management
+
+### Generate Migrations After Schema Changes
+
+```bash
+# 1. Edit schema in src/modules/shared/database/schema.ts
+# 2. Generate migration
+npm run migrate:generate
+
+# 3. Review migration in src/modules/shared/database/migrations/
+# 4. Apply migration
+npm run migrate
+```
+
+### View Database with Drizzle Studio
+
+```bash
+npm run db:studio
+```
+
+Opens at `https://local.drizzle.studio`
+
+### Seed Database (Optional)
+
+Edit `scripts/seed.ts` with your test data, then:
+
+```bash
+npm run seed
+```
+
+---
+
+## API Documentation
+
+### Base URL
+
+- Local: `http://localhost:3000`
+- Production: `https://your-app.onrender.com`
+
+### Authentication Endpoints
 
 #### `GET /auth/github`
 Initiate GitHub OAuth flow
 
-**Query Parameters:**
-- `platform` - `web` | `mobile` (required)
-- `redirect_uri` - Mobile deep link (mobile only)
+**Query Parameters**:
+- `platform`: `web` | `mobile` (default: `web`)
+- `redirect_uri`: Deep link for mobile (mobile only)
 
-**Web Response:** Redirects to GitHub
-**Mobile Response:** `{ authUrl: string, state: string }`
+**Example**:
+```bash
+# Web
+curl http://localhost:3000/auth/github?platform=web
+
+# Mobile
+curl http://localhost:3000/auth/github?platform=mobile&redirect_uri=myapp://callback
+```
 
 #### `GET /auth/github/callback`
-GitHub OAuth callback (handled automatically)
-
-**Web Response:** Redirects to client with cookies set
-**Mobile Response:** Redirects to deep link with tokens
+OAuth callback (handled automatically by GitHub)
 
 #### `POST /auth/refresh`
 Refresh access token
 
-**Mobile Request:**
+**Request (Mobile)**:
 ```json
 {
   "refreshToken": "string"
 }
 ```
 
-**Web Request:** Uses `refresh_token` cookie
+**Request (Web)**: Automatic (uses `refresh_token` cookie)
 
-**Response:**
+**Response**:
 ```json
 {
   "accessToken": "string",
@@ -146,40 +385,32 @@ Refresh access token
 ```
 
 #### `POST /auth/logout`
-Logout user and revoke tokens
+Logout and revoke tokens
 
-**Headers:** `Authorization: Bearer {token}` (mobile)
-**Cookies:** `access_token` (web)
-
-#### `POST /auth/revoke-all`
-Revoke all user tokens
-
-**Requires authentication**
+**Headers**: `Authorization: Bearer {token}` (mobile) or cookies (web)
 
 #### `GET /auth/session`
-Validate current session
+Validate current session (requires authentication)
 
-**Requires authentication**
-
-### User Management
+### User Endpoints
 
 #### `GET /users/me`
 Get current authenticated user
 
-**Headers:** `Authorization: Bearer {token}`
+**Headers**: `Authorization: Bearer {token}`
 
-**Response:**
+**Response**:
 ```json
 {
   "user": {
     "id": "uuid",
-    "githubId": "string",
-    "username": "string",
-    "displayName": "string",
-    "email": "string",
-    "avatarUrl": "string",
-    "createdAt": "ISO8601",
-    "updatedAt": "ISO8601"
+    "githubId": "123456",
+    "username": "johndoe",
+    "displayName": "John Doe",
+    "email": "john@example.com",
+    "avatarUrl": "https://...",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z"
   }
 }
 ```
@@ -187,13 +418,13 @@ Get current authenticated user
 #### `PATCH /users/me`
 Update current user
 
-**Headers:** `Authorization: Bearer {token}`
+**Headers**: `Authorization: Bearer {token}`
 
-**Request:**
+**Request**:
 ```json
 {
-  "displayName": "string (optional)",
-  "avatarUrl": "string (optional)"
+  "displayName": "New Name",
+  "avatarUrl": "https://..."
 }
 ```
 
@@ -202,82 +433,54 @@ Update current user
 #### `GET /health`
 Check server health
 
-**Response:**
+**Response**:
 ```json
 {
   "status": "healthy",
-  "timestamp": "ISO8601",
+  "timestamp": "2024-11-10T12:00:00.000Z",
   "environment": "development"
 }
 ```
 
-## Authentication Flows
+---
 
-### Web Flow (Cookie-based)
+## Testing
 
-1. Client redirects to `/auth/github?platform=web`
-2. User authorizes on GitHub
-3. Backend sets httpOnly cookies and redirects to client
-4. Client makes requests with cookies automatically included
+### Manual API Testing
 
-### Mobile Flow (Token-based)
+**Using curl**:
+```bash
+# Health check
+curl http://localhost:3000/health
 
-1. App opens in-app browser to `/auth/github?platform=mobile&redirect_uri=myapp://auth/callback`
-2. User authorizes on GitHub
-3. Backend redirects to deep link with tokens
-4. App stores tokens securely and includes in `Authorization` header
+# Start OAuth flow
+curl http://localhost:3000/auth/github?platform=web
 
-## Database Schema
-
-### Users Table
-```sql
-CREATE TABLE users (
-  id UUID PRIMARY KEY,
-  github_id VARCHAR(255) UNIQUE NOT NULL,
-  email VARCHAR(255) UNIQUE,
-  username VARCHAR(255) UNIQUE NOT NULL,
-  display_name VARCHAR(255),
-  avatar_url TEXT,
-  created_at TIMESTAMP,
-  updated_at TIMESTAMP
-);
+# Test authenticated endpoint (replace TOKEN)
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  http://localhost:3000/users/me
 ```
 
-### Refresh Tokens Table
-```sql
-CREATE TABLE refresh_tokens (
-  id UUID PRIMARY KEY,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  token_hash VARCHAR(255) UNIQUE NOT NULL,
-  expires_at TIMESTAMP NOT NULL,
-  created_at TIMESTAMP,
-  revoked_at TIMESTAMP
-);
-```
+**Using Postman/Insomnia**:
+1. Import the API endpoints
+2. Set base URL to `http://localhost:3000`
+3. Use OAuth flow to get tokens
+4. Add tokens to subsequent requests
 
-## Docker
-
-### Build Image
+### Running Tests
 
 ```bash
-docker build -f docker/Dockerfile -t knowledge-expansion-api .
+# All tests
+npm test
+
+# Unit tests only
+npm run test:unit
+
+# With coverage
+npm test -- --coverage
 ```
 
-### Run with Docker Compose
-
-```bash
-docker-compose -f docker/docker-compose.yml up
-```
-
-## Security Features
-
-- **Rate Limiting** - 100 requests per 15 minutes globally
-- **Helmet** - Security headers
-- **CORS** - Configurable allowed origins
-- **httpOnly Cookies** - XSS protection for web
-- **JWT Fingerprinting** - Device/IP binding
-- **Token Rotation** - Refresh tokens rotated on use
-- **Input Validation** - Zod schemas for all inputs
+---
 
 ## Project Structure
 
@@ -285,71 +488,247 @@ docker-compose -f docker/docker-compose.yml up
 backend/
 ├── src/
 │   ├── modules/
-│   │   ├── auth/           # Authentication module
-│   │   ├── user/           # User management module
-│   │   └── shared/         # Shared utilities
-│   │       ├── database/   # DB schema & client
-│   │       ├── config/     # Environment config
-│   │       ├── middleware/ # Custom middleware
-│   │       └── utils/      # Utility functions
-│   ├── app.ts             # Fastify app setup
-│   └── server.ts          # Entry point
-├── scripts/               # Migration & seed scripts
-├── docker/                # Docker configuration
-└── tests/                 # Test files
+│   │   ├── auth/              # Authentication logic
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.service.ts
+│   │   │   ├── auth.routes.ts
+│   │   │   ├── auth.repository.ts
+│   │   │   ├── auth.schemas.ts
+│   │   │   └── guards/
+│   │   │       └── jwt.guard.ts
+│   │   ├── user/              # User management
+│   │   │   ├── user.controller.ts
+│   │   │   ├── user.service.ts
+│   │   │   ├── user.routes.ts
+│   │   │   ├── user.repository.ts
+│   │   │   └── user.schemas.ts
+│   │   └── shared/            # Shared utilities
+│   │       ├── config/
+│   │       │   ├── env.ts     # Environment validation
+│   │       │   └── constants.ts
+│   │       ├── database/
+│   │       │   ├── client.ts  # Drizzle client
+│   │       │   ├── schema.ts  # Database schema
+│   │       │   └── migrations/ # SQL migrations
+│   │       ├── middleware/
+│   │       │   ├── error-handler.ts
+│   │       │   └── request-logger.ts
+│   │       └── utils/
+│   │           ├── jwt.utils.ts
+│   │           └── crypto.utils.ts
+│   ├── app.ts                 # Fastify app setup
+│   └── server.ts              # Entry point
+├── scripts/
+│   ├── migrate.ts             # Migration runner
+│   ├── seed.ts                # Database seeder
+│   └── start.sh               # Production startup script
+├── docker/
+│   ├── Dockerfile             # Production Docker image
+│   └── docker-compose.yml     # Local development setup
+├── drizzle.config.ts          # Drizzle ORM config
+├── tsconfig.json              # TypeScript config
+├── eslint.config.mjs          # ESLint config (flat config)
+├── package.json               # Dependencies and scripts
+├── .env.example               # Example environment variables
+├── .dockerignore              # Docker ignore patterns
+├── render.yaml                # Render deployment config
+├── README.md                  # This file
+└── DEPLOYMENT.md              # Deployment guide
 ```
+
+---
+
+## Environment Variables Reference
+
+### Required
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host/db` |
+| `GITHUB_CLIENT_ID` | GitHub OAuth client ID | `abc123` |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth client secret | `secret123` |
+| `GITHUB_CALLBACK_URL` | OAuth callback URL | `http://localhost:3000/auth/github/callback` |
+| `JWT_ACCESS_SECRET` | JWT access token secret (32+ chars) | `random_32_char_string` |
+| `JWT_REFRESH_SECRET` | JWT refresh token secret (32+ chars) | `random_32_char_string` |
+| `WEB_CLIENT_URL` | Frontend URL | `http://localhost:3001` |
+| `ALLOWED_ORIGINS` | CORS allowed origins (comma-separated) | `http://localhost:3001,http://localhost:3000` |
+
+### Optional
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `NODE_ENV` | Environment | `development` |
+| `PORT` | Server port | `3000` |
+| `SECURE_COOKIES` | Use secure cookies (HTTPS) | `false` |
+| `COOKIE_DOMAIN` | Cookie domain | `localhost` |
+| `ENABLE_FINGERPRINTING` | Enable device fingerprinting | `true` |
+| `MOBILE_DEEP_LINK_SCHEME` | Mobile app deep link | `thearchitect://` |
+
+---
 
 ## Deployment
 
-### Render
+### Deploy to Production
 
-See `docs/backend-spec.md` for Render deployment configuration.
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions for:
 
-### Environment Variables for Production
+- Neon PostgreSQL setup
+- Render deployment
+- Environment configuration
+- GitHub OAuth configuration for production
+- Monitoring and troubleshooting
 
-Ensure all environment variables are set in your deployment platform:
-- Set `NODE_ENV=production`
-- Set `SECURE_COOKIES=true`
-- Use HTTPS URLs for all callback and client URLs
-- Generate strong JWT secrets (minimum 32 characters)
+### Quick Deploy to Render
+
+```bash
+# 1. Push code to GitHub
+git push origin main
+
+# 2. Connect repository in Render dashboard
+# 3. Deploy from render.yaml (auto-detected)
+# 4. Configure environment variables
+# 5. Deploy!
+```
+
+**Important**: Migrations run automatically on every deployment.
+
+---
+
+## Security
+
+### Features
+
+- **Rate Limiting**: 100 requests per 15 minutes (configurable)
+- **Helmet**: Security headers enabled
+- **CORS**: Strict origin checking
+- **HttpOnly Cookies**: XSS protection for web clients
+- **JWT Fingerprinting**: Device/IP binding
+- **Token Rotation**: Refresh tokens rotated on use
+- **Input Validation**: Zod schemas on all inputs
+- **SQL Injection Protection**: Parameterized queries via Drizzle ORM
+
+### Best Practices
+
+- Never commit `.env` files
+- Use strong JWT secrets (32+ characters)
+- Enable `SECURE_COOKIES=true` in production
+- Use HTTPS everywhere in production
+- Regularly rotate JWT secrets
+- Monitor rate limit violations
+- Keep dependencies updated
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### Port Already in Use
+
+```bash
+# Kill process on port 3000
+lsof -ti:3000 | xargs kill -9
+
+# Or use a different port
+PORT=3001 npm run dev
+```
+
+#### Database Connection Failed
+
+- **Local**: Ensure PostgreSQL is running
+  ```bash
+  docker-compose -f docker/docker-compose.yml up postgres -d
+  ```
+- **Neon**: Check connection string and internet connection
+- Verify `DATABASE_URL` in `.env`
+
+#### GitHub OAuth Errors
+
+- Verify callback URL matches GitHub app settings exactly
+- Check client ID and secret
+- Ensure scopes include `user:email` and `read:user`
+- For local dev, use ngrok or similar tunneling
+
+#### Migration Errors
+
+- Ensure database exists and is accessible
+- Check migration files in `src/modules/shared/database/migrations/`
+- Try generating a fresh migration: `npm run migrate:generate`
+
+---
 
 ## Development Tips
 
-### Generate Strong Secrets
+### Hot Reload
 
-```bash
-openssl rand -base64 32
-```
+The dev server uses `tsx watch` for instant reload on file changes.
 
-### View Database
+### Database GUI
 
 ```bash
 npm run db:studio
 ```
 
-### Check Logs
+Opens Drizzle Studio at `https://local.drizzle.studio` to view and edit data.
 
-Logs are formatted with Pino and include structured data:
-- Request/response logging
-- Error tracking
-- Performance metrics
+### View Logs
 
-## Troubleshooting
+Logs use Pino with pretty printing in development:
 
-### Database Connection Issues
-- Verify `DATABASE_URL` is correct
-- Check Neon dashboard for connection limits
-- Ensure IP allowlist includes your IP
+```bash
+npm run dev
+# Logs show colored, formatted output
+```
 
-### GitHub OAuth Errors
-- Verify callback URL matches GitHub app settings
-- Check client ID and secret
-- Ensure scopes include `user:email` and `read:user`
+### Test API with VS Code REST Client
 
-### CORS Errors
-- Add your client URL to `ALLOWED_ORIGINS`
-- Ensure `credentials: true` in CORS config
+Create `test.http`:
+```http
+### Health Check
+GET http://localhost:3000/health
+
+### Get Current User
+GET http://localhost:3000/users/me
+Authorization: Bearer YOUR_TOKEN
+```
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests: `npm test`
+5. Run linter: `npm run lint`
+6. Commit with descriptive message
+7. Push and create PR
+
+---
 
 ## License
 
 MIT
+
+---
+
+## Support & Resources
+
+- **Documentation**: See [DEPLOYMENT.md](./DEPLOYMENT.md)
+- **Fastify**: [fastify.dev](https://fastify.dev/)
+- **Drizzle ORM**: [orm.drizzle.team](https://orm.drizzle.team/)
+- **Neon**: [neon.tech/docs](https://neon.tech/docs)
+- **Render**: [render.com/docs](https://render.com/docs)
+
+---
+
+## What's Next?
+
+1. ✅ Local development setup
+2. ✅ GitHub OAuth configured
+3. ✅ Database migrations run
+4. ✅ Server running and tested
+5. → Deploy to production (see [DEPLOYMENT.md](./DEPLOYMENT.md))
+6. → Set up monitoring
+7. → Configure custom domain
+8. → Add more features!
