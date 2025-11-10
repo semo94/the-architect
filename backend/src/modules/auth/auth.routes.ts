@@ -40,7 +40,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
       async (request) => {
         try {
           await request.jwtVerify();
-        } catch (err) {
+        } catch {
           // Allow logout even if token is invalid
         }
       },

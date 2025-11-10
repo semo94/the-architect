@@ -1,4 +1,4 @@
-import { eq, and, gt } from 'drizzle-orm';
+import { eq, and, gt, lt, isNull } from 'drizzle-orm';
 import { db } from '../shared/database/client.js';
 import { refreshTokens, type RefreshToken, type NewRefreshToken } from '../shared/database/schema.js';
 
@@ -16,7 +16,7 @@ export class AuthRepository {
         and(
           eq(refreshTokens.tokenHash, tokenHash),
           gt(refreshTokens.expiresAt, new Date()),
-          eq(refreshTokens.revokedAt, null as any)
+          isNull(refreshTokens.revokedAt)
         )
       );
     return result[0];
@@ -36,7 +36,7 @@ export class AuthRepository {
       .where(
         and(
           eq(refreshTokens.userId, userId),
-          eq(refreshTokens.revokedAt, null as any)
+          isNull(refreshTokens.revokedAt)
         )
       );
   }
@@ -44,6 +44,6 @@ export class AuthRepository {
   async deleteExpiredTokens(): Promise<void> {
     await db
       .delete(refreshTokens)
-      .where(gt(new Date(), refreshTokens.expiresAt));
+      .where(lt(refreshTokens.expiresAt, new Date()));
   }
 }

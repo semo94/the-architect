@@ -25,7 +25,7 @@ export class AuthController {
       throw new Error('Failed to fetch GitHub profile');
     }
 
-    const profile = await response.json();
+    const profile = await response.json() as import('./auth.service.js').GitHubProfile;
 
     // Handle authentication
     const { user, tokens } = await this.authService.handleGitHubCallback(profile, request);
@@ -75,14 +75,16 @@ export class AuthController {
       refreshTokenValue = body.refreshToken;
     } else {
       // Get refresh token from cookie
-      refreshTokenValue = request.cookies.refresh_token;
+      const cookieValue = request.cookies.refresh_token;
 
-      if (!refreshTokenValue) {
+      if (!cookieValue) {
         throw new Error('No refresh token provided');
       }
+
+      refreshTokenValue = cookieValue;
     }
 
-    const { user, tokens } = await this.authService.refreshTokens(refreshTokenValue, request);
+    const { tokens } = await this.authService.refreshTokens(refreshTokenValue, request);
 
     if (platform === 'mobile') {
       reply.send({
@@ -139,7 +141,6 @@ export class AuthController {
   }
 
   async session(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const userId = (request.user as any).sub;
     const exp = (request.user as any).exp;
 
     // In a real implementation, fetch user from database

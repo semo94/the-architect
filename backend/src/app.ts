@@ -94,8 +94,10 @@ declare module 'fastify' {
   interface FastifyInstance {
     authenticate: typeof jwtGuard;
   }
+}
 
-  interface FastifyRequest {
+declare module '@fastify/jwt' {
+  interface FastifyJWT {
     user: {
       sub: string;
       githubId: string;

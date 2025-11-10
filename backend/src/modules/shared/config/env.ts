@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().transform(Number).default('3000'),
+  PORT: z.string().default('3000').transform(Number),
 
   // Database
   DATABASE_URL: z.string().url(),
@@ -22,11 +22,11 @@ const envSchema = z.object({
 
   // Cookie settings
   COOKIE_DOMAIN: z.string().optional(),
-  SECURE_COOKIES: z.string().transform(val => val === 'true').default('true'),
+  SECURE_COOKIES: z.string().default('true').transform(val => val === 'true'),
 
   // Security
   ALLOWED_ORIGINS: z.string().transform(s => s.split(',')),
-  ENABLE_FINGERPRINTING: z.string().transform(val => val === 'true').default('true'),
+  ENABLE_FINGERPRINTING: z.string().default('true').transform(val => val === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;

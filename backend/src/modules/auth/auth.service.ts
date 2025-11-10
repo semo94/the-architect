@@ -6,7 +6,6 @@ import { AppError } from '../shared/middleware/error-handler.js';
 import {
   generateFingerprint,
   parseExpiry,
-  getSecret,
   getExpiry,
   type JWTPayload,
   type TokenPair,
@@ -68,21 +67,11 @@ export class AuthService {
       type: 'access',
     };
 
-    const refreshPayload: Partial<JWTPayload> = {
-      sub: user.id,
-      githubId: user.githubId,
-      username: user.username,
-      platform,
-      fingerprint,
-      type: 'refresh',
-    };
-
     const accessExpiry = getExpiry('access', platform);
     const refreshExpiry = getExpiry('refresh', platform);
 
     // Sign JWT tokens
     const accessToken = await request.server.jwt.sign(accessPayload, {
-      secret: getSecret('access'),
       expiresIn: accessExpiry,
     });
 
