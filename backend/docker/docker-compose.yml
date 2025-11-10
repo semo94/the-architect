@@ -7,20 +7,12 @@ services:
       dockerfile: docker/Dockerfile
     ports:
       - '3000:3000'
+    env_file:
+      - ../.env
     environment:
+      # Override for local development
       - NODE_ENV=development
-      - PORT=3000
-      - DATABASE_URL=${DATABASE_URL}
-      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
-      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
-      - GITHUB_CALLBACK_URL=${GITHUB_CALLBACK_URL}
-      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-      - WEB_CLIENT_URL=${WEB_CLIENT_URL}
-      - MOBILE_DEEP_LINK_SCHEME=${MOBILE_DEEP_LINK_SCHEME}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
-      - SECURE_COOKIES=${SECURE_COOKIES}
-      - ENABLE_FINGERPRINTING=${ENABLE_FINGERPRINTING}
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/knowledge_expansion
     volumes:
       - ../src:/app/src
       - ../dist:/app/dist
