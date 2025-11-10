@@ -1,0 +1,35 @@
+import { z } from 'zod';
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  PORT: z.string().transform(Number).default('3000'),
+
+  // Database
+  DATABASE_URL: z.string().url(),
+
+  // GitHub OAuth
+  GITHUB_CLIENT_ID: z.string().min(1),
+  GITHUB_CLIENT_SECRET: z.string().min(1),
+  GITHUB_CALLBACK_URL: z.string().url(),
+
+  // JWT
+  JWT_ACCESS_SECRET: z.string().min(32),
+  JWT_REFRESH_SECRET: z.string().min(32),
+
+  // Client URLs
+  WEB_CLIENT_URL: z.string().url(),
+  MOBILE_DEEP_LINK_SCHEME: z.string().default('thearchitect://'),
+
+  // Cookie settings
+  COOKIE_DOMAIN: z.string().optional(),
+  SECURE_COOKIES: z.string().transform(val => val === 'true').default('true'),
+
+  // Security
+  ALLOWED_ORIGINS: z.string().transform(s => s.split(',')),
+  ENABLE_FINGERPRINTING: z.string().transform(val => val === 'true').default('true'),
+});
+
+export type Env = z.infer<typeof envSchema>;
+
+// Parse and validate environment variables
+export const env = envSchema.parse(process.env);
