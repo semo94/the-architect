@@ -104,7 +104,6 @@ declare module '@fastify/jwt' {
       username: string;
       email?: string;
       platform?: 'web' | 'mobile';
-      type: 'access' | 'refresh';
       iat: number;
       exp: number;
     };

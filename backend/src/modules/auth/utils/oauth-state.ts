@@ -96,7 +96,7 @@ export function validateState(stateString: string): OAuthStatePayload {
     const payloadJson = Buffer.from(payloadBase64, 'base64url').toString('utf-8');
     payload = JSON.parse(payloadJson);
   } catch {
-    throw new Error('Failed to decode state payload',);
+    throw new Error('Failed to decode state payload');
   }
 
   // Validate required fields

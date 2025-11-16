@@ -116,9 +116,8 @@ GITHUB_CALLBACK_URL=https://your-app.onrender.com/auth/github/callback
 WEB_CLIENT_URL=https://your-frontend-url.com
 ALLOWED_ORIGINS=https://your-frontend-url.com,https://your-app.onrender.com
 
-# Optional - JWT Secrets (Render can auto-generate these)
+# Optional - JWT Secret (Render can auto-generate this)
 JWT_ACCESS_SECRET=<random-32-char-string>
-JWT_REFRESH_SECRET=<random-32-char-string>
 
 # Required - Security
 NODE_ENV=production

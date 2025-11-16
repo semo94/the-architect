@@ -84,7 +84,6 @@ GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
 
 # Generate with: openssl rand -base64 32
 JWT_ACCESS_SECRET=swOHWopT+Bjb0YGmINDbMQqPPTMaFRfsuykRTTPDVzk=
-JWT_REFRESH_SECRET=QY8+GI4/ZIiBWieCwNSbD6CLCcV+pSYA+ZKVP+fphig=
 
 # Local client
 WEB_CLIENT_URL=http://localhost:3001
@@ -92,10 +91,9 @@ ALLOWED_ORIGINS=http://localhost:3001,http://localhost:3000
 SECURE_COOKIES=false
 ```
 
-**Generate JWT Secrets**:
+**Generate JWT Secret**:
 ```bash
 openssl rand -base64 32  # For JWT_ACCESS_SECRET
-openssl rand -base64 32  # For JWT_REFRESH_SECRET
 ```
 
 #### 4. Setup Database Schema
@@ -283,7 +281,6 @@ docker run -p 3000:3000 \
   -e GITHUB_CLIENT_ID="your_id" \
   -e GITHUB_CLIENT_SECRET="your_secret" \
   -e JWT_ACCESS_SECRET="your_secret" \
-  -e JWT_REFRESH_SECRET="your_secret" \
   breadthwise-api
 ```
 
@@ -549,7 +546,6 @@ backend/
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth client secret | `secret123` |
 | `GITHUB_CALLBACK_URL` | OAuth callback URL | `http://localhost:3000/auth/github/callback` |
 | `JWT_ACCESS_SECRET` | JWT access token secret (32+ chars) | `random_32_char_string` |
-| `JWT_REFRESH_SECRET` | JWT refresh token secret (32+ chars) | `random_32_char_string` |
 | `WEB_CLIENT_URL` | Frontend URL | `http://localhost:3001` |
 | `ALLOWED_ORIGINS` | CORS allowed origins (comma-separated) | `http://localhost:3001,http://localhost:3000` |
 

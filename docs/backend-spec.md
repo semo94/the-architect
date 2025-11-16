@@ -730,7 +730,6 @@ const envSchema = z.object({
 
   // JWT
   JWT_ACCESS_SECRET: z.string().min(32),
-  JWT_REFRESH_SECRET: z.string().min(32),  // Currently unused (refresh tokens are random)
 
   // Client URLs
   WEB_CLIENT_URL: z.string().url(),
@@ -1075,8 +1074,6 @@ services:
         fromSecret: github-client-secret
       - key: JWT_ACCESS_SECRET
         generateValue: true
-      - key: JWT_REFRESH_SECRET
-        generateValue: true
     healthCheckPath: /health
     autoDeploy: true
 ```
@@ -1158,9 +1155,8 @@ GITHUB_CALLBACK_URL=http://localhost:3000/auth/github/callback
 # OAuth State Security (Generate with: openssl rand -base64 32)
 OAUTH_STATE_SECRET=your_oauth_state_secret_min_32_chars
 
-# JWT Secrets (Generate with: openssl rand -base64 32)
+# JWT Secret (Generate with: openssl rand -base64 32)
 JWT_ACCESS_SECRET=your_jwt_access_secret_min_32_chars
-JWT_REFRESH_SECRET=your_jwt_refresh_secret_min_32_chars
 
 # Client URLs
 WEB_CLIENT_URL=http://localhost:3001
@@ -1180,7 +1176,6 @@ ENABLE_FINGERPRINTING=true
 - `OAUTH_STATE_SECRET`: New requirement for signing OAuth state parameters
 - `MOBILE_DEEP_LINK_SCHEME`: Must match the deep link scheme in mobile app
 - `SECURE_COOKIES`: Should be `true` in production (HTTPS required)
-- `JWT_REFRESH_SECRET`: Currently unused (refresh tokens are random, not JWTs) but kept for future extensibility
 
 ## 13. Implementation Summary
 

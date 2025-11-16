@@ -1,5 +1,4 @@
 import { FastifyRequest } from 'fastify';
-import { env } from '../config/env.js';
 import { TOKEN_EXPIRY } from '../config/constants.js';
 import { createHash } from './crypto.utils.js';
 
@@ -10,7 +9,6 @@ export interface JWTPayload {
   email?: string;
   iat: number;
   exp: number;
-  type: 'access' | 'refresh';
   platform?: 'web' | 'mobile';
   fingerprint?: string;
 }
@@ -48,11 +46,6 @@ export function parseExpiry(expiry: string): number {
   };
 
   return value * multipliers[unit];
-}
-
-// Get secret for token type
-export function getSecret(type: 'access' | 'refresh'): string {
-  return type === 'access' ? env.JWT_ACCESS_SECRET : env.JWT_REFRESH_SECRET;
 }
 
 // Get expiry for token type and platform

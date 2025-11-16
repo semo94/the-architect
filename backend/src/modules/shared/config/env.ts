@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'staging','production']).default('development'),
+  NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
   PORT: z.string().default('3000').transform(Number),
 
   // Database
@@ -17,7 +17,6 @@ const envSchema = z.object({
 
   // JWT
   JWT_ACCESS_SECRET: z.string().min(32),
-  JWT_REFRESH_SECRET: z.string().min(32),
 
   // Client URLs
   WEB_CLIENT_URL: z.string().url(),

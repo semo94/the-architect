@@ -64,7 +64,6 @@ export class AuthService {
       email: user.email || undefined,
       platform,
       fingerprint,
-      type: 'access',
     };
 
     const accessExpiry = getExpiry('access', platform);
