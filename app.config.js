@@ -57,6 +57,8 @@ export default {
       llmTemperature: parseFloat(process.env.LLM_TEMPERATURE || "0.7"),
       // public for web bundle consumption; points to local proxy in dev
       llmProxyUrl: process.env.EXPO_PUBLIC_LLM_PROXY_URL || "",
+      // Auth backend URL
+      backendUrl: process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:3000",
     },
   },
 };

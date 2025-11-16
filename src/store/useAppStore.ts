@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create, type StateCreator } from 'zustand';
 import { Profile, Quiz, Topic } from '../types';
+import type { User } from '@/services/authService';
+import { authService } from '@/services/authService';
 
 const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
 
@@ -12,6 +14,13 @@ interface AppState {
   profile: Profile;
   isLoading: boolean;
   error: string | null;
+
+  // Auth state
+  user: User | null;
+  isAuthenticated: boolean;
+  isAuthLoading: boolean;
+  authError: string | null;
+
   addTopic: (topic: Topic) => void;
   updateTopicStatus: (id: string, status: 'learned') => void;
   dismissTopic: (name: string) => void;
@@ -24,6 +33,13 @@ interface AppState {
   setError: (error: string | null) => void;
   resetCurrentQuiz: () => void;
   setCurrentQuiz: (quiz: Quiz | null) => void;
+
+  // Auth actions
+  setUser: (user: User | null) => void;
+  setAuthLoading: (loading: boolean) => void;
+  setAuthError: (error: string | null) => void;
+  checkSession: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const initialProfile: Profile = {
@@ -73,6 +89,12 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
   profile: initialProfile,
   isLoading: false,
   error: null,
+
+  // Auth state initial values
+  user: null,
+  isAuthenticated: false,
+  isAuthLoading: true,
+  authError: null,
 
   addTopic: (topic: Topic) => {
     set((state) => {
@@ -251,6 +273,79 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
   setError: (error: string | null) => set({ error }),
   resetCurrentQuiz: () => set({ currentQuiz: null }),
   setCurrentQuiz: (quiz: Quiz | null) => set({ currentQuiz: quiz }),
+
+  // Auth actions
+  setUser: (user) => {
+    set({
+      user,
+      isAuthenticated: !!user,
+      authError: null,
+    });
+  },
+
+  setAuthLoading: (loading) => {
+    set({ isAuthLoading: loading });
+  },
+
+  setAuthError: (error) => {
+    set({ authError: error, isAuthLoading: false });
+  },
+
+  checkSession: async () => {
+    try {
+      set({ isAuthLoading: true, authError: null });
+
+      // First check stored user
+      const storedUser = await authService.getStoredUser();
+
+      if (storedUser) {
+        // Validate session with backend
+        const user = await authService.checkSession();
+
+        if (user) {
+          set({ user, isAuthenticated: true, isAuthLoading: false });
+          return;
+        }
+      }
+
+      // No valid session
+      set({ user: null, isAuthenticated: false, isAuthLoading: false });
+    } catch (error) {
+      console.error('Session check failed:', error);
+      set({
+        user: null,
+        isAuthenticated: false,
+        isAuthLoading: false,
+        authError: error instanceof Error ? error.message : 'Session check failed',
+      });
+    }
+  },
+
+  logout: async () => {
+    try {
+      set({ isAuthLoading: true });
+
+      await authService.logout();
+
+      // Clear auth state
+      set({
+        user: null,
+        isAuthenticated: false,
+        isAuthLoading: false,
+        authError: null,
+      });
+    } catch (error) {
+      console.error('Logout failed:', error);
+
+      // Still clear local auth state even if backend call fails
+      set({
+        user: null,
+        isAuthenticated: false,
+        isAuthLoading: false,
+        authError: error instanceof Error ? error.message : 'Logout failed',
+      });
+    }
+  },
 });
 
 export const useAppStore = create<AppState>()(storeCreator);
@@ -259,7 +354,7 @@ export const useAppStore = create<AppState>()(storeCreator);
 const STORAGE_KEY = 'architect-app-storage';
 
 type PersistedSlice = Pick<AppState,
-  'topics' | 'dismissedTopics' | 'quizzes' | 'currentQuiz' | 'profile'>;
+  'topics' | 'dismissedTopics' | 'quizzes' | 'currentQuiz' | 'profile' | 'user'>;
 
 function selectPersisted(state: AppState): PersistedSlice {
   return {
@@ -268,6 +363,7 @@ function selectPersisted(state: AppState): PersistedSlice {
     quizzes: state.quizzes,
     currentQuiz: state.currentQuiz,
     profile: state.profile,
+    user: state.user, // Persist user info (not tokens - they're in SecureStore)
   };
 }
 
