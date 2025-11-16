@@ -2,6 +2,7 @@ import type { OAuth2Namespace } from '@fastify/oauth2';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { refreshTokenSchema, type RefreshTokenDto } from './auth.schemas.js';
 import { AuthService } from './auth.service.js';
+import { env } from '../shared/config/env.js';
 
 interface LogoutBody {
   refreshToken?: string;
@@ -66,7 +67,7 @@ export class AuthController {
     } else {
       // For web: set httpOnly cookies and redirect
       this.authService.setTokenCookies(reply, tokens);
-      reply.redirect(process.env.WEB_CLIENT_URL || '/');
+      reply.redirect(env.WEB_CLIENT_URL);
     }
   }
 
