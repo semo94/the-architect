@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+docker/
+Dockerfile*
+docker-compose*.yml
+
+# Documentation
+*.md
+!README.md
+
+# Tests
+tests/
+coverage/
+*.test.ts
+*.spec.ts
+
+# CI/CD
+.github/
+
+# Misc
+.eslintrc*
+.prettierrc*
+vitest.config.ts
