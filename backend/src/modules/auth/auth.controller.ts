@@ -3,11 +3,6 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { refreshTokenSchema, type RefreshTokenDto } from './auth.schemas.js';
 import { AuthService } from './auth.service.js';
 
-interface AuthQuery {
-  redirect_uri?: string;
-  platform?: string;
-}
-
 interface LogoutBody {
   refreshToken?: string;
 }
@@ -46,36 +41,28 @@ export class AuthController {
     const profile = await response.json() as import('./auth.service.js').GitHubProfile;
 
     // Handle authentication
-    const { user, tokens } = await this.authService.handleGitHubCallback(profile, request);
+    const { user: _user, tokens } = await this.authService.handleGitHubCallback(profile, request);
 
-    const platform = this.authService.detectPlatform(request);
+    // Get platform and redirect URI from decoded OAuth state
+    // This was validated and attached to the request by checkStateFunction
+    if (!request.oauthState) {
+      throw new Error('OAuth state not found - invalid authentication flow');
+    }
+
+    const { platform, redirectUri } = request.oauthState;
 
     if (platform === 'mobile') {
-      // For mobile: return JSON response or redirect with tokens
-      const query = request.query as AuthQuery;
-      const redirectUri = query.redirect_uri;
-
-      if (redirectUri) {
-        // Redirect to mobile deep link with tokens
-        const url = new URL(redirectUri);
-        url.searchParams.set('access_token', tokens.accessToken);
-        url.searchParams.set('refresh_token', tokens.refreshToken);
-        reply.redirect(url.toString());
-      } else {
-        // Return JSON response
-        reply.send({
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-          user: {
-            id: user.id,
-            githubId: user.githubId,
-            username: user.username,
-            displayName: user.displayName,
-            email: user.email,
-            avatarUrl: user.avatarUrl,
-          },
-        });
+      // For mobile: redirect to deep link with tokens in URL fragment
+      // redirectUri is guaranteed to exist (validated in generateStateFunction)
+      if (!redirectUri) {
+        throw new Error('redirect_uri is required for mobile OAuth flow');
       }
+
+      // Use URL fragment (#) instead of query params (?) for security
+      // Fragments are not sent to servers, preventing token leakage in logs
+      const url = new URL(redirectUri);
+      url.hash = `access_token=${tokens.accessToken}&refresh_token=${tokens.refreshToken}`;
+      reply.redirect(url.toString());
     } else {
       // For web: set httpOnly cookies and redirect
       this.authService.setTokenCookies(reply, tokens);

@@ -1,13 +1,22 @@
-import { FastifyInstance } from 'fastify';
 import oauth2Plugin from '@fastify/oauth2';
-import { AuthController } from './auth.controller.js';
+import type { FastifyOAuth2Options, FastifyGenerateStateFunction, FastifyCheckStateFunction } from '@fastify/oauth2';
+import { FastifyInstance, FastifyRequest } from 'fastify';
 import { env } from '../shared/config/env.js';
+import { AuthController } from './auth.controller.js';
+import { generateState, OAuthStatePayload, validateState } from './utils/oauth-state.js';
+
+// Extend FastifyRequest to include decoded OAuth state
+declare module 'fastify' {
+  interface FastifyRequest {
+    oauthState?: OAuthStatePayload;
+  }
+}
 
 export async function authRoutes(fastify: FastifyInstance): Promise<void> {
   const controller = new AuthController();
 
-  // Register GitHub OAuth2
-  await fastify.register(oauth2Plugin, {
+  // Register GitHub OAuth2 with custom state management
+  const oauth2Options: FastifyOAuth2Options = {
     name: 'githubOAuth2',
     credentials: {
       client: {
@@ -19,7 +28,61 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     startRedirectPath: '/github',
     callbackUri: env.GITHUB_CALLBACK_URL,
     scope: ['user:email', 'read:user'],
-  });
+
+    // Custom state generation: encode platform and redirect URI
+    generateStateFunction: (function (this: FastifyInstance, request: FastifyRequest, callback: (err: Error | null, state: string) => void): void {
+      try {
+        const query = request.query as { platform?: string; redirect_uri?: string };
+        const platform = query.platform === 'mobile' ? 'mobile' : 'web';
+        const redirectUri = query.redirect_uri;
+
+        // Validate redirect_uri for mobile platform
+        if (platform === 'mobile') {
+          if (!redirectUri) {
+            throw new Error('redirect_uri is required for mobile platform');
+          }
+          if (!redirectUri.startsWith(env.MOBILE_DEEP_LINK_SCHEME)) {
+            throw new Error(`Invalid redirect_uri: must start with ${env.MOBILE_DEEP_LINK_SCHEME}`);
+          }
+        }
+
+        const state = generateState(platform, redirectUri);
+        callback(null, state);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to generate state';
+        this.log.error({ error: errorMessage }, 'OAuth state generation failed');
+        // Callback signature requires both error and state params
+        callback(new Error(errorMessage), '');
+      }
+    }) as FastifyGenerateStateFunction,
+
+    // Custom state validation: verify signature and decode platform context
+    checkStateFunction: (function (this: FastifyInstance, request: FastifyRequest, callback: (err?: Error) => void): void {
+      try {
+        const query = request.query as { state?: string };
+        const stateString = query.state;
+
+        if (!stateString) {
+          return callback(new Error('Missing state parameter'));
+        }
+
+        // Validate and decode state
+        const decodedState = validateState(stateString);
+
+        // Attach decoded state to request for controller access
+        request.oauthState = decodedState;
+
+        // State is valid - call callback with no error
+        callback();
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Invalid state';
+        this.log.error({ error: errorMessage }, 'OAuth state validation failed');
+        callback(new Error(errorMessage));
+      }
+    }) as FastifyCheckStateFunction,
+  };
+
+  await fastify.register(oauth2Plugin, oauth2Options);
 
   // GET /auth/github - Initiate GitHub OAuth
   // This is automatically handled by @fastify/oauth2 via startRedirectPath

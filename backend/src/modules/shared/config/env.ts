@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z.enum(['development', 'staging','production']).default('development'),
   PORT: z.string().default('3000').transform(Number),
 
   // Database
@@ -11,6 +11,9 @@ const envSchema = z.object({
   GITHUB_CLIENT_ID: z.string().min(1),
   GITHUB_CLIENT_SECRET: z.string().min(1),
   GITHUB_CALLBACK_URL: z.string().url(),
+
+  // OAuth State Security
+  OAUTH_STATE_SECRET: z.string().min(32),
 
   // JWT
   JWT_ACCESS_SECRET: z.string().min(32),
