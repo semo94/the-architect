@@ -27,6 +27,7 @@ Breadthwise is designed to help experienced engineers transition from deep speci
 ### Installation
 
 1. **Clone and install dependencies**:
+
    ```bash
    cd Breadthwise
    pnpm install
@@ -35,6 +36,7 @@ Breadthwise is designed to help experienced engineers transition from deep speci
 2. **Configure environment**:
 
    Create a `.env` file with your LLM configuration:
+
    ```env
    # LLM Configuration
    LLM_PROVIDER=anthropic  # or 'openai', 'custom'
@@ -50,6 +52,7 @@ Breadthwise is designed to help experienced engineers transition from deep speci
    ```
 
 3. **Start the app**:
+
    ```bash
    # Mobile (iOS/Android)
    pnpm start
@@ -105,6 +108,7 @@ Breadthwise/
 ## 🎯 Current Implementation Status
 
 ### ✅ Completed
+
 - ✅ Core infrastructure and dependencies
 - ✅ State management (Zustand with AsyncStorage persistence)
 - ✅ Multi-provider LLM service (Anthropic, OpenAI, Custom)
@@ -121,6 +125,7 @@ Breadthwise/
 - ✅ Cross-platform (iOS, Android, Web)
 
 ### 🔄 Future Enhancements
+
 - Enhanced error handling and offline support
 - More quiz question types
 - Learning path recommendations
@@ -131,6 +136,7 @@ Breadthwise/
 ### Discovering Technologies
 
 #### Surprise Me Mode
+
 1. Open the app and go to the **Discover** tab
 2. Click **"Surprise Me"** to get a random technology you haven't learned
 3. Read through the comprehensive content:
@@ -144,6 +150,7 @@ Breadthwise/
    - **Acquire Now**: Take a quiz immediately
 
 #### Guide Me Mode
+
 1. Click **"Guide Me"** on the Discover tab
 2. Answer 3 guided questions about your interests and context
 3. Receive a personalized technology recommendation

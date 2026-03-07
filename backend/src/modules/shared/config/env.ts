@@ -25,6 +25,7 @@ const envSchema = z.object({
   // Cookie settings
   COOKIE_DOMAIN: z.string().optional(),
   SECURE_COOKIES: z.string().default('true').transform(val => val === 'true'),
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
 
   // Security
   ALLOWED_ORIGINS: z.string().transform(s => s.split(',')),

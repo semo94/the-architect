@@ -1,17 +1,17 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
-import { UserRepository } from '../user/user.repository.js';
-import { AuthRepository } from './auth.repository.js';
+import { FastifyReply, FastifyRequest } from 'fastify';
+import { env } from '../shared/config/env.js';
 import { type User } from '../shared/database/schema.js';
 import { AppError } from '../shared/middleware/error-handler.js';
+import { generateRandomToken, hashToken } from '../shared/utils/crypto.utils.js';
 import {
   generateFingerprint,
-  parseExpiry,
   getExpiry,
+  parseExpiry,
   type JWTPayload,
   type TokenPair,
 } from '../shared/utils/jwt.utils.js';
-import { generateRandomToken, hashToken } from '../shared/utils/crypto.utils.js';
-import { env } from '../shared/config/env.js';
+import { UserRepository } from '../user/user.repository.js';
+import { AuthRepository } from './auth.repository.js';
 
 export interface GitHubProfile {
   id: string;
@@ -152,7 +152,7 @@ export class AuthService {
     const cookieOptions = {
       httpOnly: true,
       secure: env.SECURE_COOKIES,
-      sameSite: 'lax' as const,
+      sameSite: env.COOKIE_SAME_SITE,
       domain: env.COOKIE_DOMAIN,
       path: '/',
     };

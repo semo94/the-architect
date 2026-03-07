@@ -1,9 +1,12 @@
 import { BreadthExpansionStats } from '@/components/profile/BreadthExpansionStats';
 import { CategoryBreakdownList } from '@/components/profile/CategoryBreakdownList';
+import { LogoutButton } from '@/components/profile/LogoutButton';
 import { MilestonesList } from '@/components/profile/MilestonesList';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { QuizPerformanceCard } from '@/components/profile/QuizPerformanceCard';
+import { UserProfileHeader } from '@/components/profile/UserProfileHeader';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useAppStore } from '@/store/useAppStore';
 import React from 'react';
 import { ScrollView } from 'react-native';
@@ -13,10 +16,13 @@ export default function ProfileScreen() {
   const { profile } = useAppStore();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
+  const { user, isAuthenticated } = useAuth();
 
   return (
     <ScrollView style={themeStyles.container}>
       <ProfileHeader paddingTop={Math.max(insets.top, 20)} />
+
+      {isAuthenticated && user && <UserProfileHeader user={user} />}
 
       <BreadthExpansionStats
         totalDiscovered={profile.statistics.breadthExpansion.totalDiscovered}
@@ -36,6 +42,8 @@ export default function ProfileScreen() {
       />
 
       <MilestonesList milestones={profile.milestones} />
+
+      {isAuthenticated && <LogoutButton />}
     </ScrollView>
   );
 }

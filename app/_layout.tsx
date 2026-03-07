@@ -3,19 +3,49 @@ import {
   DefaultTheme,
   ThemeProvider as NavigationThemeProvider,
 } from "@react-navigation/native";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AuthLoadingOverlay } from "@/components/auth/AuthLoadingOverlay";
 
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useAppStore } from "@/store/useAppStore";
 import { DarkColors, LightColors } from "@/styles/globalStyles";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const colors = colorScheme === "dark" ? DarkColors : LightColors;
+  const router = useRouter();
+  const segments = useSegments();
+
+  const isAuthenticated = useAppStore((state) => state.isAuthenticated);
+  const isAuthLoading = useAppStore((state) => state.isAuthLoading);
+  const checkSession = useAppStore((state) => state.checkSession);
+
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
+
+  useEffect(() => {
+    if (isAuthLoading) {
+      return;
+    }
+
+    const inAuthGroup = segments[0] === "(auth)";
+
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace("/(auth)/login");
+      return;
+    }
+
+    if (isAuthenticated && inAuthGroup) {
+      router.replace("/(tabs)/discover");
+    }
+  }, [isAuthenticated, isAuthLoading, router, segments]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -23,6 +53,12 @@ export default function RootLayout() {
         <ThemeProvider>
           <NavigationThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
             <Stack>
+              <Stack.Screen
+                name="(auth)"
+                options={{
+                  headerShown: false,
+                }}
+              />
               <Stack.Screen
                 name="(tabs)"
                 options={{
@@ -71,6 +107,7 @@ export default function RootLayout() {
                 }}
               />
             </Stack>
+            {isAuthLoading && <AuthLoadingOverlay message="Checking session..." />}
             <StatusBar style="auto" />
           </NavigationThemeProvider>
         </ThemeProvider>
