@@ -1,8 +1,8 @@
 # Expo Authentication Integration Specification
 
 **Project**: Breadthwise
-**Version**: 1.0
-**Last Updated**: 2025-11-16
+**Version**: 2.0
+**Last Updated**: 2026-03-07
 **Status**: Ready for Implementation
 
 ---
@@ -11,17 +11,15 @@
 
 1. [Overview & Architecture](#1-overview--architecture)
 2. [Dependencies & Configuration](#2-dependencies--configuration)
-3. [Design System Integration](#3-design-system-integration)
-4. [Auth Service Implementation](#4-auth-service-implementation)
-5. [State Management](#5-state-management)
-6. [Login Screen Implementation](#6-login-screen-implementation)
-7. [Profile Screen Modifications](#7-profile-screen-modifications)
-8. [Navigation & Protected Routes](#8-navigation--protected-routes)
-9. [Component Library](#9-component-library)
-10. [Error Handling & Edge Cases](#10-error-handling--edge-cases)
-11. [Testing Checklist](#11-testing-checklist)
-12. [Implementation Roadmap](#12-implementation-roadmap)
-13. [Appendix: Type Definitions](#13-appendix-type-definitions)
+3. [Auth Service Implementation](#3-auth-service-implementation)
+4. [State Management](#4-state-management)
+5. [Login Screen Implementation](#5-login-screen-implementation)
+6. [Profile Screen Modifications](#6-profile-screen-modifications)
+7. [Navigation & Protected Routes](#7-navigation--protected-routes)
+8. [Reusable Auth Components](#8-reusable-auth-components)
+9. [Error Handling & Edge Cases](#9-error-handling--edge-cases)
+10. [Testing Checklist](#10-testing-checklist)
+11. [Implementation Roadmap](#11-implementation-roadmap)
 
 ---
 
@@ -29,111 +27,68 @@
 
 ### 1.1 Introduction
 
-This specification outlines the integration of GitHub OAuth authentication into the Breadthwise Expo application. The implementation follows a **platform-agnostic approach** that works seamlessly across iOS, Android, and Web platforms using a single codebase.
+This specification outlines the integration of GitHub OAuth authentication into the Breadthwise Expo application. The implementation follows a platform-agnostic approach that works across iOS, Android, and Web using a single codebase.
 
 ### 1.2 Current State
 
 **Frontend (Expo)**:
-- No existing authentication implementation
-- Client-side only state management with Zustand
-- Local persistence of topics, quizzes, and profile data
-- Ready for backend integration
+- Expo SDK 54.0.12 / React Native 0.81.4 / React 19.1.0
+- expo-router 6 with typed routes
+- Zustand 5.0.8 with manual cross-platform persistence
+- ThemeContext providing `colors`, `shadows`, `styles`, `spacing`, `typography`, `borderRadius`, `isDark`
+- No existing authentication
 
-**Backend (Fastify)**:
-- Fully implemented GitHub OAuth flow via `@fastify/oauth2`
+**Backend (Fastify 5)** - Fully Implemented:
+- GitHub OAuth via `@fastify/oauth2` with signed HMAC-SHA256 state
 - Platform-aware token delivery (cookies for web, URL fragments for mobile)
-- JWT access tokens (15min expiry) + random refresh tokens (7d web, 30d mobile)
-- User management with PostgreSQL (Neon)
+- JWT access tokens (15min) + opaque refresh tokens (7d web, 30d mobile)
+- Token rotation on every refresh
+- See `docs/backend-spec.md` for full API reference
 
-### 1.3 Integration Goals
+### 1.3 Authentication Flow
 
-1. ✅ **Seamless OAuth Flow**: GitHub SSO on all platforms (iOS, Android, Web)
-2. ✅ **Secure Token Management**: Platform-specific storage (SecureStore mobile, cookies web)
-3. ✅ **Single Codebase**: One auth service with platform conditionals
-4. ✅ **Design Consistency**: Use existing globalStyles.ts theme system
-5. ✅ **Mobile-First UI**: Responsive login and profile screens
-6. ✅ **Data Sync**: Merge local data with backend user account
-7. ✅ **Protected Routes**: Conditional navigation based on auth state
-
-### 1.4 Backend API Endpoints
-
-| Endpoint | Method | Description | Platform-Specific |
-|----------|--------|-------------|-------------------|
-| `/auth/github` | GET | Initiates OAuth flow | Query param: `platform=mobile\|web`, `redirect_uri` (mobile only) |
-| `/auth/github/callback` | GET | OAuth callback | Response: Web=cookies+redirect, Mobile=URL fragment redirect |
-| `/auth/refresh` | POST | Refresh access token | Request: Web=cookie, Mobile=JSON body |
-| `/auth/logout` | POST | Logout and revoke token | Request: Web=cookie, Mobile=JSON body |
-| `/auth/revoke-all` | POST | Revoke all user tokens | Requires: Authorization header |
-| `/auth/session` | GET | Validate session | Response: `{ user, expiresAt }` |
-| `/users/me` | GET | Get current user | Requires: Authorization header |
-| `/users/me` | PATCH | Update user info | Requires: Authorization header |
-
-### 1.5 Authentication Flow Diagrams
-
-#### Mobile Flow (iOS/Android)
-
+#### Mobile (iOS/Android)
 ```
-User Taps "Login with GitHub"
-         ↓
-expo-web-browser opens OAuth URL
-  (/auth/github?platform=mobile&redirect_uri=breadthwise://auth/callback)
-         ↓
-User authorizes on GitHub
-         ↓
-Backend redirects to: breadthwise://auth/callback#access_token=...&refresh_token=...
-         ↓
-expo-linking catches deep link
-         ↓
-Extract tokens from URL fragment
-         ↓
-Store tokens in expo-secure-store
-         ↓
-Update Zustand auth state
-         ↓
-Navigate to /(tabs)/discover
+User taps "Login with GitHub"
+  -> expo-web-browser opens /auth/github?platform=mobile&redirect_uri=breadthwise://auth/callback
+  -> User authorizes on GitHub
+  -> Backend redirects to breadthwise://auth/callback#access_token=...&refresh_token=...
+  -> WebBrowser.openAuthSessionAsync returns the URL
+  -> Extract tokens from URL fragment
+  -> Store tokens in expo-secure-store
+  -> Fetch full user via /users/me
+  -> Update Zustand auth state
+  -> Navigate to /(tabs)/discover
 ```
 
-#### Web Flow
-
+#### Web
 ```
-User Clicks "Login with GitHub"
-         ↓
-window.location.href = /auth/github?platform=web
-         ↓
-User authorizes on GitHub
-         ↓
-Backend sets httpOnly cookies + redirects to WEB_CLIENT_URL
-         ↓
-Browser follows redirect with cookies
-         ↓
-Check session via /auth/session (cookies sent automatically)
-         ↓
-Update Zustand auth state
-         ↓
-Navigate to /(tabs)/discover
+User clicks "Login with GitHub"
+  -> window.location.href = /auth/github?platform=web
+  -> User authorizes on GitHub
+  -> Backend sets httpOnly cookies + redirects to WEB_CLIENT_URL
+  -> App checks session via /auth/session (cookies sent automatically)
+  -> Fetch full user via /users/me
+  -> Update Zustand auth state
+  -> Navigate to /(tabs)/discover
 ```
 
-### 1.6 Technology Stack
+### 1.4 Technology Stack
 
-**Existing**:
-- Expo SDK 54.0.12
-- React Native 0.81.4
-- expo-router 6.0.10 (file-based routing)
-- Zustand 5.0.8 (state management)
-- TypeScript (strict mode)
-- @react-native-async-storage/async-storage (persistence)
+**Already Installed**:
+- `expo-web-browser` ~15.0.7 (OAuth browser)
+- `expo-linking` ~8.0.8 (deep link handling)
+- `zustand` ^5.0.8 (state management)
 
-**New Dependencies**:
-- `expo-web-browser` ~14.0.0 (OAuth browser)
-- `expo-secure-store` ~14.0.0 (secure token storage)
-- `expo-linking` (already installed - deep link handling)
+**To Install**:
+- `expo-secure-store` (secure token storage on mobile)
 
-### 1.7 File Structure
+### 1.5 File Structure (New/Modified Files)
 
 ```
 Breadthwise/
 ├── app/
-│   ├── _layout.tsx                    [MODIFY] Add auth guards
+│   ├── _layout.tsx                    [MODIFY] Add auth guards + session check
 │   ├── (auth)/
 │   │   ├── _layout.tsx                [NEW] Auth group layout
 │   │   └── login.tsx                  [NEW] Login screen
@@ -149,390 +104,55 @@ Breadthwise/
 │   │
 │   ├── components/
 │   │   ├── auth/
-│   │   │   ├── LoginButton.tsx        [NEW] GitHub login button
-│   │   │   ├── AuthLoadingOverlay.tsx [NEW] OAuth loading state
-│   │   │   └── ErrorBanner.tsx        [NEW] Auth error display
-│   │   │
+│   │   │   └── AuthLoadingOverlay.tsx  [NEW] OAuth loading state
 │   │   └── profile/
-│   │       ├── UserProfileHeader.tsx  [NEW] User avatar & info
-│   │       ├── AccountSection.tsx     [NEW] Account settings
-│   │       ├── LogoutButton.tsx       [NEW] Logout with confirmation
-│   │       ├── UserAvatar.tsx         [NEW] Avatar component
-│   │       └── UserInfoCard.tsx       [NEW] User details card
+│   │       ├── UserProfileHeader.tsx   [NEW] User avatar & info
+│   │       └── LogoutButton.tsx        [NEW] Logout with confirmation
 │   │
 │   ├── hooks/
-│   │   ├── useAuth.ts                 [NEW] Auth context hook
-│   │   └── useRequireAuth.ts          [NEW] Protected route hook
+│   │   └── useAuth.ts                 [NEW] Auth convenience hook
 │   │
 │   └── types/
 │       └── index.ts                   [MODIFY] Add auth types
 │
-├── .env                                [MODIFY] Add auth env vars
-└── app.config.js                       [VERIFY] Deep link scheme (already set)
+└── .env                               [MODIFY] Add EXPO_PUBLIC_API_URL
 ```
 
 ---
 
 ## 2. Dependencies & Configuration
 
-### 2.1 Install New Dependencies
+### 2.1 Install Dependencies
 
 ```bash
-# Navigate to project root
-cd /Users/salimbakri/Documents/Projects/Breadthwise
-
-# Install new packages
-npx expo install expo-web-browser expo-secure-store
-
-# expo-linking is already installed (package.json:33)
+npx expo install expo-secure-store
 ```
 
-**Expected versions**:
-- `expo-web-browser`: ~14.0.0
-- `expo-secure-store`: ~14.0.0
-- `expo-linking`: ~7.0.2 (already installed)
+`expo-web-browser` (~15.0.7) and `expo-linking` (~8.0.8) are already installed.
 
 ### 2.2 Environment Variables
 
-Add the following to `.env`:
+Add to `.env`:
 
 ```bash
-# Existing (keep as-is)
-EXPO_PUBLIC_BACKEND_URL=https://nanci-homogonous-nida.ngrok-free.dev
-
-# New Auth Variables
-EXPO_PUBLIC_API_URL=https://nanci-homogonous-nida.ngrok-free.dev
-EXPO_PUBLIC_WEB_CLIENT_URL=http://localhost:8081
-EXPO_PUBLIC_MOBILE_DEEP_LINK_SCHEME=breadthwise://
-```
-
-**Environment Variable Usage**:
-
-```typescript
-// src/services/authService.ts
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.backendUrl || 'http://localhost:3000';
-const DEEP_LINK_SCHEME = 'breadthwise://'; // Must match app.config.js scheme
+# Backend API URL
+EXPO_PUBLIC_API_URL=https://your-backend-url.com
 ```
 
 ### 2.3 Deep Link Configuration
 
-**File**: `app.config.js` (line 10)
-
+Already configured in `app.config.js`:
 ```javascript
-{
-  expo: {
-    scheme: "breadthwise",  // ✅ Already configured - DO NOT CHANGE
-    // ...
-  }
-}
+{ expo: { scheme: "breadthwise" } }  // DO NOT CHANGE
 ```
 
-**Deep Link Format**:
-- App opens on: `breadthwise://auth/callback#access_token=...&refresh_token=...`
-- Scheme (`breadthwise`) must match backend's `MOBILE_DEEP_LINK_SCHEME` (default: `breadthwise://`)
-
-### 2.4 TypeScript Configuration
-
-No changes needed. Existing `tsconfig.json` already supports:
-- Path alias `@/*` → `./src/*`
-- Strict mode enabled
-- Expo types included
+Deep link format: `breadthwise://auth/callback#access_token=...&refresh_token=...`
 
 ---
 
-## 3. Design System Integration
+## 3. Auth Service Implementation
 
-### 3.1 Using Existing Global Styles
-
-**Location**: `src/styles/globalStyles.ts`
-
-The app already has a comprehensive design system. **All new auth components must use this system**.
-
-#### 3.1.1 Theme Colors (Light/Dark Mode)
-
-```typescript
-import { useTheme } from '@/contexts/ThemeContext';
-
-function LoginScreen() {
-  const { theme } = useTheme();
-  const colors = theme === 'light' ? LightColors : DarkColors;
-
-  // Use colors.primary, colors.background, colors.text, etc.
-}
-```
-
-**Key Colors**:
-- `primary`: Green (#4CAF50 light, #66BB6A dark) - for primary CTAs
-- `secondary`: Blue (#2196F3 light, #42A5F5 dark) - for secondary actions
-- `error`: Red - for error states
-- `surface`: Card backgrounds
-- `text`: Primary text color
-
-#### 3.1.2 Typography System
-
-```typescript
-import { globalStyles, typography } from '@/styles/globalStyles';
-
-// Font sizes
-typography.fontSize.xxxl   // 36 - Large headings
-typography.fontSize.xxl    // 28 - Screen titles
-typography.fontSize.xl     // 24 - Section headers
-typography.fontSize.lg     // 20 - Subheadings
-typography.fontSize.base   // 16 - Body text
-typography.fontSize.sm     // 14 - Secondary text
-
-// Font weights
-typography.fontWeight.bold      // 700
-typography.fontWeight.semibold  // 600
-typography.fontWeight.medium    // 500
-typography.fontWeight.normal    // 400
-```
-
-#### 3.1.3 Spacing System
-
-```typescript
-import { spacing } from '@/styles/globalStyles';
-
-spacing.xs   // 4
-spacing.sm   // 8
-spacing.md   // 12
-spacing.lg   // 15
-spacing.xl   // 20
-spacing.xxl  // 30
-```
-
-#### 3.1.4 Pre-built Styles for Auth Components
-
-**Login Button** (use existing button styles):
-
-```typescript
-import { buttonStyles } from '@/styles/globalStyles';
-
-<TouchableOpacity style={buttonStyles.primary}>
-  <Text style={buttonStyles.primaryText}>Continue with GitHub</Text>
-</TouchableOpacity>
-```
-
-**Auth Container** (use existing card styles):
-
-```typescript
-import { cardStyles } from '@/styles/globalStyles';
-
-<View style={[cardStyles.card, { padding: spacing.xl }]}>
-  {/* Login content */}
-</View>
-```
-
-**Error Messages** (use existing text styles):
-
-```typescript
-import { textStyles } from '@/styles/globalStyles';
-
-<Text style={textStyles.error}>{error}</Text>
-```
-
-### 3.2 Mobile-First Design Principles
-
-**Screen Breakpoints**:
-
-```typescript
-import { useWindowDimensions } from 'react-native';
-
-function ResponsiveAuthScreen() {
-  const { width } = useWindowDimensions();
-
-  const isSmallScreen = width < 375;   // Small phones
-  const isMediumScreen = width < 768;  // Most phones
-  const isTablet = width >= 768;       // Tablets
-  const isDesktop = width >= 1024;     // Desktop/web
-
-  // Adjust layout based on screen size
-}
-```
-
-**Responsive Padding**:
-
-```typescript
-const getResponsivePadding = (width: number) => {
-  if (width < 375) return spacing.md;      // Small phones: 12px
-  if (width < 768) return spacing.xl;      // Phones: 20px
-  if (width < 1024) return spacing.xxl;    // Tablets: 30px
-  return spacing.xxl + spacing.lg;         // Desktop: 45px
-};
-```
-
-### 3.3 Accessibility Standards
-
-**All auth components must include**:
-
-```typescript
-<TouchableOpacity
-  accessible={true}
-  accessibilityRole="button"
-  accessibilityLabel="Login with GitHub"
-  accessibilityHint="Opens GitHub login in browser"
->
-  {/* Button content */}
-</TouchableOpacity>
-
-<TextInput
-  accessible={true}
-  accessibilityLabel="Email address"
-  accessibilityHint="Enter your email address"
-/>
-```
-
-**Focus Management**:
-- Ensure logical tab order
-- Announce screen changes to screen readers
-- Provide descriptive labels for all interactive elements
-
-### 3.4 Auth-Specific Style Patterns
-
-#### Login Screen Styles
-
-```typescript
-// src/components/auth/styles/loginScreenStyles.ts
-import { StyleSheet } from 'react-native';
-import { spacing, typography, borderRadius, shadows } from '@/styles/globalStyles';
-
-export const useLoginScreenStyles = (colors: typeof LightColors) => {
-  return React.useMemo(
-    () =>
-      StyleSheet.create({
-        container: {
-          flex: 1,
-          backgroundColor: colors.background,
-        },
-        content: {
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingHorizontal: spacing.xl,
-        },
-        logoContainer: {
-          marginBottom: spacing.xxl,
-          alignItems: 'center',
-        },
-        title: {
-          fontSize: typography.fontSize.xxxl,
-          fontWeight: typography.fontWeight.bold,
-          color: colors.text,
-          marginBottom: spacing.sm,
-          textAlign: 'center',
-        },
-        subtitle: {
-          fontSize: typography.fontSize.base,
-          color: colors.textSecondary,
-          textAlign: 'center',
-          marginBottom: spacing.xxl,
-          lineHeight: typography.lineHeight.relaxed,
-        },
-        buttonContainer: {
-          width: '100%',
-          maxWidth: 400,
-        },
-        githubButton: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: colors.surface,
-          borderWidth: 1,
-          borderColor: colors.border,
-          borderRadius: borderRadius.md,
-          paddingVertical: spacing.lg,
-          paddingHorizontal: spacing.xl,
-          ...shadows.small(colors),
-        },
-        githubButtonText: {
-          fontSize: typography.fontSize.base,
-          fontWeight: typography.fontWeight.semibold,
-          color: colors.text,
-          marginLeft: spacing.md,
-        },
-        loadingOverlay: {
-          ...StyleSheet.absoluteFillObject,
-          backgroundColor: colors.background + 'CC', // 80% opacity
-          justifyContent: 'center',
-          alignItems: 'center',
-        },
-      }),
-    [colors]
-  );
-};
-```
-
-#### User Profile Card Styles
-
-```typescript
-// Use in Profile screen for user info display
-export const useUserProfileStyles = (colors: typeof LightColors) => {
-  return React.useMemo(
-    () =>
-      StyleSheet.create({
-        profileCard: {
-          backgroundColor: colors.surface,
-          borderRadius: borderRadius.lg,
-          padding: spacing.xl,
-          marginHorizontal: spacing.lg,
-          marginTop: spacing.lg,
-          ...shadows.small(colors),
-        },
-        avatarContainer: {
-          alignItems: 'center',
-          marginBottom: spacing.lg,
-        },
-        avatar: {
-          width: 80,
-          height: 80,
-          borderRadius: borderRadius.round,
-          backgroundColor: colors.primary,
-          justifyContent: 'center',
-          alignItems: 'center',
-        },
-        avatarText: {
-          fontSize: typography.fontSize.xxl,
-          fontWeight: typography.fontWeight.bold,
-          color: '#FFFFFF',
-        },
-        username: {
-          fontSize: typography.fontSize.xl,
-          fontWeight: typography.fontWeight.bold,
-          color: colors.text,
-          textAlign: 'center',
-          marginTop: spacing.md,
-        },
-        email: {
-          fontSize: typography.fontSize.sm,
-          color: colors.textSecondary,
-          textAlign: 'center',
-          marginTop: spacing.xs,
-        },
-        logoutButton: {
-          marginTop: spacing.xl,
-          backgroundColor: colors.error,
-          borderRadius: borderRadius.md,
-          paddingVertical: spacing.md,
-          alignItems: 'center',
-        },
-        logoutButtonText: {
-          fontSize: typography.fontSize.base,
-          fontWeight: typography.fontWeight.semibold,
-          color: '#FFFFFF',
-        },
-      }),
-    [colors]
-  );
-};
-```
-
----
-
-## 4. Auth Service Implementation
-
-### 4.1 Complete Auth Service
+### 3.1 Auth Service
 
 **File**: `src/services/authService.ts` [NEW]
 
@@ -541,9 +161,11 @@ import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as SecureStore from 'expo-secure-store';
 import * as Linking from 'expo-linking';
-import Constants from 'expo-constants';
 
-// Types
+// ============================================================
+// TYPES
+// ============================================================
+
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -561,13 +183,16 @@ export interface User {
 }
 
 export interface SessionResponse {
-  user: User;
-  expiresAt: string; // ISO 8601 timestamp
-}
-
-export interface RefreshResponse {
-  accessToken: string;
-  refreshToken: string;
+  user: {
+    sub: string;
+    githubId: string;
+    username: string;
+    email?: string;
+    platform?: string;
+    iat: number;
+    exp: number;
+  };
+  expiresAt: string;
 }
 
 export class AuthError extends Error {
@@ -581,103 +206,90 @@ export class AuthError extends Error {
   }
 }
 
-// Constants
-const API_URL = Constants.expoConfig?.extra?.backendUrl || 'http://localhost:3000';
+// ============================================================
+// CONSTANTS
+// ============================================================
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 const DEEP_LINK_SCHEME = 'breadthwise://';
 
-// Storage keys
 const STORAGE_KEYS = {
   ACCESS_TOKEN: 'auth_access_token',
   REFRESH_TOKEN: 'auth_refresh_token',
-  USER: 'auth_user',
 } as const;
+
+// ============================================================
+// AUTH SERVICE
+// ============================================================
 
 class AuthService {
   private refreshPromise: Promise<string> | null = null;
 
-  // ============================================================
-  // PLATFORM DETECTION
-  // ============================================================
+  private get isWeb(): boolean {
+    return Platform.OS === 'web';
+  }
 
   private get platform(): 'web' | 'mobile' {
-    return Platform.OS === 'web' ? 'web' : 'mobile';
+    return this.isWeb ? 'web' : 'mobile';
   }
 
-  // ============================================================
+  // ----------------------------------------------------------
   // OAUTH LOGIN
-  // ============================================================
+  // ----------------------------------------------------------
 
-  async loginWithGitHub(): Promise<void> {
-    if (this.platform === 'web') {
+  async loginWithGitHub(): Promise<AuthTokens | void> {
+    if (this.isWeb) {
       return this.loginWeb();
-    } else {
-      return this.loginMobile();
     }
+    return this.loginMobile();
   }
 
-  private async loginWeb(): Promise<void> {
-    // Web: Simple redirect - backend handles cookies
+  private loginWeb(): void {
+    // Web: redirect to backend OAuth - cookies handled automatically
     const authUrl = `${API_URL}/auth/github?platform=web`;
-
     if (typeof window !== 'undefined') {
       window.location.href = authUrl;
-    } else {
-      throw new AuthError('Window object not available', 500, 'NO_WINDOW');
     }
   }
 
-  private async loginMobile(): Promise<void> {
-    try {
-      // Create deep link redirect URI
-      const redirectUri = Linking.createURL('auth/callback');
+  private async loginMobile(): Promise<AuthTokens> {
+    const redirectUri = Linking.createURL('auth/callback');
+    const authUrl = `${API_URL}/auth/github?platform=mobile&redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-      // Build OAuth URL
-      const authUrl = `${API_URL}/auth/github?platform=mobile&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
-      // Open OAuth browser
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-
-      if (result.type === 'cancel') {
-        throw new AuthError('Login cancelled by user', 400, 'USER_CANCELLED');
-      }
-
-      if (result.type !== 'success' || !result.url) {
-        throw new AuthError('Login failed', 400, 'LOGIN_FAILED');
-      }
-
-      // Extract and store tokens
-      const tokens = this.extractTokensFromFragment(result.url);
-      await this.storeTokens(tokens);
-
-      // Fetch user session
-      await this.fetchAndStoreUserSession(tokens.accessToken);
-
-    } catch (error) {
-      if (error instanceof AuthError) {
-        throw error;
-      }
-      throw new AuthError(
-        error instanceof Error ? error.message : 'Unknown error during login',
-        500,
-        'LOGIN_ERROR'
-      );
+    if (result.type === 'cancel') {
+      throw new AuthError('Login cancelled by user', 400, 'USER_CANCELLED');
     }
+
+    if (result.type !== 'success' || !result.url) {
+      throw new AuthError('Login failed', 400, 'LOGIN_FAILED');
+    }
+
+    // Extract tokens from URL fragment
+    const tokens = this.extractTokensFromFragment(result.url);
+    await this.storeTokens(tokens);
+    return tokens;
   }
 
-  // ============================================================
-  // TOKEN EXTRACTION
-  // ============================================================
+  /**
+   * Handle mobile OAuth callback URL. Extracts tokens, stores them,
+   * and fetches the full user profile.
+   */
+  async handleMobileCallback(url: string): Promise<User> {
+    const tokens = this.extractTokensFromFragment(url);
+    await this.storeTokens(tokens);
+    return this.getCurrentUser();
+  }
 
   private extractTokensFromFragment(url: string): AuthTokens {
     const hashIndex = url.indexOf('#');
-
     if (hashIndex === -1) {
-      throw new AuthError('No fragment found in callback URL', 400, 'INVALID_CALLBACK');
+      throw new AuthError('No fragment in callback URL', 400, 'INVALID_CALLBACK');
     }
 
     const fragment = url.substring(hashIndex + 1);
     const params = new URLSearchParams(fragment);
-
     const accessToken = params.get('access_token');
     const refreshToken = params.get('refresh_token');
 
@@ -688,18 +300,12 @@ class AuthService {
     return { accessToken, refreshToken };
   }
 
-  // ============================================================
-  // TOKEN STORAGE
-  // ============================================================
+  // ----------------------------------------------------------
+  // TOKEN STORAGE (mobile only - web uses httpOnly cookies)
+  // ----------------------------------------------------------
 
   private async storeTokens(tokens: AuthTokens): Promise<void> {
-    if (this.platform === 'web') {
-      // Web: Tokens stored in httpOnly cookies by backend
-      // No client-side storage needed
-      return;
-    }
-
-    // Mobile: Store in SecureStore
+    if (this.isWeb) return; // Web: cookies set by backend
     await Promise.all([
       SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, tokens.accessToken),
       SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken),
@@ -707,127 +313,62 @@ class AuthService {
   }
 
   async getAccessToken(): Promise<string | null> {
-    if (this.platform === 'web') {
-      // Web: Token in httpOnly cookie, not accessible to JS
-      return null;
-    }
-
-    // Mobile: Retrieve from SecureStore
-    return await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+    if (this.isWeb) return null; // Web: cookie sent automatically
+    return SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
   }
 
   private async getRefreshToken(): Promise<string | null> {
-    if (this.platform === 'web') {
-      // Web: Token in httpOnly cookie
-      return null;
-    }
-
-    // Mobile: Retrieve from SecureStore
-    return await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+    if (this.isWeb) return null;
+    return SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
   }
 
   private async clearTokens(): Promise<void> {
-    if (this.platform === 'web') {
-      // Web: Cookies cleared by backend on logout
-      // Clear user from localStorage
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem(STORAGE_KEYS.USER);
-      }
-      return;
-    }
-
-    // Mobile: Delete from SecureStore
+    if (this.isWeb) return; // Web: cookies cleared by backend on logout
     await Promise.all([
       SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
       SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
     ]);
   }
 
-  // ============================================================
+  // ----------------------------------------------------------
   // SESSION MANAGEMENT
-  // ============================================================
+  // ----------------------------------------------------------
 
-  async checkSession(): Promise<User | null> {
+  /**
+   * Check if user has a valid session.
+   * For web: sends cookies automatically.
+   * For mobile: sends access token in Authorization header.
+   * Returns null if no valid session.
+   */
+  async checkSession(): Promise<boolean> {
     try {
       const response = await this.authenticatedFetch(`${API_URL}/auth/session`);
-
-      if (!response.ok) {
-        return null;
-      }
-
-      const data: SessionResponse = await response.json();
-
-      // Store user info
-      await this.storeUser(data.user);
-
-      return data.user;
-    } catch (error) {
-      console.error('Session check failed:', error);
-      return null;
+      return response.ok;
+    } catch {
+      return false;
     }
   }
 
-  private async fetchAndStoreUserSession(accessToken: string): Promise<User> {
-    const response = await fetch(`${API_URL}/auth/session`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'X-Platform': this.platform,
-      },
-      credentials: this.platform === 'web' ? 'include' : 'same-origin',
-    });
-
+  /**
+   * Fetch full user profile from /users/me.
+   * This is needed because /auth/session only returns JWT claims.
+   */
+  async getCurrentUser(): Promise<User> {
+    const response = await this.authenticatedFetch(`${API_URL}/users/me`);
     if (!response.ok) {
-      throw new AuthError('Failed to fetch user session', response.status, 'SESSION_FETCH_FAILED');
+      throw new AuthError('Failed to fetch user', response.status, 'USER_FETCH_FAILED');
     }
-
-    const data: SessionResponse = await response.json();
-    await this.storeUser(data.user);
-
+    const data = await response.json();
     return data.user;
   }
 
-  private async storeUser(user: User): Promise<void> {
-    const userJson = JSON.stringify(user);
-
-    if (this.platform === 'web') {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(STORAGE_KEYS.USER, userJson);
-      }
-    } else {
-      await SecureStore.setItemAsync(STORAGE_KEYS.USER, userJson);
-    }
-  }
-
-  async getStoredUser(): Promise<User | null> {
-    try {
-      let userJson: string | null = null;
-
-      if (this.platform === 'web') {
-        if (typeof localStorage !== 'undefined') {
-          userJson = localStorage.getItem(STORAGE_KEYS.USER);
-        }
-      } else {
-        userJson = await SecureStore.getItemAsync(STORAGE_KEYS.USER);
-      }
-
-      if (!userJson) return null;
-
-      return JSON.parse(userJson) as User;
-    } catch (error) {
-      console.error('Failed to get stored user:', error);
-      return null;
-    }
-  }
-
-  // ============================================================
+  // ----------------------------------------------------------
   // TOKEN REFRESH
-  // ============================================================
+  // ----------------------------------------------------------
 
   async refreshAccessToken(): Promise<string> {
-    // Prevent multiple simultaneous refresh requests
-    if (this.refreshPromise) {
-      return this.refreshPromise;
-    }
+    // Prevent concurrent refresh requests
+    if (this.refreshPromise) return this.refreshPromise;
 
     this.refreshPromise = (async () => {
       try {
@@ -839,26 +380,27 @@ class AuthService {
             'Content-Type': 'application/json',
             'X-Platform': this.platform,
           },
-          body: this.platform === 'mobile' && refreshToken
+          body: !this.isWeb && refreshToken
             ? JSON.stringify({ refreshToken })
             : undefined,
-          credentials: this.platform === 'web' ? 'include' : 'same-origin',
+          credentials: this.isWeb ? 'include' : 'same-origin',
         });
 
         if (!response.ok) {
-          // Session expired - clear tokens
           await this.clearTokens();
           throw new AuthError('Session expired', 401, 'SESSION_EXPIRED');
         }
 
-        const data: RefreshResponse = await response.json();
+        const data = await response.json();
 
-        // Store new tokens (mobile only, web uses cookies)
-        if (this.platform === 'mobile') {
-          await this.storeTokens(data);
+        if (!this.isWeb && data.accessToken) {
+          await this.storeTokens({
+            accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
+          });
         }
 
-        return data.accessToken;
+        return data.accessToken || '';
       } finally {
         this.refreshPromise = null;
       }
@@ -867,59 +409,51 @@ class AuthService {
     return this.refreshPromise;
   }
 
-  // ============================================================
+  // ----------------------------------------------------------
   // AUTHENTICATED REQUESTS
-  // ============================================================
+  // ----------------------------------------------------------
 
   async authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
     const makeRequest = async (token?: string): Promise<Response> => {
       const headers = new Headers(options.headers);
       headers.set('X-Platform', this.platform);
 
-      if (this.platform === 'web') {
-        // Web: Cookies sent automatically
-        return fetch(url, {
-          ...options,
-          headers,
-          credentials: 'include',
-        });
-      } else {
-        // Mobile: Add Bearer token
-        if (token) {
-          headers.set('Authorization', `Bearer ${token}`);
-        }
-        return fetch(url, { ...options, headers });
+      if (this.isWeb) {
+        return fetch(url, { ...options, headers, credentials: 'include' });
       }
+
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
+      return fetch(url, { ...options, headers });
     };
 
     // First attempt
-    let response = await makeRequest(
-      this.platform === 'mobile' ? await this.getAccessToken() || undefined : undefined
-    );
+    const token = this.isWeb ? undefined : (await this.getAccessToken()) || undefined;
+    let response = await makeRequest(token);
 
-    // Retry with refresh if 401
+    // Auto-retry with refreshed token on 401
     if (response.status === 401) {
       try {
         const newToken = await this.refreshAccessToken();
-        response = await makeRequest(this.platform === 'mobile' ? newToken : undefined);
-      } catch (error) {
-        // Refresh failed - user must re-login
-        throw error;
+        response = await makeRequest(this.isWeb ? undefined : newToken);
+      } catch {
+        throw new AuthError('Session expired', 401, 'SESSION_EXPIRED');
       }
     }
 
     return response;
   }
 
-  // ============================================================
+  // ----------------------------------------------------------
   // LOGOUT
-  // ============================================================
+  // ----------------------------------------------------------
 
   async logout(): Promise<void> {
     try {
       const refreshToken = await this.getRefreshToken();
 
-      // Call backend logout (don't await - allow offline logout)
+      // Fire-and-forget backend logout
       fetch(`${API_URL}/auth/logout`, {
         method: 'POST',
         headers: {
@@ -927,159 +461,37 @@ class AuthService {
           'X-Platform': this.platform,
         },
         body: refreshToken ? JSON.stringify({ refreshToken }) : undefined,
-        credentials: this.platform === 'web' ? 'include' : 'same-origin',
-      }).catch(() => {
-        // Ignore errors - clear local state anyway
-      });
-
-      // Clear local storage immediately
+        credentials: this.isWeb ? 'include' : 'same-origin',
+      }).catch(() => {});
+    } finally {
       await this.clearTokens();
-    } catch (error) {
-      // Always clear tokens even if backend call fails
-      await this.clearTokens();
-      throw error;
     }
-  }
-
-  async revokeAllTokens(): Promise<void> {
-    const response = await this.authenticatedFetch(`${API_URL}/auth/revoke-all`, {
-      method: 'POST',
-    });
-
-    if (!response.ok) {
-      throw new AuthError('Failed to revoke all tokens', response.status, 'REVOKE_FAILED');
-    }
-
-    await this.clearTokens();
-  }
-
-  // ============================================================
-  // USER MANAGEMENT
-  // ============================================================
-
-  async getCurrentUser(): Promise<User> {
-    const response = await this.authenticatedFetch(`${API_URL}/users/me`);
-
-    if (!response.ok) {
-      throw new AuthError('Failed to fetch current user', response.status, 'USER_FETCH_FAILED');
-    }
-
-    const data = await response.json();
-    await this.storeUser(data.user);
-
-    return data.user;
-  }
-
-  async updateUser(updates: { displayName?: string; avatarUrl?: string }): Promise<User> {
-    const response = await this.authenticatedFetch(`${API_URL}/users/me`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates),
-    });
-
-    if (!response.ok) {
-      throw new AuthError('Failed to update user', response.status, 'USER_UPDATE_FAILED');
-    }
-
-    const data = await response.json();
-    await this.storeUser(data.user);
-
-    return data.user;
   }
 }
 
-// Export singleton instance
 export const authService = new AuthService();
-```
-
-### 4.2 Deep Link Handler Hook
-
-**File**: `src/hooks/useDeepLinkHandler.ts` [NEW]
-
-```typescript
-import { useEffect } from 'react';
-import * as Linking from 'expo-linking';
-import { useRouter } from 'expo-router';
-import { authService } from '@/services/authService';
-import { useAppStore } from '@/store/useAppStore';
-
-export function useDeepLinkHandler() {
-  const router = useRouter();
-  const setUser = useAppStore((state) => state.setUser);
-  const setAuthLoading = useAppStore((state) => state.setAuthLoading);
-  const setAuthError = useAppStore((state) => state.setAuthError);
-
-  useEffect(() => {
-    const handleUrl = async ({ url }: { url: string }) => {
-      // Check if this is an auth callback
-      if (url.includes('/auth/callback')) {
-        try {
-          setAuthLoading(true);
-
-          // Extract tokens from URL fragment
-          const tokens = (authService as any).extractTokensFromFragment(url);
-
-          // Store tokens
-          await (authService as any).storeTokens(tokens);
-
-          // Fetch user session
-          const user = await (authService as any).fetchAndStoreUserSession(tokens.accessToken);
-
-          // Update state
-          setUser(user);
-          setAuthLoading(false);
-
-          // Navigate to main app
-          router.replace('/(tabs)/discover');
-        } catch (error) {
-          setAuthError(error instanceof Error ? error.message : 'Authentication failed');
-          setAuthLoading(false);
-          router.replace('/(auth)/login');
-        }
-      }
-    };
-
-    // Listen for deep link events
-    const subscription = Linking.addEventListener('url', handleUrl);
-
-    // Check if app was opened via deep link
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        handleUrl({ url });
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-}
 ```
 
 ---
 
-## 5. State Management
+## 4. State Management
 
-### 5.1 Extend Zustand Store
+### 4.1 Extend Zustand Store
 
 **File**: `src/store/useAppStore.ts` [MODIFY]
 
-Add the following auth state slice to the existing store:
+Follow the existing manual persistence pattern. Add auth state to the existing `AppState` interface and store creator.
 
 ```typescript
 // Add to imports
 import type { User } from '@/services/authService';
 import { authService } from '@/services/authService';
 
-// Add to AppState interface
+// Add to AppState interface (alongside existing fields)
 interface AppState {
   // ... existing state (topics, quizzes, profile, etc.)
 
-  // ============================================================
-  // AUTH STATE
-  // ============================================================
+  // Auth state
   user: User | null;
   isAuthenticated: boolean;
   isAuthLoading: boolean;
@@ -1095,238 +507,153 @@ interface AppState {
   // ... existing actions
 }
 
-// In the create() function, add these initial values and actions:
+// Add to storeCreator (alongside existing state & actions)
+const storeCreator: StateCreator<AppState> = (set, get) => ({
+  // ... existing state ...
 
-export const useAppStore = create<AppState>()(
-  persist(
-    (set, get) => ({
-      // ... existing state
+  // Auth state - initial values
+  user: null,
+  isAuthenticated: false,
+  isAuthLoading: true, // Start true to check session on mount
+  authError: null,
 
-      // ============================================================
-      // AUTH STATE - Initial Values
-      // ============================================================
-      user: null,
-      isAuthenticated: false,
-      isAuthLoading: true, // Start as true to check session on mount
-      authError: null,
+  // Auth actions
+  setUser: (user) => set({
+    user,
+    isAuthenticated: !!user,
+    authError: null,
+  }),
 
-      // ============================================================
-      // AUTH ACTIONS
-      // ============================================================
+  setAuthLoading: (isAuthLoading) => set({ isAuthLoading }),
 
-      setUser: (user) => {
-        set({
-          user,
-          isAuthenticated: !!user,
-          authError: null,
-        });
-      },
+  setAuthError: (authError) => set({ authError, isAuthLoading: false }),
 
-      setAuthLoading: (loading) => {
-        set({ isAuthLoading: loading });
-      },
+  checkSession: async () => {
+    try {
+      set({ isAuthLoading: true, authError: null });
 
-      setAuthError: (error) => {
-        set({ authError: error, isAuthLoading: false });
-      },
+      const isValid = await authService.checkSession();
+      if (isValid) {
+        const user = await authService.getCurrentUser();
+        set({ user, isAuthenticated: true, isAuthLoading: false });
+        return;
+      }
 
-      checkSession: async () => {
-        try {
-          set({ isAuthLoading: true, authError: null });
-
-          // First check stored user
-          const storedUser = await authService.getStoredUser();
-
-          if (storedUser) {
-            // Validate session with backend
-            const user = await authService.checkSession();
-
-            if (user) {
-              set({ user, isAuthenticated: true, isAuthLoading: false });
-              return;
-            }
-          }
-
-          // No valid session
-          set({ user: null, isAuthenticated: false, isAuthLoading: false });
-        } catch (error) {
-          console.error('Session check failed:', error);
-          set({
-            user: null,
-            isAuthenticated: false,
-            isAuthLoading: false,
-            authError: error instanceof Error ? error.message : 'Session check failed',
-          });
-        }
-      },
-
-      logout: async () => {
-        try {
-          set({ isAuthLoading: true });
-
-          await authService.logout();
-
-          // Clear auth state
-          set({
-            user: null,
-            isAuthenticated: false,
-            isAuthLoading: false,
-            authError: null,
-          });
-
-          // Optionally: Clear local app data (topics, quizzes)
-          // Uncomment if you want to clear everything on logout:
-          // set({
-          //   topics: [],
-          //   quizzes: [],
-          //   currentQuiz: null,
-          //   profile: { /* reset to defaults */ },
-          // });
-
-        } catch (error) {
-          console.error('Logout failed:', error);
-
-          // Still clear local auth state even if backend call fails
-          set({
-            user: null,
-            isAuthenticated: false,
-            isAuthLoading: false,
-            authError: error instanceof Error ? error.message : 'Logout failed',
-          });
-        }
-      },
-
-      // ... existing actions (addTopic, updateTopicStatus, etc.)
-    }),
-    {
-      name: 'app-storage',
-
-      // Update partialize to exclude auth tokens (stored in SecureStore)
-      partialize: (state) => ({
-        topics: state.topics,
-        dismissedTopics: state.dismissedTopics,
-        quizzes: state.quizzes,
-        currentQuiz: state.currentQuiz,
-        profile: state.profile,
-        user: state.user, // Persist user info (not tokens)
-        // DO NOT persist tokens - they're in SecureStore
-      }),
+      set({ user: null, isAuthenticated: false, isAuthLoading: false });
+    } catch {
+      set({ user: null, isAuthenticated: false, isAuthLoading: false });
     }
-  )
-);
+  },
+
+  logout: async () => {
+    try {
+      set({ isAuthLoading: true });
+      await authService.logout();
+    } finally {
+      set({
+        user: null,
+        isAuthenticated: false,
+        isAuthLoading: false,
+        authError: null,
+      });
+    }
+  },
+
+  // ... existing actions ...
+});
+
+// Update selectPersisted to include user (NOT tokens - those are in SecureStore)
+function selectPersisted(state: AppState): PersistedSlice {
+  return {
+    topics: state.topics,
+    dismissedTopics: state.dismissedTopics,
+    quizzes: state.quizzes,
+    currentQuiz: state.currentQuiz,
+    profile: state.profile,
+    user: state.user, // Add this line
+  };
+}
+
+// Update PersistedSlice type
+type PersistedSlice = Pick<AppState,
+  'topics' | 'dismissedTopics' | 'quizzes' | 'currentQuiz' | 'profile' | 'user'>;
 ```
 
-### 5.2 Custom Auth Hooks
+The existing `hydrateState()` and `subscribe()` functions will automatically persist and restore the `user` field.
+
+### 4.2 Auth Hook
 
 **File**: `src/hooks/useAuth.ts` [NEW]
 
 ```typescript
+import { useShallow } from 'zustand/shallow';
 import { useAppStore } from '@/store/useAppStore';
 import { authService } from '@/services/authService';
 
 export function useAuth() {
-  const user = useAppStore((state) => state.user);
-  const isAuthenticated = useAppStore((state) => state.isAuthenticated);
-  const isAuthLoading = useAppStore((state) => state.isAuthLoading);
-  const authError = useAppStore((state) => state.authError);
-  const setUser = useAppStore((state) => state.setUser);
-  const setAuthLoading = useAppStore((state) => state.setAuthLoading);
-  const setAuthError = useAppStore((state) => state.setAuthError);
-  const checkSession = useAppStore((state) => state.checkSession);
-  const logout = useAppStore((state) => state.logout);
+  const store = useAppStore(useShallow((state) => ({
+    user: state.user,
+    isAuthenticated: state.isAuthenticated,
+    isAuthLoading: state.isAuthLoading,
+    authError: state.authError,
+    setUser: state.setUser,
+    setAuthLoading: state.setAuthLoading,
+    setAuthError: state.setAuthError,
+    checkSession: state.checkSession,
+    logout: state.logout,
+  })));
 
   const login = async () => {
     try {
-      setAuthLoading(true);
-      setAuthError(null);
+      store.setAuthLoading(true);
+      store.setAuthError(null);
 
-      await authService.loginWithGitHub();
+      const result = await authService.loginWithGitHub();
 
-      // Note: For mobile, user will be set via deep link handler
-      // For web, we'll check session after redirect
+      // Mobile: loginWithGitHub returns tokens, fetch user
+      if (result) {
+        const user = await authService.getCurrentUser();
+        store.setUser(user);
+        store.setAuthLoading(false);
+      }
+      // Web: page redirects, no further action needed here
     } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Login failed');
-      setAuthLoading(false);
+      store.setAuthError(error instanceof Error ? error.message : 'Login failed');
+      store.setAuthLoading(false);
     }
   };
 
-  return {
-    user,
-    isAuthenticated,
-    isAuthLoading,
-    authError,
-    login,
-    logout,
-    checkSession,
-    setAuthError,
-  };
-}
-```
-
-**File**: `src/hooks/useRequireAuth.ts` [NEW]
-
-```typescript
-import { useEffect } from 'react';
-import { useRouter, useSegments } from 'expo-router';
-import { useAuth } from './useAuth';
-
-/**
- * Hook to protect routes - redirects to login if not authenticated
- */
-export function useRequireAuth() {
-  const { isAuthenticated, isAuthLoading } = useAuth();
-  const router = useRouter();
-  const segments = useSegments();
-
-  useEffect(() => {
-    if (isAuthLoading) return;
-
-    const inAuthGroup = segments[0] === '(auth)';
-
-    if (!isAuthenticated && !inAuthGroup) {
-      // Redirect to login if not authenticated
-      router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      // Redirect to app if already authenticated
-      router.replace('/(tabs)/discover');
-    }
-  }, [isAuthenticated, isAuthLoading, segments]);
-
-  return { isAuthenticated, isAuthLoading };
+  return { ...store, login };
 }
 ```
 
 ---
 
-## 6. Login Screen Implementation
+## 5. Login Screen Implementation
 
-### 6.1 Auth Group Layout
+### 5.1 Auth Group Layout
 
 **File**: `app/(auth)/_layout.tsx` [NEW]
 
 ```typescript
 import { Stack } from 'expo-router';
 import { useTheme } from '@/contexts/ThemeContext';
-import { LightColors, DarkColors } from '@/styles/globalStyles';
 
 export default function AuthLayout() {
-  const { theme } = useTheme();
-  const colors = theme === 'light' ? LightColors : DarkColors;
+  const { colors } = useTheme();
 
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: {
-          backgroundColor: colors.background,
-        },
+        contentStyle: { backgroundColor: colors.background },
       }}
     />
   );
 }
 ```
 
-### 6.2 Login Screen
+### 5.2 Login Screen
 
 **File**: `app/(auth)/login.tsx` [NEW]
 
@@ -1338,7 +665,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   useWindowDimensions,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -1346,15 +672,12 @@ import { useRouter } from 'expo-router';
 import { AntDesign } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { LightColors, DarkColors, spacing, typography, borderRadius, shadows } from '@/styles/globalStyles';
 
 export default function LoginScreen() {
-  const { theme } = useTheme();
-  const colors = theme === 'light' ? LightColors : DarkColors;
-  const styles = useLoginStyles(colors);
+  const { colors, spacing, typography, borderRadius, shadows } = useTheme();
+  const styles = useStyles();
   const { width } = useWindowDimensions();
   const router = useRouter();
-
   const { isAuthenticated, isAuthLoading, authError, login, setAuthError } = useAuth();
 
   // Redirect if already authenticated
@@ -1364,7 +687,7 @@ export default function LoginScreen() {
     }
   }, [isAuthenticated, isAuthLoading]);
 
-  // Clear error after 5 seconds
+  // Auto-dismiss error
   useEffect(() => {
     if (authError) {
       const timer = setTimeout(() => setAuthError(null), 5000);
@@ -1372,17 +695,12 @@ export default function LoginScreen() {
     }
   }, [authError]);
 
-  const handleLogin = async () => {
-    await login();
-  };
-
-  const isTablet = width >= 768;
-  const containerWidth = isTablet ? 500 : width - spacing.xl * 2;
+  const containerWidth = width >= 768 ? 500 : width - spacing.xl * 2;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.content}>
-        {/* Logo/Branding */}
+        {/* Branding */}
         <View style={styles.logoContainer}>
           <Text style={styles.logo}>🧭</Text>
           <Text style={styles.title}>Breadthwise</Text>
@@ -1396,9 +714,9 @@ export default function LoginScreen() {
         <View style={[styles.buttonContainer, { width: containerWidth }]}>
           <TouchableOpacity
             style={styles.githubButton}
-            onPress={handleLogin}
+            onPress={login}
             disabled={isAuthLoading}
-            accessible={true}
+            accessible
             accessibilityRole="button"
             accessibilityLabel="Login with GitHub"
             accessibilityHint="Opens GitHub login in browser"
@@ -1414,7 +732,6 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Error Message */}
           {authError && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{authError}</Text>
@@ -1434,7 +751,9 @@ export default function LoginScreen() {
   );
 }
 
-const useLoginStyles = (colors: typeof LightColors) => {
+function useStyles() {
+  const { colors, spacing, typography, borderRadius, shadows } = useTheme();
+
   return React.useMemo(
     () =>
       StyleSheet.create({
@@ -1478,14 +797,14 @@ const useLoginStyles = (colors: typeof LightColors) => {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: colors.surface,
+          backgroundColor: colors.cardBackground,
           borderWidth: 2,
           borderColor: colors.border,
           borderRadius: borderRadius.md,
           paddingVertical: spacing.lg,
           paddingHorizontal: spacing.xl,
           minHeight: 56,
-          ...shadows.small(colors),
+          ...shadows.small,
         },
         githubButtonText: {
           fontSize: typography.fontSize.lg,
@@ -1495,7 +814,7 @@ const useLoginStyles = (colors: typeof LightColors) => {
         },
         errorContainer: {
           marginTop: spacing.lg,
-          backgroundColor: colors.errorBackground,
+          backgroundColor: colors.errorLight,
           borderRadius: borderRadius.md,
           padding: spacing.md,
           borderLeftWidth: 4,
@@ -1515,19 +834,19 @@ const useLoginStyles = (colors: typeof LightColors) => {
           fontSize: typography.fontSize.xs,
           color: colors.textSecondary,
           textAlign: 'center',
-          lineHeight: typography.lineHeight.normal,
+          lineHeight: typography.lineHeight.tight,
         },
       }),
-    [colors]
+    [colors, spacing, typography, borderRadius, shadows]
   );
-};
+}
 ```
 
 ---
 
-## 7. Profile Screen Modifications
+## 6. Profile Screen Modifications
 
-### 7.1 User Profile Header Component
+### 6.1 User Profile Header Component
 
 **File**: `src/components/profile/UserProfileHeader.tsx` [NEW]
 
@@ -1536,16 +855,14 @@ import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import type { User } from '@/services/authService';
 import { useTheme } from '@/contexts/ThemeContext';
-import { LightColors, DarkColors, spacing, typography, borderRadius, shadows } from '@/styles/globalStyles';
 
 interface UserProfileHeaderProps {
   user: User;
 }
 
 export function UserProfileHeader({ user }: UserProfileHeaderProps) {
-  const { theme } = useTheme();
-  const colors = theme === 'light' ? LightColors : DarkColors;
-  const styles = useStyles(colors);
+  const { colors, spacing, typography, borderRadius, shadows } = useTheme();
+  const styles = useStyles();
 
   const displayName = user.displayName || user.username;
   const initials = displayName
@@ -1557,7 +874,6 @@ export function UserProfileHeader({ user }: UserProfileHeaderProps) {
 
   return (
     <View style={styles.container}>
-      {/* Avatar */}
       <View style={styles.avatarContainer}>
         {user.avatarUrl ? (
           <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
@@ -1567,8 +883,6 @@ export function UserProfileHeader({ user }: UserProfileHeaderProps) {
           </View>
         )}
       </View>
-
-      {/* User Info */}
       <Text style={styles.displayName}>{displayName}</Text>
       <Text style={styles.username}>@{user.username}</Text>
       {user.email && <Text style={styles.email}>{user.email}</Text>}
@@ -1576,22 +890,23 @@ export function UserProfileHeader({ user }: UserProfileHeaderProps) {
   );
 }
 
-const useStyles = (colors: typeof LightColors) => {
+function useStyles() {
+  const { colors, spacing, typography, borderRadius, shadows } = useTheme();
+
   return React.useMemo(
     () =>
       StyleSheet.create({
         container: {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.cardBackground,
           borderRadius: borderRadius.lg,
           padding: spacing.xl,
           marginHorizontal: spacing.lg,
           marginTop: spacing.lg,
+          marginBottom: spacing.lg,
           alignItems: 'center',
-          ...shadows.small(colors),
+          ...shadows.small,
         },
-        avatarContainer: {
-          marginBottom: spacing.md,
-        },
+        avatarContainer: { marginBottom: spacing.md },
         avatar: {
           width: 80,
           height: 80,
@@ -1624,12 +939,12 @@ const useStyles = (colors: typeof LightColors) => {
           marginTop: spacing.xs,
         },
       }),
-    [colors]
+    [colors, spacing, typography, borderRadius, shadows]
   );
-};
+}
 ```
 
-### 7.2 Logout Button Component
+### 6.2 Logout Button Component
 
 **File**: `src/components/profile/LogoutButton.tsx` [NEW]
 
@@ -1639,12 +954,10 @@ import { TouchableOpacity, Text, StyleSheet, Alert, ActivityIndicator } from 're
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { LightColors, DarkColors, spacing, typography, borderRadius } from '@/styles/globalStyles';
 
 export function LogoutButton() {
-  const { theme } = useTheme();
-  const colors = theme === 'light' ? LightColors : DarkColors;
-  const styles = useStyles(colors);
+  const { colors, spacing, typography, borderRadius } = useTheme();
+  const styles = useStyles();
   const router = useRouter();
   const { logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -1654,10 +967,7 @@ export function LogoutButton() {
       'Logout',
       'Are you sure you want to logout?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Logout',
           style: 'destructive',
@@ -1666,8 +976,7 @@ export function LogoutButton() {
               setIsLoggingOut(true);
               await logout();
               router.replace('/(auth)/login');
-            } catch (error) {
-              console.error('Logout error:', error);
+            } catch {
               Alert.alert('Error', 'Failed to logout. Please try again.');
             } finally {
               setIsLoggingOut(false);
@@ -1684,7 +993,7 @@ export function LogoutButton() {
       style={styles.button}
       onPress={handleLogout}
       disabled={isLoggingOut}
-      accessible={true}
+      accessible
       accessibilityRole="button"
       accessibilityLabel="Logout"
       accessibilityHint="Logout from your account"
@@ -1699,7 +1008,9 @@ export function LogoutButton() {
   );
 }
 
-const useStyles = (colors: typeof LightColors) => {
+function useStyles() {
+  const { colors, spacing, typography, borderRadius } = useTheme();
+
   return React.useMemo(
     () =>
       StyleSheet.create({
@@ -1711,6 +1022,7 @@ const useStyles = (colors: typeof LightColors) => {
           alignItems: 'center',
           marginHorizontal: spacing.lg,
           marginTop: spacing.xl,
+          marginBottom: spacing.xxl,
           minHeight: 48,
           justifyContent: 'center',
         },
@@ -1720,146 +1032,111 @@ const useStyles = (colors: typeof LightColors) => {
           color: '#FFFFFF',
         },
       }),
-    [colors]
+    [colors, spacing, typography, borderRadius]
   );
-};
+}
 ```
 
-### 7.3 Modified Profile Screen
+### 6.3 Modified Profile Screen
 
 **File**: `app/(tabs)/profile.tsx` [MODIFY]
 
-Replace the existing profile screen with this updated version:
+Add user info and logout to the existing profile screen. Keep all existing components and their prop interfaces intact.
 
 ```typescript
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { SafeAreaScrollView } from '@/components/SafeAreaScrollView';
-import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { BreadthExpansionStats } from '@/components/profile/BreadthExpansionStats';
-import { QuizPerformanceCard } from '@/components/profile/QuizPerformanceCard';
 import { CategoryBreakdownList } from '@/components/profile/CategoryBreakdownList';
 import { MilestonesList } from '@/components/profile/MilestonesList';
+import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import { QuizPerformanceCard } from '@/components/profile/QuizPerformanceCard';
 import { UserProfileHeader } from '@/components/profile/UserProfileHeader';
 import { LogoutButton } from '@/components/profile/LogoutButton';
-import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/contexts/ThemeContext';
-import { LightColors, DarkColors, spacing, typography } from '@/styles/globalStyles';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useAuth } from '@/hooks/useAuth';
+import { useAppStore } from '@/store/useAppStore';
+import React from 'react';
+import { ScrollView, View, Text, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
-  const { theme } = useTheme();
-  const colors = theme === 'light' ? LightColors : DarkColors;
-  const styles = useStyles(colors);
-  const { user, isAuthenticated, isAuthLoading } = useAuth();
-
-  if (isAuthLoading) {
-    return (
-      <SafeAreaScrollView contentContainerStyle={styles.loadingContainer}>
-        <LoadingSpinner />
-      </SafeAreaScrollView>
-    );
-  }
-
-  if (!isAuthenticated || !user) {
-    return (
-      <SafeAreaScrollView contentContainerStyle={styles.unauthContainer}>
-        <Text style={styles.unauthTitle}>Not Logged In</Text>
-        <Text style={styles.unauthText}>
-          Please login to view your profile and sync your progress.
-        </Text>
-      </SafeAreaScrollView>
-    );
-  }
+  const { profile } = useAppStore();
+  const insets = useSafeAreaInsets();
+  const { styles: themeStyles, colors, spacing, typography } = useTheme();
+  const { user, isAuthenticated } = useAuth();
 
   return (
-    <SafeAreaScrollView>
-      <ProfileHeader />
+    <ScrollView style={themeStyles.container}>
+      <ProfileHeader paddingTop={Math.max(insets.top, 20)} />
 
-      {/* User Profile Card */}
-      <UserProfileHeader user={user} />
+      {/* User profile card (when authenticated) */}
+      {isAuthenticated && user && (
+        <UserProfileHeader user={user} />
+      )}
 
-      {/* Stats - Existing Components */}
-      <BreadthExpansionStats />
-      <QuizPerformanceCard />
-      <CategoryBreakdownList />
-      <MilestonesList />
+      {/* Existing stats components - unchanged */}
+      <BreadthExpansionStats
+        totalDiscovered={profile.statistics.breadthExpansion.totalDiscovered}
+        totalLearned={profile.statistics.breadthExpansion.totalLearned}
+        inBucketList={profile.statistics.breadthExpansion.inBucketList}
+        learningRate={profile.statistics.breadthExpansion.learningRate}
+      />
 
-      {/* Logout Button */}
-      <LogoutButton />
+      <QuizPerformanceCard
+        totalQuizzesTaken={profile.statistics.quizPerformance.totalQuizzesTaken}
+        averageScore={profile.statistics.quizPerformance.averageScore}
+        passRate={profile.statistics.quizPerformance.passRate}
+      />
 
-      <View style={styles.spacer} />
-    </SafeAreaScrollView>
+      <CategoryBreakdownList
+        categoryBreakdown={profile.statistics.categoryBreakdown}
+      />
+
+      <MilestonesList milestones={profile.milestones} />
+
+      {/* Logout button (when authenticated) */}
+      {isAuthenticated && <LogoutButton />}
+    </ScrollView>
   );
 }
-
-const useStyles = (colors: typeof LightColors) => {
-  return React.useMemo(
-    () =>
-      StyleSheet.create({
-        loadingContainer: {
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: colors.background,
-        },
-        unauthContainer: {
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: colors.background,
-          paddingHorizontal: spacing.xl,
-        },
-        unauthTitle: {
-          fontSize: typography.fontSize.xxl,
-          fontWeight: typography.fontWeight.bold,
-          color: colors.text,
-          marginBottom: spacing.md,
-        },
-        unauthText: {
-          fontSize: typography.fontSize.base,
-          color: colors.textSecondary,
-          textAlign: 'center',
-          lineHeight: typography.lineHeight.relaxed,
-        },
-        spacer: {
-          height: spacing.xxl,
-        },
-      }),
-    [colors]
-  );
-};
 ```
 
 ---
 
-## 8. Navigation & Protected Routes
+## 7. Navigation & Protected Routes
 
-### 8.1 Root Layout with Auth Guards
+### 7.1 Root Layout with Auth Guards
 
 **File**: `app/_layout.tsx` [MODIFY]
 
-Update the root layout to check auth state and redirect accordingly:
+Add auth state management and route protection while preserving all existing screen configurations.
 
 ```typescript
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider as NavigationThemeProvider,
+} from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { DarkColors, LightColors } from '@/styles/globalStyles';
 import { useAppStore } from '@/store/useAppStore';
-import { useDeepLinkHandler } from '@/hooks/useDeepLinkHandler';
 
 export default function RootLayout() {
+  const colorScheme = useColorScheme();
+  const colors = colorScheme === 'dark' ? DarkColors : LightColors;
   const router = useRouter();
   const segments = useSegments();
 
   const isAuthenticated = useAppStore((state) => state.isAuthenticated);
   const isAuthLoading = useAppStore((state) => state.isAuthLoading);
   const checkSession = useAppStore((state) => state.checkSession);
-
-  // Initialize deep link handler
-  useDeepLinkHandler();
 
   // Check session on mount
   useEffect(() => {
@@ -1873,10 +1150,8 @@ export default function RootLayout() {
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!isAuthenticated && !inAuthGroup) {
-      // Redirect to login if not authenticated
       router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuthGroup) {
-      // Redirect to app if already authenticated
       router.replace('/(tabs)/discover');
     }
   }, [isAuthenticated, isAuthLoading, segments]);
@@ -1885,14 +1160,61 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="quiz" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="discover-surprise" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="discover-guided" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="topic-detail" options={{ presentation: 'modal' }} />
-          </Stack>
+          <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <Stack>
+              {/* Auth screens */}
+              <Stack.Screen
+                name="(auth)"
+                options={{ headerShown: false }}
+              />
+              {/* Existing screens - preserved as-is */}
+              <Stack.Screen
+                name="(tabs)"
+                options={{ title: 'Home', headerShown: false }}
+              />
+              <Stack.Screen
+                name="quiz"
+                options={{
+                  presentation: 'card',
+                  title: 'Test Your Knowledge',
+                  headerStyle: { backgroundColor: colors.primary },
+                  headerTintColor: colors.white,
+                  headerTitleStyle: { fontWeight: 'bold' },
+                }}
+              />
+              <Stack.Screen
+                name="discover-surprise"
+                options={{
+                  presentation: 'card',
+                  title: 'Surprise Me',
+                  headerStyle: { backgroundColor: colors.primary },
+                  headerTintColor: colors.white,
+                  headerTitleStyle: { fontWeight: 'bold' },
+                }}
+              />
+              <Stack.Screen
+                name="discover-guided"
+                options={{
+                  presentation: 'card',
+                  title: 'Guide Me',
+                  headerStyle: { backgroundColor: colors.primary },
+                  headerTintColor: colors.white,
+                  headerTitleStyle: { fontWeight: 'bold' },
+                }}
+              />
+              <Stack.Screen
+                name="topic-detail"
+                options={{
+                  presentation: 'card',
+                  title: 'Topic Details',
+                  headerStyle: { backgroundColor: colors.primary },
+                  headerTintColor: colors.white,
+                  headerTitleStyle: { fontWeight: 'bold' },
+                }}
+              />
+            </Stack>
+            <StatusBar style="auto" />
+          </NavigationThemeProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -1900,47 +1222,11 @@ export default function RootLayout() {
 }
 ```
 
-### 8.2 Optional: Authenticated API Requests
-
-For existing API calls (topics, quizzes), update them to use authenticated requests:
-
-**Example**: Updating LLM service to include auth tokens
-
-```typescript
-// src/services/llmService.ts [MODIFY]
-import { authService } from './authService';
-
-class LLMService {
-  async generateTopic(/* params */): Promise<Topic> {
-    try {
-      // Use authenticated fetch for backend requests
-      const response = await authService.authenticatedFetch(
-        `${API_URL}/topics/generate`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ /* params */ }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to generate topic');
-      }
-
-      return await response.json();
-    } catch (error) {
-      // Handle error
-      throw error;
-    }
-  }
-}
-```
-
 ---
 
-## 9. Component Library
+## 8. Reusable Auth Components
 
-### 9.1 Auth Loading Overlay
+### 8.1 Auth Loading Overlay
 
 **File**: `src/components/auth/AuthLoadingOverlay.tsx` [NEW]
 
@@ -1948,41 +1234,27 @@ class LLMService {
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
-import { LightColors, DarkColors, spacing, typography } from '@/styles/globalStyles';
 
 interface AuthLoadingOverlayProps {
   message?: string;
 }
 
 export function AuthLoadingOverlay({ message = 'Authenticating...' }: AuthLoadingOverlayProps) {
-  const { theme } = useTheme();
-  const colors = theme === 'light' ? LightColors : DarkColors;
-  const styles = useStyles(colors);
+  const { colors, spacing, typography, borderRadius } = useTheme();
 
-  return (
-    <View style={styles.overlay}>
-      <View style={styles.content}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.message}>{message}</Text>
-      </View>
-    </View>
-  );
-}
-
-const useStyles = (colors: typeof LightColors) => {
-  return React.useMemo(
+  const styles = React.useMemo(
     () =>
       StyleSheet.create({
         overlay: {
           ...StyleSheet.absoluteFillObject,
-          backgroundColor: colors.background + 'CC', // 80% opacity
+          backgroundColor: colors.background + 'CC',
           justifyContent: 'center',
           alignItems: 'center',
           zIndex: 999,
         },
         content: {
-          backgroundColor: colors.surface,
-          borderRadius: 12,
+          backgroundColor: colors.cardBackground,
+          borderRadius: borderRadius.lg,
           padding: spacing.xxl,
           alignItems: 'center',
           minWidth: 200,
@@ -1994,530 +1266,155 @@ const useStyles = (colors: typeof LightColors) => {
           textAlign: 'center',
         },
       }),
-    [colors]
+    [colors, spacing, typography, borderRadius]
   );
-};
-```
-
-### 9.2 Error Banner
-
-**File**: `src/components/auth/ErrorBanner.tsx` [NEW]
-
-```typescript
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { AntDesign } from '@expo/vector-icons';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { useTheme } from '@/contexts/ThemeContext';
-import { LightColors, DarkColors, spacing, typography, borderRadius } from '@/styles/globalStyles';
-
-interface ErrorBannerProps {
-  message: string;
-  onDismiss?: () => void;
-  autoDismiss?: boolean;
-  autoDismissDelay?: number;
-}
-
-export function ErrorBanner({
-  message,
-  onDismiss,
-  autoDismiss = true,
-  autoDismissDelay = 5000,
-}: ErrorBannerProps) {
-  const { theme } = useTheme();
-  const colors = theme === 'light' ? LightColors : DarkColors;
-  const styles = useStyles(colors);
-  const translateY = useSharedValue(-100);
-
-  useEffect(() => {
-    translateY.value = withSpring(0);
-
-    if (autoDismiss && onDismiss) {
-      const timer = setTimeout(onDismiss, autoDismissDelay);
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
+    <View style={styles.overlay}>
       <View style={styles.content}>
-        <AntDesign name="exclamationcircle" size={20} color={colors.error} />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.message}>{message}</Text>
-        {onDismiss && (
-          <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <AntDesign name="close" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-        )}
       </View>
-    </Animated.View>
-  );
-}
-
-const useStyles = (colors: typeof LightColors) => {
-  return React.useMemo(
-    () =>
-      StyleSheet.create({
-        container: {
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-        },
-        content: {
-          backgroundColor: colors.errorBackground,
-          borderBottomWidth: 2,
-          borderBottomColor: colors.error,
-          paddingVertical: spacing.md,
-          paddingHorizontal: spacing.lg,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: spacing.md,
-        },
-        message: {
-          flex: 1,
-          fontSize: typography.fontSize.sm,
-          color: colors.error,
-        },
-      }),
-    [colors]
-  );
-};
-```
-
-### 9.3 User Avatar Component
-
-**File**: `src/components/profile/UserAvatar.tsx` [NEW]
-
-```typescript
-import React from 'react';
-import { View, Image, Text, StyleSheet } from 'react-native';
-import { useTheme } from '@/contexts/ThemeContext';
-import { LightColors, DarkColors, typography, borderRadius } from '@/styles/globalStyles';
-
-interface UserAvatarProps {
-  avatarUrl?: string | null;
-  displayName: string;
-  size?: number;
-}
-
-export function UserAvatar({ avatarUrl, displayName, size = 80 }: UserAvatarProps) {
-  const { theme } = useTheme();
-  const colors = theme === 'light' ? LightColors : DarkColors;
-
-  const initials = displayName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-
-  const fontSize = size / 2.5;
-
-  if (avatarUrl) {
-    return (
-      <Image
-        source={{ uri: avatarUrl }}
-        style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}
-      />
-    );
-  }
-
-  return (
-    <View
-      style={[
-        styles.avatar,
-        styles.avatarPlaceholder,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: colors.primary,
-        },
-      ]}
-    >
-      <Text style={[styles.avatarText, { fontSize }]}>{initials}</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  avatar: {
-    overflow: 'hidden',
-  },
-  avatarPlaceholder: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontWeight: typography.fontWeight.bold as any,
-    color: '#FFFFFF',
-  },
-});
 ```
 
 ---
 
-## 10. Error Handling & Edge Cases
+## 9. Error Handling & Edge Cases
 
-### 10.1 OAuth Errors
+### 9.1 OAuth Errors
 
-**Scenario**: User cancels OAuth flow
+| Scenario | Handling | UI Response |
+|----------|----------|-------------|
+| User cancels OAuth | `AuthError('USER_CANCELLED')` | Dismissible error banner, stay on login |
+| Network error during login | Generic error catch | Error shown, stay on login |
+| Invalid callback URL | `AuthError('INVALID_CALLBACK')` | Error shown, redirect to login |
+| Token refresh fails | `AuthError('SESSION_EXPIRED')` | Redirect to login |
 
-```typescript
-// Handled in authService.loginMobile()
-if (result.type === 'cancel') {
-  throw new AuthError('Login cancelled by user', 400, 'USER_CANCELLED');
-}
-```
+### 9.2 Concurrent Refresh Requests
 
-**UI Response**: Show dismissable error banner, remain on login screen
+The `refreshPromise` field in `AuthService` prevents multiple simultaneous refresh requests. If a refresh is already in progress, subsequent calls await the same promise.
 
-### 10.2 Network Errors
+### 9.3 Offline Logout
 
-**Scenario**: Token refresh fails due to network
+Backend logout call is fire-and-forget (`fetch().catch(() => {})`). Local tokens are always cleared immediately regardless of network state.
 
-```typescript
-// authService.refreshAccessToken()
-catch (error) {
-  await this.clearTokens();
-  throw new AuthError('Session expired', 401, 'SESSION_EXPIRED');
-}
-```
+### 9.4 Token Expiry During Request
 
-**UI Response**: Redirect to login screen, show "Session expired, please login again"
+`authenticatedFetch` automatically retries with a refreshed token when it receives a 401. This is transparent to the caller.
 
-### 10.3 Concurrent Refresh Requests
+### 9.5 Session Check Flow
 
-**Solution**: Request queue in authService
-
-```typescript
-private refreshPromise: Promise<string> | null = null;
-
-async refreshAccessToken(): Promise<string> {
-  // Prevent multiple simultaneous refresh requests
-  if (this.refreshPromise) {
-    return this.refreshPromise;
-  }
-
-  this.refreshPromise = (async () => {
-    // ... refresh logic
-  })();
-
-  return this.refreshPromise;
-}
-```
-
-### 10.4 Offline Logout
-
-**Scenario**: User logs out while offline
-
-```typescript
-async logout(): Promise<void> {
-  // Call backend (don't await - allow offline logout)
-  fetch(`${API_URL}/auth/logout`, {
-    // ...
-  }).catch(() => {
-    // Ignore errors - clear local state anyway
-  });
-
-  // Clear local storage immediately
-  await this.clearTokens();
-}
-```
-
-**Result**: Local state cleared immediately, backend updated when online
-
-### 10.5 Deep Link Validation
-
-**Scenario**: Invalid deep link callback
-
-```typescript
-private extractTokensFromFragment(url: string): AuthTokens {
-  const hashIndex = url.indexOf('#');
-
-  if (hashIndex === -1) {
-    throw new AuthError('No fragment found in callback URL', 400, 'INVALID_CALLBACK');
-  }
-
-  // Validate token presence
-  if (!accessToken || !refreshToken) {
-    throw new AuthError('Missing tokens in callback URL', 400, 'MISSING_TOKENS');
-  }
-
-  return { accessToken, refreshToken };
-}
-```
-
-**UI Response**: Show error, redirect to login
-
-### 10.6 Token Expiry During Request
-
-**Scenario**: Access token expires mid-request
-
-```typescript
-// Auto-retry with refresh
-async authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  let response = await makeRequest(/* with current token */);
-
-  // Retry with refresh if 401
-  if (response.status === 401) {
-    const newToken = await this.refreshAccessToken();
-    response = await makeRequest(/* with new token */);
-  }
-
-  return response;
-}
-```
-
-**Result**: Seamless token refresh, request succeeds
+On app mount, `checkSession()` runs:
+1. Call `/auth/session` to validate the current token/cookie
+2. If valid, call `/users/me` to get full user data
+3. Store user in Zustand state
+4. If invalid, clear auth state (redirect handled by auth guard)
 
 ---
 
-## 11. Testing Checklist
+## 10. Testing Checklist
 
-### 11.1 OAuth Flow Testing
+### OAuth Flow
+- [ ] **Mobile (iOS)**: Login redirects to GitHub, deep link callback received, tokens stored in SecureStore, user fetched, navigates to app
+- [ ] **Mobile (Android)**: Same as iOS
+- [ ] **Web**: Login redirects to GitHub, cookies set, redirects back, session check works, navigates to app
 
-- [ ] **Mobile (iOS)**
-  - [ ] Login redirects to GitHub
-  - [ ] Deep link callback received
-  - [ ] Tokens extracted and stored in SecureStore
-  - [ ] User session fetched
-  - [ ] Navigates to main app
-
-- [ ] **Mobile (Android)**
-  - [ ] Same as iOS
-
-- [ ] **Web**
-  - [ ] Login redirects to GitHub
-  - [ ] Callback sets cookies
-  - [ ] Navigates to main app
-  - [ ] Session persists on refresh
-
-### 11.2 Token Refresh Testing
-
-- [ ] Access token auto-refreshes before expiry
-- [ ] Concurrent requests queue properly
+### Token Refresh
+- [ ] Access token auto-refreshes on 401
+- [ ] Concurrent requests queue properly (single refresh)
 - [ ] Failed refresh redirects to login
-- [ ] Refresh token rotation works
+- [ ] Token rotation works (old refresh token invalidated)
 
-### 11.3 Logout Testing
-
-- [ ] Backend logout called
-- [ ] Local tokens cleared
+### Logout
+- [ ] Backend logout called (fire-and-forget)
+- [ ] Local tokens/cookies cleared
 - [ ] Zustand state reset
 - [ ] Redirects to login screen
-- [ ] Offline logout works
+- [ ] Works offline (local state cleared even if backend unreachable)
 
-### 11.4 Protected Routes
-
+### Protected Routes
 - [ ] Unauthenticated users redirected to login
-- [ ] Authenticated users can access app
+- [ ] Authenticated users can access all app tabs
 - [ ] Already logged-in users skip login screen
+- [ ] Auth state persists across app restarts (via Zustand persistence)
 
-### 11.5 Error Scenarios
+### UI/UX
+- [ ] Login screen renders correctly (light & dark mode)
+- [ ] Profile shows user avatar, name, email when authenticated
+- [ ] Logout confirmation dialog works
+- [ ] Loading states shown during OAuth flow
+- [ ] Error messages displayed and auto-dismissed
+- [ ] Responsive layout on phones and tablets
 
-- [ ] User cancels OAuth → error shown
-- [ ] Network error during login → error shown
-- [ ] Invalid callback URL → error shown
-- [ ] Token expired → auto-refresh or redirect
-
-### 11.6 Platform-Specific
-
-- [ ] iOS deep links work
-- [ ] Android deep links work
-- [ ] Web cookies work correctly
-- [ ] SecureStore encryption works (mobile)
-
-### 11.7 UI/UX
-
-- [ ] Login screen renders correctly
-- [ ] Profile shows user info
-- [ ] Logout confirmation works
-- [ ] Loading states shown
-- [ ] Errors displayed clearly
-- [ ] Dark mode works
-- [ ] Light mode works
-
-### 11.8 Accessibility
-
-- [ ] Screen reader announces auth states
-- [ ] Buttons have accessibility labels
-- [ ] Inputs have accessibility hints
-- [ ] Focus order is logical
+### Accessibility
+- [ ] Login button has accessibilityLabel and accessibilityHint
+- [ ] Loading states announced to screen readers
+- [ ] Logical focus order
 
 ---
 
-## 12. Implementation Roadmap
+## 11. Implementation Roadmap
 
-### Phase 1: Foundation (2-3 days)
+### Phase 1: Foundation (1-2 days)
+1. Install `expo-secure-store`
+2. Add `EXPO_PUBLIC_API_URL` to `.env`
+3. Create `authService.ts`
+4. Add auth state to `useAppStore.ts`
+5. Create `useAuth.ts` hook
 
-**Tasks**:
-1. Install dependencies (`expo-web-browser`, `expo-secure-store`)
-2. Create auth service (`authService.ts`)
-3. Add auth state to Zustand store
-4. Create auth hooks (`useAuth`, `useRequireAuth`, `useDeepLinkHandler`)
-5. Update environment variables
+### Phase 2: Login Flow (1-2 days)
+1. Create `app/(auth)/_layout.tsx` and `app/(auth)/login.tsx`
+2. Test mobile OAuth flow (deep link callback)
+3. Test web OAuth flow (cookie-based)
 
-**Deliverable**: Auth service ready, state management in place
-
-### Phase 2: Login Flow (2-3 days)
-
-**Tasks**:
-1. Create auth group layout
-2. Implement login screen
-3. Add deep link handling
-4. Integrate with backend OAuth
-5. Test mobile and web OAuth flows
-
-**Deliverable**: Working login on all platforms
-
-### Phase 3: Profile & Logout (1-2 days)
-
-**Tasks**:
-1. Create user profile components (`UserProfileHeader`, `UserAvatar`, `LogoutButton`)
-2. Modify profile screen
-3. Implement logout flow
-4. Add confirmation dialogs
-
-**Deliverable**: Profile shows user info, logout works
+### Phase 3: Profile & Logout (1 day)
+1. Create `UserProfileHeader` and `LogoutButton`
+2. Modify profile screen (additive)
+3. Test logout flow
 
 ### Phase 4: Protected Routes (1 day)
+1. Modify root `_layout.tsx` with auth guards
+2. Add session check on mount
+3. Test navigation flows (authenticated/unauthenticated)
 
-**Tasks**:
-1. Modify root layout with auth guards
-2. Add session check on app startup
-3. Implement redirect logic
-4. Test navigation flows
-
-**Deliverable**: App redirects based on auth state
-
-### Phase 5: Data Sync (2 days)
-
-**Tasks**:
-1. Create sync hooks
-2. Implement upload local data on login
-3. Add conflict resolution
-4. Test sync scenarios
-
-**Deliverable**: Local data syncs with backend
-
-### Phase 6: Polish & Testing (2-3 days)
-
-**Tasks**:
+### Phase 5: Polish & Testing (1-2 days)
 1. Error handling refinement
-2. Loading state improvements
-3. Accessibility testing
-4. Cross-platform testing (iOS, Android, Web)
-5. Dark/light theme testing
-6. Performance optimization
-
-**Deliverable**: Production-ready auth system
-
-**Total Estimated Time**: 10-14 days
+2. Cross-platform testing (iOS, Android, Web)
+3. Dark/light mode testing
+4. Accessibility testing
 
 ---
 
-## 13. Appendix: Type Definitions
+## Design System Reference
 
-### 13.1 Auth Types
-
-**File**: `src/types/index.ts` [MODIFY - Add these types]
+All auth components use `useTheme()` from `@/contexts/ThemeContext`:
 
 ```typescript
-// Re-export from authService for convenience
-export type { User, AuthTokens, SessionResponse, RefreshResponse } from '@/services/authService';
-export { AuthError } from '@/services/authService';
-
-// Auth state
-export interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  isAuthLoading: boolean;
-  authError: string | null;
-}
-
-// Token pair
-export interface TokenPair {
-  accessToken: string;
-  refreshToken: string;
-}
-
-// OAuth state payload (backend-generated, read-only for frontend)
-export interface OAuthStatePayload {
-  nonce: string;
-  platform: 'web' | 'mobile';
-  redirectUri?: string;
-  iat: number;
-  exp: number;
-}
+const { colors, shadows, spacing, typography, borderRadius, isDark } = useTheme();
 ```
 
-### 13.2 Zustand Store Type
+**Key color properties used in auth**:
+- `colors.background` - Screen background
+- `colors.cardBackground` - Card/button surfaces
+- `colors.text` - Primary text
+- `colors.textSecondary` - Secondary text
+- `colors.primary` - Primary accent (green)
+- `colors.error` - Error states, logout button
+- `colors.errorLight` - Error banner background
+- `colors.border` - Borders
 
-```typescript
-import type { User } from '@/services/authService';
-
-interface AppState {
-  // Existing state
-  topics: Topic[];
-  dismissedTopics: string[];
-  quizzes: Quiz[];
-  currentQuiz: Quiz | null;
-  profile: Profile;
-  isLoading: boolean;
-  error: string | null;
-
-  // Auth state
-  user: User | null;
-  isAuthenticated: boolean;
-  isAuthLoading: boolean;
-  authError: string | null;
-
-  // Existing actions
-  addTopic: (topic: Topic) => void;
-  updateTopicStatus: (id: string, status: TopicStatus) => void;
-  dismissTopic: (topicName: string) => void;
-  deleteTopic: (id: string) => void;
-  addQuiz: (quiz: Quiz) => void;
-  updateQuizAnswer: (questionIndex: number, userAnswer: string, isCorrect: boolean) => void;
-  calculateStatistics: () => void;
-  checkMilestones: () => void;
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-
-  // Auth actions
-  setUser: (user: User | null) => void;
-  setAuthLoading: (loading: boolean) => void;
-  setAuthError: (error: string | null) => void;
-  checkSession: () => Promise<void>;
-  logout: () => Promise<void>;
-}
-```
+**Key spacing/typography values**:
+- `spacing`: xs(4), sm(8), md(12), lg(15), xl(20), xxl(30)
+- `typography.fontSize`: xs(12), sm(14), base(16), lg(18), xl(20), xxl(24), xxxl(28)
+- `typography.fontWeight`: normal('400'), medium('500'), semibold('600'), bold('700')
+- `borderRadius`: sm(4), md(8), lg(12), xl(20), round(9999)
+- `shadows.small` - Spread directly (pre-resolved, no function call)
 
 ---
 
-## Conclusion
-
-This specification provides a **complete, production-ready** integration of GitHub OAuth authentication into the Breadthwise Expo application. Key highlights:
-
-✅ **Platform-Agnostic**: Single codebase works on iOS, Android, and Web
-✅ **Design Consistency**: Uses existing `globalStyles.ts` theme system
-✅ **Type-Safe**: Full TypeScript coverage
-✅ **Mobile-First**: Responsive UI following best practices
-✅ **Secure**: Platform-specific token storage (SecureStore mobile, cookies web)
-✅ **Production-Ready**: Error handling, offline support, accessibility
-
-All code examples are **ready to implement** - not pseudocode. Follow the implementation roadmap for a structured rollout.
-
-**Next Steps**: Begin with Phase 1 (Foundation), following the roadmap in Section 12.
-
----
-
-**Document Version**: 1.0
-**Last Updated**: 2025-11-16
-**Status**: ✅ Ready for Implementation
+**Document Version**: 2.0
+**Last Updated**: 2026-03-07
+**Status**: Ready for Implementation
