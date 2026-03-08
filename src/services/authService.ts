@@ -236,17 +236,25 @@ class AuthService {
     try {
       const refreshToken = await this.getRefreshToken();
 
-      fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Platform': this.platform,
-        },
-        body: refreshToken ? JSON.stringify({ refreshToken }) : undefined,
-        credentials: this.isWeb ? 'include' : 'same-origin',
-      }).catch(() => {
+      const body = !this.isWeb && refreshToken ? JSON.stringify({ refreshToken }) : undefined;
+      const headers: Record<string, string> = {
+        'X-Platform': this.platform,
+      };
+
+      if (body) {
+        headers['Content-Type'] = 'application/json';
+      }
+
+      try {
+        await fetch(`${API_URL}/auth/logout`, {
+          method: 'POST',
+          headers,
+          body,
+          credentials: this.isWeb ? 'include' : 'same-origin',
+        });
+      } catch {
         // Intentionally ignored. Local logout should still proceed offline.
-      });
+      }
     } finally {
       await this.clearTokens();
     }
