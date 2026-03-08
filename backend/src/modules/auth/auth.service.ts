@@ -1,17 +1,17 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
-import { UserRepository } from '../user/user.repository.js';
-import { AuthRepository } from './auth.repository.js';
+import { FastifyReply, FastifyRequest } from 'fastify';
+import { env } from '../shared/config/env.js';
 import { type User } from '../shared/database/schema.js';
 import { AppError } from '../shared/middleware/error-handler.js';
+import { generateRandomToken, hashToken } from '../shared/utils/crypto.utils.js';
 import {
   generateFingerprint,
-  parseExpiry,
   getExpiry,
+  parseExpiry,
   type JWTPayload,
   type TokenPair,
 } from '../shared/utils/jwt.utils.js';
-import { generateRandomToken, hashToken } from '../shared/utils/crypto.utils.js';
-import { env } from '../shared/config/env.js';
+import { UserRepository } from '../user/user.repository.js';
+import { AuthRepository } from './auth.repository.js';
 
 export interface GitHubProfile {
   id: string;
@@ -148,14 +148,24 @@ export class AuthService {
     return 'web';
   }
 
-  setTokenCookies(reply: FastifyReply, tokens: TokenPair): void {
-    const cookieOptions = {
+  private getAuthCookieOptions(): {
+    httpOnly: true;
+    secure: boolean;
+    sameSite: 'lax' | 'strict' | 'none';
+    path: '/';
+    domain?: string;
+  } {
+    return {
       httpOnly: true,
       secure: env.SECURE_COOKIES,
-      sameSite: 'lax' as const,
-      domain: env.COOKIE_DOMAIN,
+      sameSite: env.COOKIE_SAME_SITE,
       path: '/',
+      ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
     };
+  }
+
+  setTokenCookies(reply: FastifyReply, tokens: TokenPair): void {
+    const cookieOptions = this.getAuthCookieOptions();
 
     reply.setCookie('access_token', tokens.accessToken, {
       ...cookieOptions,
@@ -169,13 +179,27 @@ export class AuthService {
   }
 
   clearTokenCookies(reply: FastifyReply): void {
-    reply.clearCookie('access_token', {
-      path: '/',
-      domain: env.COOKIE_DOMAIN,
+    const cookieOptions = this.getAuthCookieOptions();
+
+    reply.clearCookie('access_token', cookieOptions);
+    reply.clearCookie('refresh_token', cookieOptions);
+
+    // OAuth plugin state cookie is not part of auth session, but clearing it
+    // avoids stale browser artifacts between login attempts.
+    const stateOptions = {
+      secure: env.SECURE_COOKIES,
+      sameSite: env.COOKIE_SAME_SITE,
+      ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
+    } as const;
+
+    reply.clearCookie('oauth2-redirect-state', {
+      ...stateOptions,
+      path: '/auth',
     });
-    reply.clearCookie('refresh_token', {
+
+    reply.clearCookie('oauth2-redirect-state', {
+      ...stateOptions,
       path: '/',
-      domain: env.COOKIE_DOMAIN,
     });
   }
 }

@@ -1,3 +1,4 @@
+import { authService, type User } from '@/services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create, type StateCreator } from 'zustand';
 import { Profile, Quiz, Topic } from '../types';
@@ -12,6 +13,10 @@ interface AppState {
   profile: Profile;
   isLoading: boolean;
   error: string | null;
+  user: User | null;
+  isAuthenticated: boolean;
+  isAuthLoading: boolean;
+  authError: string | null;
   addTopic: (topic: Topic) => void;
   updateTopicStatus: (id: string, status: 'learned') => void;
   dismissTopic: (name: string) => void;
@@ -24,6 +29,11 @@ interface AppState {
   setError: (error: string | null) => void;
   resetCurrentQuiz: () => void;
   setCurrentQuiz: (quiz: Quiz | null) => void;
+  setUser: (user: User | null) => void;
+  setAuthLoading: (loading: boolean) => void;
+  setAuthError: (error: string | null) => void;
+  checkSession: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const initialProfile: Profile = {
@@ -73,6 +83,10 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
   profile: initialProfile,
   isLoading: false,
   error: null,
+  user: null,
+  isAuthenticated: false,
+  isAuthLoading: true,
+  authError: null,
 
   addTopic: (topic: Topic) => {
     set((state) => {
@@ -132,11 +146,11 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
     set((state) => ({
       currentQuiz: state.currentQuiz
         ? {
-            ...state.currentQuiz,
-            questions: state.currentQuiz.questions.map((q: any, idx: number) =>
-              idx === questionIndex ? { ...q, userAnswer: answer } : q
-            ),
-          }
+          ...state.currentQuiz,
+          questions: state.currentQuiz.questions.map((q: any, idx: number) =>
+            idx === questionIndex ? { ...q, userAnswer: answer } : q
+          ),
+        }
         : null,
     }));
   },
@@ -251,6 +265,38 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
   setError: (error: string | null) => set({ error }),
   resetCurrentQuiz: () => set({ currentQuiz: null }),
   setCurrentQuiz: (quiz: Quiz | null) => set({ currentQuiz: quiz }),
+  setUser: (user: User | null) => set({ user, isAuthenticated: !!user, authError: null }),
+  setAuthLoading: (isAuthLoading: boolean) => set({ isAuthLoading }),
+  setAuthError: (authError: string | null) => set({ authError, isAuthLoading: false }),
+  checkSession: async () => {
+    try {
+      set({ isAuthLoading: true, authError: null });
+
+      const isValid = await authService.checkSession();
+      if (isValid) {
+        const user = await authService.getCurrentUser();
+        set({ user, isAuthenticated: true, isAuthLoading: false });
+        return;
+      }
+
+      set({ user: null, isAuthenticated: false, isAuthLoading: false });
+    } catch {
+      set({ user: null, isAuthenticated: false, isAuthLoading: false });
+    }
+  },
+  logout: async () => {
+    try {
+      set({ isAuthLoading: true });
+      await authService.logout();
+    } finally {
+      set({
+        user: null,
+        isAuthenticated: false,
+        isAuthLoading: false,
+        authError: null,
+      });
+    }
+  },
 });
 
 export const useAppStore = create<AppState>()(storeCreator);
@@ -259,7 +305,7 @@ export const useAppStore = create<AppState>()(storeCreator);
 const STORAGE_KEY = 'architect-app-storage';
 
 type PersistedSlice = Pick<AppState,
-  'topics' | 'dismissedTopics' | 'quizzes' | 'currentQuiz' | 'profile'>;
+  'topics' | 'dismissedTopics' | 'quizzes' | 'currentQuiz' | 'profile' | 'user'>;
 
 function selectPersisted(state: AppState): PersistedSlice {
   return {
@@ -268,6 +314,7 @@ function selectPersisted(state: AppState): PersistedSlice {
     quizzes: state.quizzes,
     currentQuiz: state.currentQuiz,
     profile: state.profile,
+    user: state.user,
   };
 }
 
