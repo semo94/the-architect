@@ -1,8 +1,8 @@
 import { AuthLoadingOverlay } from "@/components/auth/AuthLoadingOverlay";
 import {
-    DarkTheme,
-    DefaultTheme,
-    ThemeProvider as NavigationThemeProvider,
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider as NavigationThemeProvider,
 } from "@react-navigation/native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -45,7 +45,7 @@ export default function RootLayout() {
     if (isAuthenticated && inAuthGroup) {
       router.replace("/(tabs)/discover");
     }
-  }, [isAuthenticated, isAuthLoading, router, segments]);
+  }, [inAuthGroup, isAuthenticated, isAuthLoading, router]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

@@ -8,10 +8,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from './EmptyState';
 import { FilterBar } from './FilterBar';
 import {
-  FilterSheet,
-  generateCategoryOptions,
-  generateSubcategoryOptions,
-  topicTypeOptions,
+    FilterSheet,
+    generateCategoryOptions,
+    generateSubcategoryOptions,
+    topicTypeOptions,
 } from './FilterSheet';
 import { SearchBar } from './SearchBar';
 import { TopicListCard } from './TopicListCard';
@@ -74,7 +74,7 @@ export const TopicsScreen: React.FC = () => {
         matchesSubcategory
       );
     });
-  }, [topics, searchQuery, statusFilter, typeFilter, categoryFilter, subcategoryFilter]);
+  }, [topics, dismissedTopics, searchQuery, statusFilter, typeFilter, categoryFilter, subcategoryFilter]);
 
   // Count active filters
   const activeFiltersCount = useMemo(() => {
