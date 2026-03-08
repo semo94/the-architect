@@ -1,10 +1,11 @@
 import { useTheme } from '@/contexts/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { QuizQuestion } from '../../types';
 import { SkeletonLoader } from '../common/SkeletonLoader';
@@ -208,19 +209,19 @@ export const QuestionCard: React.FC<Props> = ({
                 optionTextStyle.push(styles.optionTextCorrect as any);
                 optionLabelStyle.push(styles.optionLabelCorrect as any);
                 optionLabelTextStyle.push(styles.optionLabelTextCorrect as any);
-                showIcon = '✓';
+                showIcon = 'correct';
               } else if (isSelected && !isCorrect) {
                 optionStyle.push(styles.optionIncorrect as any);
                 optionTextStyle.push(styles.optionTextIncorrect as any);
                 optionLabelStyle.push(styles.optionLabelIncorrect as any);
                 optionLabelTextStyle.push(styles.optionLabelTextIncorrect as any);
-                showIcon = '✗';
+                showIcon = 'incorrect';
               } else if (isCorrectOption) {
                 optionStyle.push(styles.optionCorrect as any);
                 optionTextStyle.push(styles.optionTextCorrect as any);
                 optionLabelStyle.push(styles.optionLabelCorrect as any);
                 optionLabelTextStyle.push(styles.optionLabelTextCorrect as any);
-                showIcon = '✓';
+                showIcon = 'correct';
               }
             } else if (isSelected) {
               optionStyle.push(styles.optionSelected as any);
@@ -252,7 +253,14 @@ export const QuestionCard: React.FC<Props> = ({
                     {/* Option Text and Icon */}
                     <View style={styles.optionTextWrapper}>
                       <Text style={optionTextStyle}>{option}</Text>
-                      {showIcon && <Text style={styles.iconText}>{showIcon}</Text>}
+                      {showIcon && (
+                        <Ionicons
+                          name={showIcon === 'correct' ? 'checkmark-circle' : 'close-circle'}
+                          size={22}
+                          color={showIcon === 'correct' ? colors.primary : colors.error}
+                          style={styles.iconText}
+                        />
+                      )}
                     </View>
                   </View>
                 </Pressable>
@@ -284,7 +292,7 @@ export const QuestionCard: React.FC<Props> = ({
           isCorrect ? styles.feedbackCorrect : styles.feedbackIncorrect,
         ]}>
           <Text style={styles.feedbackTitle}>
-            {isCorrect ? '✓ Correct!' : '✗ Incorrect'}
+            {isCorrect ? <><Ionicons name="checkmark-circle" size={18} color={colors.primary} /> Correct!</> : <><Ionicons name="close-circle" size={18} color={colors.error} /> Incorrect</>}
           </Text>
           <Text style={styles.feedbackText}>{question.explanation}</Text>
         </View>

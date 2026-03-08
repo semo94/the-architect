@@ -1,11 +1,12 @@
+import { useTheme } from '@/contexts/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import {
-  View,
-  StyleSheet,
-  Pressable,
-  Text,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
-import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
   onDismiss?: () => void;
@@ -43,25 +44,15 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
     acquireButton: {
       backgroundColor: colors.primary,
     },
-    dismissIcon: {
-      fontSize: typography.fontSize.xxl,
-      color: colors.textSecondary,
-    },
     dismissText: {
       fontSize: typography.fontSize.xs,
       color: colors.textSecondary,
       marginTop: spacing.xs,
     },
-    bucketIcon: {
-      fontSize: typography.fontSize.xxl,
-    },
     bucketText: {
       fontSize: typography.fontSize.xs,
       color: colors.white,
       marginTop: spacing.xs,
-    },
-    acquireIcon: {
-      fontSize: typography.fontSize.xxl,
     },
     acquireText: {
       fontSize: typography.fontSize.xs,
@@ -81,7 +72,7 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
           ]}
           onPress={onDismiss}
         >
-          <Text style={styles.dismissIcon}>✕</Text>
+          <Ionicons name="close" size={24} color={colors.textSecondary} />
           <Text style={styles.dismissText}>Dismiss</Text>
         </Pressable>
       )}
@@ -95,7 +86,7 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
           ]}
           onPress={onAddToBucket}
         >
-          <Text style={styles.bucketIcon}>📋</Text>
+          <Ionicons name="list-outline" size={24} color={colors.white} />
           <Text style={styles.bucketText}>Add to Bucket</Text>
         </Pressable>
       )}
@@ -109,7 +100,7 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
           ]}
           onPress={onAcquireNow}
         >
-          <Text style={styles.acquireIcon}>🎯</Text>
+          <Ionicons name="checkmark-done-outline" size={24} color={colors.white} />
           <Text style={styles.acquireText}>Acquire Now</Text>
         </Pressable>
       )}

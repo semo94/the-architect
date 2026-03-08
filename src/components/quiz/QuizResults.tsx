@@ -1,13 +1,14 @@
+import { useTheme } from '@/contexts/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { QuizQuestion } from '../../types';
-import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
   score: number;
@@ -44,8 +45,8 @@ export const QuizResults: React.FC<Props> = ({
       borderBottomColor: colors.warning,
     },
     scoreIcon: {
-      fontSize: typography.fontSize.giant,
       marginBottom: spacing.lg,
+      alignItems: 'center',
     },
     scoreTitle: {
       fontSize: typography.fontSize.xxl,
@@ -202,7 +203,13 @@ export const QuizResults: React.FC<Props> = ({
         styles.scoreContainer,
         passed ? styles.scoreContainerPassed : styles.scoreContainerFailed,
       ]}>
-        <Text style={styles.scoreIcon}>{passed ? '🎉' : '📚'}</Text>
+        <View style={styles.scoreIcon}>
+          <Ionicons
+            name={passed ? 'trophy-outline' : 'book-outline'}
+            size={64}
+            color={passed ? colors.primary : colors.warning}
+          />
+        </View>
         <Text style={styles.scoreTitle}>
           {passed ? 'Congratulations!' : 'Keep Learning!'}
         </Text>
@@ -215,7 +222,7 @@ export const QuizResults: React.FC<Props> = ({
           passed ? styles.statusBadgePassed : styles.statusBadgeFailed,
         ]}>
           <Text style={styles.statusText}>
-            {passed ? '✓ Passed' : 'Try Again'}
+            {passed ? <><Ionicons name="checkmark-circle" size={14} color={colors.primary} /> Passed</> : 'Try Again'}
           </Text>
         </View>
       </View>
@@ -252,7 +259,7 @@ export const QuizResults: React.FC<Props> = ({
                   isCorrect ? styles.reviewBadgeCorrect : styles.reviewBadgeIncorrect,
                 ]}>
                   <Text style={styles.reviewBadgeText}>
-                    {isCorrect ? '✓ Correct' : '✗ Incorrect'}
+                    {isCorrect ? <><Ionicons name="checkmark-circle" size={14} color={colors.primary} /> Correct</> : <><Ionicons name="close-circle" size={14} color={colors.error} /> Incorrect</>}
                   </Text>
                 </View>
               </View>
@@ -274,8 +281,8 @@ export const QuizResults: React.FC<Props> = ({
                   return (
                     <View key={optIdx} style={answerStyle}>
                       <Text style={styles.reviewAnswerText}>
-                        {isCorrectAnswer && '✓ '}
-                        {isUserAnswer && !isCorrectAnswer && '✗ '}
+                        {isCorrectAnswer && <><Ionicons name="checkmark-circle" size={14} color={colors.primary} />{' '}</>}
+                        {isUserAnswer && !isCorrectAnswer && <><Ionicons name="close-circle" size={14} color={colors.error} />{' '}</>}
                         {option}
                       </Text>
                     </View>

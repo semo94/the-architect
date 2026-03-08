@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/common/Card';
-import { Milestone } from '@/types';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSectionStyles } from '@/hooks/useComponentStyles';
+import { Milestone } from '@/types';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface MilestonesListProps {
   milestones: Milestone[];
@@ -27,7 +28,6 @@ export const MilestonesList: React.FC<MilestonesListProps> = ({ milestones }) =>
       backgroundColor: colors.primaryLight,
     },
     milestoneIcon: {
-      fontSize: typography.fontSize.huge,
       marginRight: spacing.lg,
     },
     milestoneContent: {
@@ -54,11 +54,20 @@ export const MilestonesList: React.FC<MilestonesListProps> = ({ milestones }) =>
           : styles.milestoneCard;
         return (
           <Card key={index} style={cardStyle}>
-            <Text style={styles.milestoneIcon}>{milestone.icon}</Text>
+            <Ionicons
+              name={milestone.icon as any}
+              size={32}
+              color={milestone.achievedAt ? colors.primary : colors.textLight}
+              style={styles.milestoneIcon}
+            />
             <View style={styles.milestoneContent}>
               <Text style={styles.milestoneTitle}>{milestone.title}</Text>
               <Text style={styles.milestoneStatus}>
-                {milestone.achievedAt ? '✓ Achieved!' : `Reach ${milestone.threshold}`}
+                {milestone.achievedAt ? (
+                  <><Ionicons name="checkmark-circle" size={14} color={colors.success || '#10B981'} /> Achieved!</>
+                ) : (
+                  `Reach ${milestone.threshold}`
+                )}
               </Text>
             </View>
           </Card>

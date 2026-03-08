@@ -192,16 +192,11 @@ export const TopicListCard: React.FC<TopicListCardProps> = ({
                     : styles.statusBadgeDiscovered,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.statusText,
-                    topic.status === 'learned'
-                      ? styles.statusTextLearned
-                      : styles.statusTextDiscovered,
-                  ]}
-                >
-                  {topic.status === 'learned' ? '✓' : '📚'}
-                </Text>
+                <Ionicons
+                  name={topic.status === 'learned' ? 'checkmark-circle' : 'book-outline'}
+                  size={12}
+                  color={topic.status === 'learned' ? (colors.success || '#10B981') : colors.primary}
+                />
                 <Text
                   style={[
                     styles.statusText,
@@ -224,9 +219,11 @@ export const TopicListCard: React.FC<TopicListCardProps> = ({
 
             {/* Footer with discovery info */}
             <View style={styles.footer}>
-              <Text style={styles.footerText}>
-                {getDiscoveryMethodIcon(topic.discoveryMethod)}
-              </Text>
+              <Ionicons
+                name={getDiscoveryMethodIcon(topic.discoveryMethod) as any}
+                size={12}
+                color={colors.textLight}
+              />
               <Text style={styles.footerText}>
                 {getRelativeTime(topic.discoveredAt)}
               </Text>

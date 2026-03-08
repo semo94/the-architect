@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { View, Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { Card } from '../../common/Card';
 import { SkeletonBullet } from '../../common/SkeletonLoader';
 import { useTopicCardStyles } from '../topicCardStyles';
@@ -7,7 +8,8 @@ import { useTopicCardStyles } from '../topicCardStyles';
 interface Props {
   title: string;
   items?: string[];
-  bulletPoint: string;
+  iconName: React.ComponentProps<typeof Ionicons>['name'];
+  iconColor?: string;
   isLoading?: boolean;
   ItemWrapper?: React.FC<{ children: React.ReactNode; index: number }>;
 }
@@ -15,7 +17,8 @@ interface Props {
 export const ListSection: React.FC<Props> = ({
   title,
   items = [],
-  bulletPoint,
+  iconName,
+  iconColor,
   isLoading = false,
   ItemWrapper,
 }) => {
@@ -31,7 +34,9 @@ export const ListSection: React.FC<Props> = ({
           {items.map((item, index) => {
             const listItem = (
               <View style={styles.listItem}>
-                <Text style={styles.bulletPoint}>{bulletPoint}</Text>
+                <View style={styles.bulletPoint}>
+                  <Ionicons name={iconName} size={16} color={iconColor} />
+                </View>
                 <Text style={styles.listText}>{item}</Text>
               </View>
             );

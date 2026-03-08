@@ -1,4 +1,5 @@
 import { useTheme } from '@/contexts/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SkeletonLoader } from '../common/SkeletonLoader';
@@ -44,7 +45,6 @@ export const ScopeQuestionCard: React.FC<Props> = ({
       alignItems: 'center',
     },
     questionIcon: {
-      fontSize: typography.fontSize.massive,
       marginBottom: spacing.lg,
     },
     questionText: {
@@ -90,7 +90,7 @@ export const ScopeQuestionCard: React.FC<Props> = ({
     <>
       {/* Question */}
       <View style={styles.questionContainer}>
-        <Text style={styles.questionIcon}>🧭</Text>
+        <Ionicons name="compass-outline" size={48} color={colors.primary} style={styles.questionIcon} />
         {!hasQuestion ? (
           <SkeletonLoader width="80%" height={28} />
         ) : (

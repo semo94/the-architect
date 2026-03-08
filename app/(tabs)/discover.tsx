@@ -1,6 +1,7 @@
 import { Card } from '@/components/common/Card';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAppStore } from '@/store/useAppStore';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
 import {
@@ -50,7 +51,6 @@ export default function DiscoverScreen() {
       marginBottom: spacing.lg,
     },
     modeIcon: {
-      fontSize: typography.fontSize.massive,
       marginRight: spacing.lg,
     },
     modeContent: {
@@ -121,7 +121,7 @@ export default function DiscoverScreen() {
 
       <Pressable onPress={handleSurpriseMe} style={({ pressed }) => [styles.touchable, pressed && styles.pressed]}>
         <Card style={styles.modeCard}>
-          <Text style={styles.modeIcon}>🎲</Text>
+          <Ionicons name="dice-outline" size={48} color={colors.primary} style={styles.modeIcon} />
           <View style={styles.modeContent}>
             <Text style={styles.modeTitle}>Surprise Me</Text>
             <Text style={styles.modeDescription}>
@@ -133,7 +133,7 @@ export default function DiscoverScreen() {
 
       <Pressable onPress={handleGuideMe} style={({ pressed }) => [styles.touchable, pressed && styles.pressed]}>
         <Card style={styles.modeCard}>
-          <Text style={styles.modeIcon}>🧭</Text>
+          <Ionicons name="compass-outline" size={48} color={colors.primary} style={styles.modeIcon} />
           <View style={styles.modeContent}>
             <Text style={styles.modeTitle}>Guide Me</Text>
             <Text style={styles.modeDescription}>
@@ -144,7 +144,7 @@ export default function DiscoverScreen() {
       </Pressable>
 
       <View style={styles.tipContainer}>
-        <Text style={styles.tipTitle}>💡 Pro Tip</Text>
+        <Text style={styles.tipTitle}><Ionicons name="bulb-outline" size={16} color={colors.secondaryDark} />{' '}Pro Tip</Text>
         <Text style={styles.tipText}>
           Aim to discover 3-5 new topics each week to steadily expand your architectural breadth
         </Text>

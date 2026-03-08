@@ -1,5 +1,5 @@
-import { StyleSheet } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { StyleSheet } from 'react-native';
 
 export const useTopicCardStyles = () => {
   const { colors, typography, spacing, styles: themeStyles } = useTheme();
@@ -43,11 +43,11 @@ export const useTopicCardStyles = () => {
       marginBottom: spacing.md,
     },
     bulletPoint: {
-      fontSize: typography.fontSize.base,
-      color: colors.primary,
       marginRight: 10,
       width: 20,
-    },
+      alignItems: 'center',
+      justifyContent: 'center',
+    } as any,
     listText: {
       flex: 1,
       fontSize: typography.fontSize.md,
