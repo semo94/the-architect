@@ -234,12 +234,12 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
     const discovered = topics.length;
 
     const milestoneDefinitions = [
-      { type: 'discovered' as const, threshold: 10, title: 'First 10 Discovered', icon: '🎯' },
-      { type: 'discovered' as const, threshold: 25, title: 'Quarter Century', icon: '🎖️' },
-      { type: 'discovered' as const, threshold: 50, title: 'Half Hundred', icon: '⭐' },
-      { type: 'learned' as const, threshold: 10, title: '10 Topics Mastered', icon: '✓' },
-      { type: 'learned' as const, threshold: 25, title: '25 Topics Mastered', icon: '✓✓' },
-      { type: 'learned' as const, threshold: 50, title: '50 Topics Mastered', icon: '🏆' },
+      { type: 'discovered' as const, threshold: 10, title: 'First 10 Discovered', icon: 'locate-outline' },
+      { type: 'discovered' as const, threshold: 25, title: 'Quarter Century', icon: 'medal-outline' },
+      { type: 'discovered' as const, threshold: 50, title: 'Half Hundred', icon: 'star-outline' },
+      { type: 'learned' as const, threshold: 10, title: '10 Topics Mastered', icon: 'checkmark-circle-outline' },
+      { type: 'learned' as const, threshold: 25, title: '25 Topics Mastered', icon: 'checkmark-done-circle-outline' },
+      { type: 'learned' as const, threshold: 50, title: '50 Topics Mastered', icon: 'trophy-outline' },
     ];
 
     set((state) => ({

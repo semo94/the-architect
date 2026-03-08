@@ -94,7 +94,8 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete }) => {
       <ListSection
         title="Advantages"
         items={pros}
-        bulletPoint="✓"
+        iconName="checkmark-circle-outline"
+        iconColor="#10B981"
         isLoading={!isComplete && !hasPros}
         ItemWrapper={!isComplete ? FadeInItemWrapper : undefined}
       />
@@ -102,7 +103,8 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete }) => {
       <ListSection
         title="Trade-offs"
         items={cons}
-        bulletPoint="x"
+        iconName="alert-circle-outline"
+        iconColor="#F59E0B"
         isLoading={!isComplete && !hasCons}
         ItemWrapper={!isComplete ? FadeInItemWrapper : undefined}
       />

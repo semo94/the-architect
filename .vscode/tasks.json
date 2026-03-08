@@ -1,0 +1,131 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Restart backend api container",
+			"type": "shell",
+			"command": "docker compose -f backend/docker/docker-compose.yml restart api",
+			"isBackground": false
+		},
+		{
+			"label": "Check backend api container status",
+			"type": "shell",
+			"command": "docker compose -f backend/docker/docker-compose.yml ps api",
+			"isBackground": false
+		},
+		{
+			"label": "Check backend health endpoint",
+			"type": "shell",
+			"command": "curl -s http://localhost:3000/health",
+			"isBackground": false
+		},
+		{
+			"label": "Check current proxy health",
+			"type": "shell",
+			"command": "curl -s http://localhost:8787/health",
+			"isBackground": false
+		},
+		{
+			"label": "Find process on 8787",
+			"type": "shell",
+			"command": "lsof -nP -iTCP:8787 -sTCP:LISTEN",
+			"isBackground": false
+		},
+		{
+			"label": "Kill old proxy processes",
+			"type": "shell",
+			"command": "pkill -f llm-proxy.mjs || true",
+			"isBackground": false
+		},
+		{
+			"label": "Start proxy server",
+			"type": "shell",
+			"command": "npm run proxy",
+			"isBackground": true
+		},
+		{
+			"label": "Verify proxy model after restart",
+			"type": "shell",
+			"command": "curl -s http://localhost:8787/health",
+			"isBackground": false
+		},
+		{
+			"label": "Proxy health model check",
+			"type": "shell",
+			"command": "curl -s http://localhost:8787/health",
+			"isBackground": false
+		},
+		{
+			"label": "Reproduce old-model override",
+			"type": "shell",
+			"command": "curl -s -X POST http://localhost:8787/api/llm -H 'Content-Type: application/json' -d '{\"model\":\"claude-3-5-haiku-20241022\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":16}'",
+			"isBackground": false
+		},
+		{
+			"label": "Test proxy default model",
+			"type": "shell",
+			"command": "curl -s -X POST http://localhost:8787/api/llm -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"Reply OK\"}],\"max_tokens\":16}'",
+			"isBackground": false
+		},
+		{
+			"label": "Restart hardened proxy",
+			"type": "shell",
+			"command": "pkill -f llm-proxy.mjs || true && npm run proxy",
+			"isBackground": true
+		},
+		{
+			"label": "Wait for proxy boot",
+			"type": "shell",
+			"command": "sleep 2 && curl -s http://localhost:8787/health",
+			"isBackground": false
+		},
+		{
+			"label": "Verify stale model ignored",
+			"type": "shell",
+			"command": "curl -s -X POST http://localhost:8787/api/llm -H 'Content-Type: application/json' -d '{\"model\":\"claude-3-5-haiku-20241022\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with OK\"}],\"max_tokens\":16}'",
+			"isBackground": false
+		},
+		{
+			"label": "Diag: list simulators",
+			"type": "shell",
+			"command": "xcrun simctl list devices available",
+			"isBackground": false
+		},
+		{
+			"label": "Diag: show destinations",
+			"type": "shell",
+			"command": "xcodebuild -workspace ios/Breadthwise.xcworkspace -scheme Breadthwise -showdestinations",
+			"isBackground": false
+		},
+		{
+			"label": "Verify: show destinations after SDKROOT fix",
+			"type": "shell",
+			"command": "xcodebuild -workspace ios/Breadthwise.xcworkspace -scheme Breadthwise -showdestinations",
+			"isBackground": false
+		},
+		{
+			"label": "Diag: inspect effective platform settings",
+			"type": "shell",
+			"command": "xcodebuild -workspace ios/Breadthwise.xcworkspace -scheme Breadthwise -showBuildSettings | rg \"SUPPORTED_PLATFORMS|SDKROOT|PLATFORM_NAME|TARGETED_DEVICE_FAMILY|SUPPORTS_MACCATALYST|EFFECTIVE_PLATFORM_NAME\" -n",
+			"isBackground": false
+		},
+		{
+			"label": "Diag: inspect platform settings with grep",
+			"type": "shell",
+			"command": "xcodebuild -workspace ios/Breadthwise.xcworkspace -scheme Breadthwise -showBuildSettings | grep -E \"SUPPORTED_PLATFORMS|SDKROOT|PLATFORM_NAME|TARGETED_DEVICE_FAMILY|SUPPORTS_MACCATALYST|EFFECTIVE_PLATFORM_NAME\"",
+			"isBackground": false
+		},
+		{
+			"label": "Diag: force iOS simulator destination",
+			"type": "shell",
+			"command": "xcodebuild -workspace ios/Breadthwise.xcworkspace -scheme Breadthwise -destination 'generic/platform=iOS Simulator' -showBuildSettings | grep -E 'PLATFORM_NAME|SUPPORTED_PLATFORMS|SDKROOT'",
+			"isBackground": false
+		},
+		{
+			"label": "Rebuild backend api container",
+			"type": "shell",
+			"command": "docker compose -f backend/docker/docker-compose.yml up -d --build api",
+			"isBackground": false
+		}
+	]
+}

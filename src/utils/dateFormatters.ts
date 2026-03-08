@@ -25,7 +25,7 @@ export const getRelativeTime = (isoDate: string): string => {
  * Returns an icon emoji for a discovery method
  */
 export const getDiscoveryMethodIcon = (method: DiscoveryMethod): string => {
-  return method === 'surprise' ? '🎲' : '🎯';
+  return method === 'surprise' ? 'dice-outline' : 'locate-outline';
 };
 
 /**

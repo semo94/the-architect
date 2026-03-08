@@ -1,12 +1,13 @@
 import { useTheme } from '@/contexts/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View
 } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import categorySchema from "../../constants/categories";
@@ -339,13 +340,13 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
               <View style={{ marginTop: spacing.xl }}>
                 <Text style={styles.historyTitle}>Your selections:</Text>
                 {selections.category && (
-                  <Text style={styles.historyAnswer}>✓ {selections.category}</Text>
+                  <Text style={styles.historyAnswer}><Ionicons name="checkmark-circle" size={14} color={colors.primary} /> {selections.category}</Text>
                 )}
                 {selections.subcategory && (
-                  <Text style={styles.historyAnswer}>✓ {selections.subcategory}</Text>
+                  <Text style={styles.historyAnswer}><Ionicons name="checkmark-circle" size={14} color={colors.primary} /> {selections.subcategory}</Text>
                 )}
                 {selections.topicType && (
-                  <Text style={styles.historyAnswer}>✓ {selections.topicType}</Text>
+                  <Text style={styles.historyAnswer}><Ionicons name="checkmark-circle" size={14} color={colors.primary} /> {selections.topicType}</Text>
                 )}
               </View>
             )}
