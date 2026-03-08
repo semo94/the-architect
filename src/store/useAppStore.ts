@@ -1,7 +1,7 @@
+import { authService, type User } from '@/services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create, type StateCreator } from 'zustand';
 import { Profile, Quiz, Topic } from '../types';
-import { authService, type User } from '@/services/authService';
 
 const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
 
@@ -146,11 +146,11 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
     set((state) => ({
       currentQuiz: state.currentQuiz
         ? {
-            ...state.currentQuiz,
-            questions: state.currentQuiz.questions.map((q: any, idx: number) =>
-              idx === questionIndex ? { ...q, userAnswer: answer } : q
-            ),
-          }
+          ...state.currentQuiz,
+          questions: state.currentQuiz.questions.map((q: any, idx: number) =>
+            idx === questionIndex ? { ...q, userAnswer: answer } : q
+          ),
+        }
         : null,
     }));
   },

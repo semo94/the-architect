@@ -141,7 +141,23 @@ class AuthService {
 
   async checkSession(): Promise<boolean> {
     try {
-      const response = await this.authenticatedFetch(`${API_URL}/auth/session`);
+      const headers = new Headers({ 'X-Platform': this.platform });
+
+      if (!this.isWeb) {
+        const token = await this.getAccessToken();
+        if (!token) {
+          return false;
+        }
+        headers.set('Authorization', `Bearer ${token}`);
+      }
+
+      // Session probe should be non-intrusive: do not trigger refresh flow.
+      const response = await fetch(`${API_URL}/auth/session`, {
+        method: 'GET',
+        headers,
+        credentials: this.isWeb ? 'include' : 'same-origin',
+      });
+
       return response.ok;
     } catch {
       return false;
