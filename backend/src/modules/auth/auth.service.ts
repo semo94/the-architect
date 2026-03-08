@@ -148,14 +148,24 @@ export class AuthService {
     return 'web';
   }
 
-  setTokenCookies(reply: FastifyReply, tokens: TokenPair): void {
-    const cookieOptions = {
+  private getAuthCookieOptions(): {
+    httpOnly: true;
+    secure: boolean;
+    sameSite: 'lax' | 'strict' | 'none';
+    path: '/';
+    domain?: string;
+  } {
+    return {
       httpOnly: true,
       secure: env.SECURE_COOKIES,
       sameSite: env.COOKIE_SAME_SITE,
-      domain: env.COOKIE_DOMAIN,
       path: '/',
+      ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
     };
+  }
+
+  setTokenCookies(reply: FastifyReply, tokens: TokenPair): void {
+    const cookieOptions = this.getAuthCookieOptions();
 
     reply.setCookie('access_token', tokens.accessToken, {
       ...cookieOptions,
@@ -169,13 +179,27 @@ export class AuthService {
   }
 
   clearTokenCookies(reply: FastifyReply): void {
-    reply.clearCookie('access_token', {
-      path: '/',
-      domain: env.COOKIE_DOMAIN,
+    const cookieOptions = this.getAuthCookieOptions();
+
+    reply.clearCookie('access_token', cookieOptions);
+    reply.clearCookie('refresh_token', cookieOptions);
+
+    // OAuth plugin state cookie is not part of auth session, but clearing it
+    // avoids stale browser artifacts between login attempts.
+    const stateOptions = {
+      secure: env.SECURE_COOKIES,
+      sameSite: env.COOKIE_SAME_SITE,
+      ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
+    } as const;
+
+    reply.clearCookie('oauth2-redirect-state', {
+      ...stateOptions,
+      path: '/auth',
     });
-    reply.clearCookie('refresh_token', {
+
+    reply.clearCookie('oauth2-redirect-state', {
+      ...stateOptions,
       path: '/',
-      domain: env.COOKIE_DOMAIN,
     });
   }
 }
