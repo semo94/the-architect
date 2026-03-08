@@ -13,6 +13,15 @@ const API_URL = process.env.LLM_API_URL || (PROVIDER === 'anthropic'
 const MODEL = process.env.LLM_MODEL || (PROVIDER === 'anthropic'
   ? 'claude-3-5-sonnet-20241022'
   : 'gpt-4o-mini');
+const ALLOW_CLIENT_MODEL_OVERRIDE = process.env.LLM_ALLOW_CLIENT_MODEL_OVERRIDE === 'true';
+
+function resolveModel(body) {
+  if (ALLOW_CLIENT_MODEL_OVERRIDE && typeof body?.model === 'string' && body.model.trim().length > 0) {
+    return body.model;
+  }
+
+  return MODEL;
+}
 
 if (!API_KEY) {
   console.error('[llm-proxy] Missing LLM_API_KEY');
@@ -44,7 +53,7 @@ app.post('/api/llm', async (req, res) => {
       headers['x-api-key'] = API_KEY;
       headers['anthropic-version'] = '2023-06-01';
       payload = {
-        model: body.model || MODEL,
+        model: resolveModel(body),
         max_tokens: body.max_tokens ?? 4000,
         temperature: body.temperature ?? 0.7,
         messages: body.messages || [],
@@ -52,7 +61,7 @@ app.post('/api/llm', async (req, res) => {
     } else {
       headers['Authorization'] = `Bearer ${API_KEY}`;
       payload = {
-        model: body.model || MODEL,
+        model: resolveModel(body),
         messages: body.messages || [],
         temperature: body.temperature ?? 0.7,
         max_tokens: body.max_tokens ?? 4000,
@@ -90,7 +99,7 @@ app.post('/api/llm/stream', async (req, res) => {
       headers['x-api-key'] = API_KEY;
       headers['anthropic-version'] = '2023-06-01';
       payload = {
-        model: body.model || MODEL,
+        model: resolveModel(body),
         max_tokens: body.max_tokens ?? 4000,
         temperature: body.temperature ?? 0.7,
         messages: body.messages || [],
@@ -99,7 +108,7 @@ app.post('/api/llm/stream', async (req, res) => {
     } else {
       headers['Authorization'] = `Bearer ${API_KEY}`;
       payload = {
-        model: body.model || MODEL,
+        model: resolveModel(body),
         messages: body.messages || [],
         temperature: body.temperature ?? 0.7,
         max_tokens: body.max_tokens ?? 4000,
