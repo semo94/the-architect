@@ -13,24 +13,26 @@ services:
       - key: PORT
         value: 3000
       - key: DATABASE_URL
-        sync: false  # Must be set manually in Render dashboard
+        sync: false # Must be set manually in Render dashboard
       - key: GITHUB_CLIENT_ID
-        sync: false  # Must be set manually in Render dashboard
+        sync: false # Must be set manually in Render dashboard
       - key: GITHUB_CLIENT_SECRET
-        sync: false  # Must be set manually in Render dashboard
+        sync: false # Must be set manually in Render dashboard
       - key: GITHUB_CALLBACK_URL
-        sync: false  # Must be set manually in Render dashboard
+        sync: false # Must be set manually in Render dashboard
+      - key: OAUTH_STATE_SECRET
+        generateValue: true # Auto-generate secure secret for OAuth state validation
       - key: JWT_ACCESS_SECRET
-        generateValue: true  # Auto-generate secure secret
+        generateValue: true # Auto-generate secure secret
       - key: WEB_CLIENT_URL
-        sync: false  # Must be set manually in Render dashboard
+        sync: false # Must be set manually in Render dashboard
       - key: MOBILE_DEEP_LINK_SCHEME
         value: breadthwise://
       - key: ALLOWED_ORIGINS
-        sync: false  # Must be set manually in Render dashboard
+        sync: false # Must be set manually in Render dashboard
       - key: SECURE_COOKIES
-        value: true
+        value: "true"
       - key: ENABLE_FINGERPRINTING
-        value: true
+        value: "true"
       - key: COOKIE_DOMAIN
-        sync: false  # Must be set manually in Render dashboard (e.g., .yourdomain.com)
+        sync: false # Must be set manually in Render dashboard (e.g., .yourdomain.com)

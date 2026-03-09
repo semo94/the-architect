@@ -4,9 +4,12 @@ This guide covers deploying the backend API to Render (free tier) with Neon Post
 
 ## Architecture Overview
 
-- **API**: Docker container running on Render free tier (always on)
-- **Database**: Serverless PostgreSQL on Neon (Vercel Postgres)
+- **Backend + Web**: Monolith Docker service running on Render free tier
+- **Database**: Neon Serverless Postgres
+- **iOS App**: Expo-based compiled iOS app distributed with paid Apple Developer subscription
 - **Communication**: API talks to Neon DB via HTTP API
+
+**Staging note**: Render free tier sleeps after ~15 minutes of inactivity and has cold starts. We use Upptime to ping the backend on a schedule and keep it warm.
 
 ## Prerequisites
 
@@ -44,6 +47,7 @@ This guide covers deploying the backend API to Render (free tier) with Neon Post
 The database migrations will run automatically on first deployment. No manual setup required!
 
 **Note**: Neon free tier includes:
+
 - 10 databases
 - 3 GB storage
 - Unlimited compute time
@@ -112,6 +116,9 @@ GITHUB_CLIENT_ID=<your-github-client-id>
 GITHUB_CLIENT_SECRET=<your-github-client-secret>
 GITHUB_CALLBACK_URL=https://your-app.onrender.com/auth/github/callback
 
+# Required - OAuth state security
+OAUTH_STATE_SECRET=<random-32-char-string>
+
 # Required - Client URLs
 WEB_CLIENT_URL=https://your-frontend-url.com
 ALLOWED_ORIGINS=https://your-frontend-url.com,https://your-app.onrender.com
@@ -131,12 +138,15 @@ COOKIE_DOMAIN=.yourdomain.com
 MOBILE_DEEP_LINK_SCHEME=breadthwise://
 ```
 
-**Generate JWT Secrets**:
+**Generate secrets**:
+
 ```bash
 # On your local machine:
 openssl rand -base64 32
 openssl rand -base64 32
 ```
+
+Use one value for `OAUTH_STATE_SECRET` and one for `JWT_ACCESS_SECRET`.
 
 ### 3.2 Update GitHub OAuth Callback
 
@@ -169,6 +179,7 @@ Once deployed, Render will give you a URL like `https://your-app.onrender.com`
 Visit: `https://your-app.onrender.com/health`
 
 Expected response:
+
 ```json
 {
   "status": "healthy",
@@ -186,6 +197,7 @@ Expected response:
 ### 4.3 Check Logs
 
 In Render dashboard:
+
 1. Go to your service
 2. Click **"Logs"**
 3. Verify no errors
@@ -213,6 +225,11 @@ Separate multiple origins with commas (no spaces).
 - **Cold starts**: Takes ~30 seconds to wake up from sleep
 - **Auto-redeploys**: On every git push to connected branch
 
+### Keep Backend Warm (Staging)
+
+- Use Upptime (or equivalent uptime monitor) to call `https://your-app.onrender.com/health` every 5-10 minutes.
+- This reduces cold starts by keeping the Render service active.
+
 ### Database Migrations
 
 - Migrations run automatically on every deployment
@@ -222,6 +239,7 @@ Separate multiple origins with commas (no spaces).
 ### Logs
 
 View logs in Render dashboard:
+
 ```
 🚀 Starting application...
 🔄 Running database migrations...
@@ -238,7 +256,7 @@ If you need to run migrations manually:
 2. Run:
    ```bash
    cd /app
-   node scripts/migrate.js
+   node dist/scripts/migrate.js
    ```
 
 ---
@@ -250,6 +268,7 @@ If you need to run migrations manually:
 **Problem**: Can't connect to Neon database
 
 **Solutions**:
+
 - Verify `DATABASE_URL` is correct (copy from Neon dashboard)
 - Ensure connection string includes `?sslmode=require`
 - Check Neon project is active (not suspended)
@@ -260,6 +279,7 @@ If you need to run migrations manually:
 **Problem**: GitHub OAuth fails
 
 **Solutions**:
+
 - Verify `GITHUB_CALLBACK_URL` matches GitHub app settings exactly
 - Ensure URL includes `https://` (not `http://`)
 - Check Client ID and Secret are correct
@@ -270,6 +290,7 @@ If you need to run migrations manually:
 **Problem**: Frontend can't call API
 
 **Solutions**:
+
 - Add frontend URL to `ALLOWED_ORIGINS`
 - Ensure no trailing slashes in URLs
 - Verify `credentials: true` in frontend fetch requests
@@ -280,6 +301,7 @@ If you need to run migrations manually:
 **Problem**: Migrations fail on deployment
 
 **Solutions**:
+
 - Check Neon database is accessible
 - Verify connection string has correct permissions
 - Check migration SQL syntax in `src/modules/shared/database/migrations/`
@@ -290,6 +312,7 @@ If you need to run migrations manually:
 **Problem**: First request after sleep is slow
 
 **Solutions**:
+
 - This is expected on Render free tier
 - Use a service like [Upptime](https://upptime.js.org/) to ping every 10 minutes
 - Consider upgrading to paid plan for always-on service

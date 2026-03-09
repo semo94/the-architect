@@ -53,3 +53,9 @@ app-example
 .env.test.development
 .env.test.production
 .env.test.staging
+
+
+# Agentic workflow
+.agents/
+.vscode/mcp.json
+skills-lock.json
