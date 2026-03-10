@@ -139,6 +139,10 @@ class AuthService {
     ]);
   }
 
+  /**
+   * Lightweight session probe — does NOT trigger refresh.
+   * The store layer decides whether to attempt a refresh on failure.
+   */
   async checkSession(): Promise<boolean> {
     try {
       const headers = new Headers({ 'X-Platform': this.platform });
@@ -151,7 +155,6 @@ class AuthService {
         headers.set('Authorization', `Bearer ${token}`);
       }
 
-      // Session probe should be non-intrusive: do not trigger refresh flow.
       const response = await fetch(`${API_URL}/auth/session`, {
         method: 'GET',
         headers,
@@ -162,6 +165,19 @@ class AuthService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Returns true when a refresh attempt is worth making.
+   * Mobile: checks SecureStore for a stored refresh token.
+   * Web: always returns true (can't inspect httpOnly cookies).
+   */
+  async hasRefreshToken(): Promise<boolean> {
+    if (this.isWeb) {
+      return true;
+    }
+    const token = await this.getRefreshToken();
+    return token !== null;
   }
 
   async getCurrentUser(): Promise<User> {
@@ -184,13 +200,20 @@ class AuthService {
       try {
         const refreshToken = await this.getRefreshToken();
 
+        const headers: Record<string, string> = {
+          'X-Platform': this.platform,
+        };
+
+        let body: string | undefined;
+        if (!this.isWeb && refreshToken) {
+          headers['Content-Type'] = 'application/json';
+          body = JSON.stringify({ refreshToken });
+        }
+
         const response = await fetch(`${API_URL}/auth/refresh`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Platform': this.platform,
-          },
-          body: !this.isWeb && refreshToken ? JSON.stringify({ refreshToken }) : undefined,
+          headers,
+          body,
           credentials: this.isWeb ? 'include' : 'same-origin',
         });
 

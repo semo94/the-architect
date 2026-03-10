@@ -30,6 +30,15 @@ const envSchema = z.object({
   // Security
   ALLOWED_ORIGINS: z.string().transform(s => s.split(',')),
   ENABLE_FINGERPRINTING: z.string().default('true').transform(val => val === 'true'),
+
+  // LLM
+  LLM_PROVIDER: z.enum(['anthropic', 'openai']).default('anthropic'),
+  LLM_API_KEY: z.string().min(1),
+  LLM_API_URL: z.string().url().optional(),
+  LLM_MODEL: z.string().default('claude-3-5-sonnet-20241022'),
+  LLM_ANTHROPIC_VERSION: z.string().default('2023-06-01'),
+  LLM_MAX_TOKENS: z.string().default('4000').transform(Number),
+  LLM_TEMPERATURE: z.string().default('0.7').transform(Number),
 });
 
 export type Env = z.infer<typeof envSchema>;

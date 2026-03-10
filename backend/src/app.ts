@@ -1,16 +1,17 @@
-import Fastify from 'fastify';
+import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
-import rateLimit from '@fastify/rate-limit';
 import jwt from '@fastify/jwt';
-import cookie from '@fastify/cookie';
+import rateLimit from '@fastify/rate-limit';
+import Fastify from 'fastify';
 import { authRoutes } from './modules/auth/auth.routes.js';
-import { userRoutes } from './modules/user/user.routes.js';
+import { jwtGuard } from './modules/auth/guards/jwt.guard.js';
+import { llmRoutes } from './modules/llm/llm.routes.js';
+import { RATE_LIMITS } from './modules/shared/config/constants.js';
+import { env } from './modules/shared/config/env.js';
 import { errorHandler } from './modules/shared/middleware/error-handler.js';
 import { requestLogger } from './modules/shared/middleware/request-logger.js';
-import { jwtGuard } from './modules/auth/guards/jwt.guard.js';
-import { env } from './modules/shared/config/env.js';
-import { RATE_LIMITS } from './modules/shared/config/constants.js';
+import { userRoutes } from './modules/user/user.routes.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -85,6 +86,7 @@ export async function buildApp() {
   // Register routes
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(userRoutes, { prefix: '/users' });
+  await app.register(llmRoutes, { prefix: '/llm' });
 
   return app;
 }

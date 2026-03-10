@@ -30,7 +30,17 @@
  * - Schema provides context and boundaries, not a catalog
  */
 
-import { TopicType } from '../types';
+export type TopicType =
+  | 'concepts'
+  | 'patterns'
+  | 'technologies'
+  | 'strategies'
+  | 'models'
+  | 'frameworks'
+  | 'protocols'
+  | 'practices'
+  | 'methodologies'
+  | 'architectures';
 
 export interface SubcategorySchema {
   description: string;
