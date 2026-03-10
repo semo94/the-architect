@@ -1,6 +1,7 @@
 # Technical Specification: Breadthwise Multi-Type Topic System
 
 ## Executive Summary
+
 Transform Breadthwise from a "technology discovery" app to a comprehensive "architectural knowledge" platform by implementing a multi-type topic system where subcategories can contain multiple knowledge types (concepts, patterns, technologies, etc.). This design enables more accurate LLM generation, better user control, and reflects the reality that architectural domains naturally contain mixed content types.
 
 ---
@@ -13,20 +14,20 @@ Transform Breadthwise from a "technology discovery" app to a comprehensive "arch
 
 ```typescript
 export type TopicType =
-  | 'concepts'
-  | 'patterns'
-  | 'technologies'
-  | 'strategies'
-  | 'models'
-  | 'frameworks'
-  | 'protocols'
-  | 'practices'
-  | 'methodologies'
-  | 'architectures';
+  | "concepts"
+  | "patterns"
+  | "technologies"
+  | "strategies"
+  | "models"
+  | "frameworks"
+  | "protocols"
+  | "practices"
+  | "methodologies"
+  | "architectures";
 
 export interface SubcategorySchema {
   description: string;
-  topicTypes: TopicType[];  // Array of supported topic types
+  topicTypes: TopicType[]; // Array of supported topic types
 
   // Dynamic properties - at least one must exist for each topicType
   concepts?: string[];
@@ -40,24 +41,24 @@ export interface SubcategorySchema {
   methodologies?: string[];
   architectures?: string[];
 
-  learningPath?: 'foundational' | 'intermediate' | 'advanced';
+  learningPath?: "foundational" | "intermediate" | "advanced";
 }
 
 export interface CategorySchema {
   description: string;
-  architectureLevel: 'foundational' | 'intermediate' | 'advanced';
+  architectureLevel: "foundational" | "intermediate" | "advanced";
   subcategories: Record<string, SubcategorySchema>;
 }
 
 export interface Topic {
   id: string;
   name: string;
-  topicType: TopicType;  // The specific type of THIS topic
+  topicType: TopicType; // The specific type of THIS topic
   category: string;
   subcategory: string;
   content: TopicContent;
-  status: 'discovered' | 'learned';
-  discoveryMethod: 'surprise' | 'guided';
+  status: "discovered" | "learned";
+  discoveryMethod: "surprise" | "guided";
   discoveredAt: string;
   learnedAt: string | null;
 }
@@ -77,7 +78,7 @@ export interface Quiz {
   id: string;
   topicId: string;
   topicName: string;
-  topicType: TopicType;  // Add this for context
+  topicType: TopicType; // Add this for context
   questions: QuizQuestion[];
   currentQuestionIndex: number;
   score: number;
@@ -95,10 +96,12 @@ export interface QuizQuestion {
 
 ### 1.2 Schema Structure
 
-#### File: `src/constants/categories.ts`
+#### File: `backend/src/modules/llm/categories.ts` _(single source of truth — moved to backend)_
+
+> **Note**: This file was originally at `src/constants/categories.ts` in the frontend. It has since been migrated to the Fastify backend as part of the LLM backend migration. The frontend no longer imports this file directly — instead it fetches the schema at runtime via `GET /llm/categories` using `src/services/categorySchemaService.ts`.
 
 ```typescript
-import { CategorySchema, TopicType } from '../types';
+import { CategorySchema, TopicType } from "../types";
 
 const categorySchema: Record<string, CategorySchema> = {
   "System Design Fundamentals": {
@@ -107,7 +110,7 @@ const categorySchema: Record<string, CategorySchema> = {
     subcategories: {
       "Distributed Systems Theory": {
         description: "Theoretical foundations of distributed computing",
-        topicTypes: ["concepts", "models"],  // Multiple types!
+        topicTypes: ["concepts", "models"], // Multiple types!
         concepts: [
           "CAP Theorem",
           "PACELC Theorem",
@@ -115,14 +118,14 @@ const categorySchema: Record<string, CategorySchema> = {
           "Vector Clocks",
           "Distributed Consensus",
           "Two-Phase Commit",
-          "Quorum Systems"
+          "Quorum Systems",
         ],
         models: [
           "Shared-Nothing Architecture",
           "Shared-Disk Architecture",
-          "Replicated State Machines"
+          "Replicated State Machines",
         ],
-        learningPath: "foundational"
+        learningPath: "foundational",
       },
 
       "Scalability Principles": {
@@ -134,13 +137,13 @@ const categorySchema: Record<string, CategorySchema> = {
           "Load Distribution",
           "Stateless Design",
           "Caching Layers",
-          "Read vs Write Scaling"
+          "Read vs Write Scaling",
         ],
         concepts: [
           "Scalability Triangle",
           "Amdahl's Law",
-          "Universal Scalability Law"
-        ]
+          "Universal Scalability Law",
+        ],
       },
 
       "Reliability & Fault Tolerance": {
@@ -151,16 +154,16 @@ const categorySchema: Record<string, CategorySchema> = {
           "Blast Radius",
           "Mean Time Between Failures (MTBF)",
           "Recovery Time Objective (RTO)",
-          "Recovery Point Objective (RPO)"
+          "Recovery Point Objective (RPO)",
         ],
         patterns: [
           "Redundancy Patterns",
           "Graceful Degradation",
           "Bulkhead Pattern",
-          "Timeout Pattern"
-        ]
-      }
-    }
+          "Timeout Pattern",
+        ],
+      },
+    },
   },
 
   "Architecture Patterns & Styles": {
@@ -175,32 +178,32 @@ const categorySchema: Record<string, CategorySchema> = {
           "Service-Oriented Architecture (SOA)",
           "Modular Monolith",
           "Serverless Architecture",
-          "Space-Based Architecture"
+          "Space-Based Architecture",
         ],
         concepts: [
           "Service Boundaries",
           "Bounded Context",
           "Service Mesh",
-          "Conway's Law"
-        ]
+          "Conway's Law",
+        ],
       },
 
       "Event-Driven Patterns": {
         description: "Patterns for event-based architectures",
-        topicTypes: ["patterns", "architectures"],  // Mixed types
+        topicTypes: ["patterns", "architectures"], // Mixed types
         patterns: [
           "Event Sourcing",
           "CQRS (Command Query Responsibility Segregation)",
           "Saga Pattern",
           "Event Notification",
           "Event-Carried State Transfer",
-          "Transactional Outbox"
+          "Transactional Outbox",
         ],
         architectures: [
           "Event-Driven Architecture (EDA)",
           "Reactive Architecture",
-          "Actor Model"
-        ]
+          "Actor Model",
+        ],
       },
 
       "Data Management Patterns": {
@@ -211,18 +214,18 @@ const categorySchema: Record<string, CategorySchema> = {
           "Shared Database Anti-pattern",
           "API Composition",
           "Materialized View",
-          "Change Data Capture (CDC)"
+          "Change Data Capture (CDC)",
         ],
         strategies: [
           "Data Replication Strategies",
           "Data Partitioning",
-          "Polyglot Persistence"
-        ]
+          "Polyglot Persistence",
+        ],
       },
 
       "Integration Patterns": {
         description: "Patterns for system integration",
-        topicTypes: ["patterns"],  // Single type (still array)
+        topicTypes: ["patterns"], // Single type (still array)
         patterns: [
           "API Gateway",
           "Backend for Frontend (BFF)",
@@ -231,8 +234,8 @@ const categorySchema: Record<string, CategorySchema> = {
           "Server-Side Discovery",
           "Aggregator Pattern",
           "Proxy Pattern",
-          "Gateway Routing"
-        ]
+          "Gateway Routing",
+        ],
       },
 
       "Resilience Patterns": {
@@ -246,15 +249,15 @@ const categorySchema: Record<string, CategorySchema> = {
           "Rate Limiting",
           "Throttling",
           "Fallback",
-          "Hedged Requests"
+          "Hedged Requests",
         ],
         practices: [
           "Chaos Engineering",
           "Fault Injection Testing",
-          "Game Days"
-        ]
-      }
-    }
+          "Game Days",
+        ],
+      },
+    },
   },
 
   "Data Storage & Management": {
@@ -272,7 +275,7 @@ const categorySchema: Record<string, CategorySchema> = {
           "Neo4j",
           "Elasticsearch",
           "DynamoDB",
-          "CockroachDB"
+          "CockroachDB",
         ],
         concepts: [
           "Relational Model",
@@ -280,8 +283,8 @@ const categorySchema: Record<string, CategorySchema> = {
           "Key-Value Model",
           "Column-Family Model",
           "Graph Model",
-          "Time-Series Model"
-        ]
+          "Time-Series Model",
+        ],
       },
 
       "Caching Strategies": {
@@ -292,19 +295,14 @@ const categorySchema: Record<string, CategorySchema> = {
           "Read-Through",
           "Write-Through",
           "Write-Behind",
-          "Refresh-Ahead"
+          "Refresh-Ahead",
         ],
         patterns: [
           "Distributed Caching",
           "Local Caching",
-          "Multi-Level Caching"
+          "Multi-Level Caching",
         ],
-        technologies: [
-          "Redis",
-          "Memcached",
-          "Varnish",
-          "CDN Caching"
-        ]
+        technologies: ["Redis", "Memcached", "Varnish", "CDN Caching"],
       },
 
       "Data Replication": {
@@ -315,16 +313,16 @@ const categorySchema: Record<string, CategorySchema> = {
           "Multi-Primary Replication",
           "Leaderless Replication",
           "Synchronous Replication",
-          "Asynchronous Replication"
+          "Asynchronous Replication",
         ],
         concepts: [
           "Replication Lag",
           "Read Your Writes Consistency",
           "Monotonic Reads",
-          "Causality Tracking"
-        ]
-      }
-    }
+          "Causality Tracking",
+        ],
+      },
+    },
   },
 
   "API Design & Management": {
@@ -340,14 +338,9 @@ const categorySchema: Record<string, CategorySchema> = {
           "gRPC",
           "SOAP",
           "WebSocket APIs",
-          "Server-Sent Events (SSE)"
+          "Server-Sent Events (SSE)",
         ],
-        protocols: [
-          "HTTP/1.1",
-          "HTTP/2",
-          "HTTP/3",
-          "WebSocket Protocol"
-        ]
+        protocols: ["HTTP/1.1", "HTTP/2", "HTTP/3", "WebSocket Protocol"],
       },
 
       "API Design Principles": {
@@ -357,15 +350,15 @@ const categorySchema: Record<string, CategorySchema> = {
           "REST Maturity Model",
           "HATEOAS",
           "Idempotency",
-          "API Versioning Strategies"
+          "API Versioning Strategies",
         ],
         practices: [
           "API-First Design",
           "Contract-First Development",
           "Backward Compatibility",
           "Pagination Strategies",
-          "Error Handling Standards"
-        ]
+          "Error Handling Standards",
+        ],
       },
 
       "API Security": {
@@ -376,21 +369,21 @@ const categorySchema: Record<string, CategorySchema> = {
           "OpenID Connect",
           "JWT (JSON Web Tokens)",
           "API Keys",
-          "SAML"
+          "SAML",
         ],
         patterns: [
           "Token-Based Authentication",
           "API Gateway Security",
-          "Zero Trust APIs"
+          "Zero Trust APIs",
         ],
         practices: [
           "Rate Limiting",
           "IP Whitelisting",
           "CORS Configuration",
-          "Input Validation"
-        ]
-      }
-    }
+          "Input Validation",
+        ],
+      },
+    },
   },
 
   "Messaging & Event Streaming": {
@@ -408,14 +401,14 @@ const categorySchema: Record<string, CategorySchema> = {
           "Google Pub/Sub",
           "Azure Service Bus",
           "NATS",
-          "Apache Pulsar"
+          "Apache Pulsar",
         ],
         patterns: [
           "Point-to-Point Messaging",
           "Publish-Subscribe",
           "Request-Reply",
-          "Dead Letter Queue"
-        ]
+          "Dead Letter Queue",
+        ],
       },
 
       "Event Streaming Platforms": {
@@ -426,17 +419,17 @@ const categorySchema: Record<string, CategorySchema> = {
           "Amazon Kinesis",
           "Apache Pulsar",
           "Azure Event Hubs",
-          "Confluent Platform"
+          "Confluent Platform",
         ],
         concepts: [
           "Event Log",
           "Stream Partitioning",
           "Consumer Groups",
           "Offset Management",
-          "Exactly-Once Semantics"
-        ]
-      }
-    }
+          "Exactly-Once Semantics",
+        ],
+      },
+    },
   },
 
   "Domain-Driven Design": {
@@ -454,7 +447,7 @@ const categorySchema: Record<string, CategorySchema> = {
           "Subdomain",
           "Core Domain",
           "Supporting Subdomain",
-          "Generic Subdomain"
+          "Generic Subdomain",
         ],
         patterns: [
           "Shared Kernel",
@@ -463,8 +456,8 @@ const categorySchema: Record<string, CategorySchema> = {
           "Anti-Corruption Layer",
           "Open Host Service",
           "Published Language",
-          "Separate Ways"
-        ]
+          "Separate Ways",
+        ],
       },
 
       "Tactical Design": {
@@ -479,15 +472,15 @@ const categorySchema: Record<string, CategorySchema> = {
           "Domain Service",
           "Application Service",
           "Factory Pattern",
-          "Domain Event"
+          "Domain Event",
         ],
         practices: [
           "Anemic Domain Model (Anti-pattern)",
           "Rich Domain Model",
-          "Persistence Ignorance"
-        ]
-      }
-    }
+          "Persistence Ignorance",
+        ],
+      },
+    },
   },
 
   "Cloud-Native Architecture": {
@@ -502,15 +495,15 @@ const categorySchema: Record<string, CategorySchema> = {
           "Platform as a Service (PaaS)",
           "Function as a Service (FaaS)",
           "Container as a Service (CaaS)",
-          "Backend as a Service (BaaS)"
+          "Backend as a Service (BaaS)",
         ],
         technologies: [
           "AWS Lambda",
           "Azure Functions",
           "Google Cloud Run",
           "AWS EC2",
-          "AWS ECS/EKS"
-        ]
+          "AWS ECS/EKS",
+        ],
       },
 
       "Container Orchestration": {
@@ -521,7 +514,7 @@ const categorySchema: Record<string, CategorySchema> = {
           "Docker Swarm",
           "Amazon ECS",
           "Nomad",
-          "OpenShift"
+          "OpenShift",
         ],
         concepts: [
           "Pod",
@@ -530,17 +523,17 @@ const categorySchema: Record<string, CategorySchema> = {
           "ConfigMap",
           "Secret",
           "StatefulSet",
-          "DaemonSet"
-        ]
-      }
-    }
+          "DaemonSet",
+        ],
+      },
+    },
   },
 
   "Security & Identity": {
     description: "Authentication, authorization, and security patterns",
     architectureLevel: "intermediate",
     subcategories: {
-      "Authentication": {
+      Authentication: {
         description: "Verifying user identity",
         topicTypes: ["protocols", "technologies", "patterns"],
         protocols: [
@@ -548,37 +541,31 @@ const categorySchema: Record<string, CategorySchema> = {
           "OpenID Connect",
           "SAML 2.0",
           "Kerberos",
-          "LDAP"
+          "LDAP",
         ],
-        technologies: [
-          "Auth0",
-          "Okta",
-          "AWS Cognito",
-          "Azure AD",
-          "Keycloak"
-        ],
+        technologies: ["Auth0", "Okta", "AWS Cognito", "Azure AD", "Keycloak"],
         patterns: [
           "Single Sign-On (SSO)",
           "Multi-Factor Authentication (MFA)",
           "Passwordless Authentication",
-          "Social Login"
-        ]
+          "Social Login",
+        ],
       },
 
-      "Authorization": {
+      Authorization: {
         description: "Controlling access to resources",
         topicTypes: ["models", "patterns"],
         models: [
           "Role-Based Access Control (RBAC)",
           "Attribute-Based Access Control (ABAC)",
           "Policy-Based Access Control (PBAC)",
-          "Access Control Lists (ACL)"
+          "Access Control Lists (ACL)",
         ],
         patterns: [
           "Claims-Based Authorization",
           "Permission-Based Authorization",
-          "Resource-Based Authorization"
-        ]
+          "Resource-Based Authorization",
+        ],
       },
 
       "Security Patterns": {
@@ -589,17 +576,17 @@ const categorySchema: Record<string, CategorySchema> = {
           "Principle of Least Privilege",
           "Zero Trust Architecture",
           "Security by Design",
-          "Fail Securely"
+          "Fail Securely",
         ],
         practices: [
           "Security Auditing",
           "Penetration Testing",
           "Vulnerability Scanning",
           "Threat Modeling",
-          "Security Code Review"
-        ]
-      }
-    }
+          "Security Code Review",
+        ],
+      },
+    },
   },
 
   "DevOps & Continuous Delivery": {
@@ -614,7 +601,7 @@ const categorySchema: Record<string, CategorySchema> = {
           "Continuous Delivery",
           "Continuous Deployment",
           "Trunk-Based Development",
-          "Feature Toggles"
+          "Feature Toggles",
         ],
         technologies: [
           "Jenkins",
@@ -623,8 +610,8 @@ const categorySchema: Record<string, CategorySchema> = {
           "CircleCI",
           "Azure DevOps",
           "ArgoCD",
-          "Spinnaker"
-        ]
+          "Spinnaker",
+        ],
       },
 
       "Infrastructure as Code": {
@@ -634,7 +621,7 @@ const categorySchema: Record<string, CategorySchema> = {
           "Declarative Configuration",
           "Immutable Infrastructure",
           "Infrastructure Testing",
-          "Drift Detection"
+          "Drift Detection",
         ],
         technologies: [
           "Terraform",
@@ -642,10 +629,10 @@ const categorySchema: Record<string, CategorySchema> = {
           "Pulumi",
           "Ansible",
           "Chef",
-          "Puppet"
-        ]
-      }
-    }
+          "Puppet",
+        ],
+      },
+    },
   },
 
   "Observability & Operations": {
@@ -660,7 +647,7 @@ const categorySchema: Record<string, CategorySchema> = {
           "RED Method",
           "USE Method",
           "SLI/SLO/SLA",
-          "Alerting Strategies"
+          "Alerting Strategies",
         ],
         technologies: [
           "Prometheus",
@@ -668,14 +655,14 @@ const categorySchema: Record<string, CategorySchema> = {
           "Datadog",
           "New Relic",
           "CloudWatch",
-          "Splunk"
+          "Splunk",
         ],
         concepts: [
           "Metrics vs Logs vs Traces",
           "Cardinality",
           "Time Series Data",
-          "Aggregation Strategies"
-        ]
+          "Aggregation Strategies",
+        ],
       },
 
       "Distributed Tracing": {
@@ -684,33 +671,32 @@ const categorySchema: Record<string, CategorySchema> = {
         practices: [
           "Context Propagation",
           "Trace Sampling",
-          "Service Dependency Mapping"
+          "Service Dependency Mapping",
         ],
         technologies: [
           "Jaeger",
           "Zipkin",
           "OpenTelemetry",
           "AWS X-Ray",
-          "Google Cloud Trace"
+          "Google Cloud Trace",
         ],
-        concepts: [
-          "Spans",
-          "Traces",
-          "Trace Context",
-          "Baggage"
-        ]
-      }
-    }
-  }
+        concepts: ["Spans", "Traces", "Trace Context", "Baggage"],
+      },
+    },
+  },
 };
 
 // Runtime validation helper
-export function validateSubcategorySchema(subcategory: SubcategorySchema): boolean {
+export function validateSubcategorySchema(
+  subcategory: SubcategorySchema,
+): boolean {
   // Check that each topicType has a corresponding property
   for (const topicType of subcategory.topicTypes) {
     const examples = subcategory[topicType as keyof SubcategorySchema];
     if (!Array.isArray(examples)) {
-      console.warn(`Subcategory declares topicType "${topicType}" but has no corresponding array property`);
+      console.warn(
+        `Subcategory declares topicType "${topicType}" but has no corresponding array property`,
+      );
       // Allow this - examples are optional
     }
   }
@@ -718,13 +704,15 @@ export function validateSubcategorySchema(subcategory: SubcategorySchema): boole
 }
 
 // Helper to get all examples for a subcategory
-export function getAllExamplesFromSubcategory(subcategory: SubcategorySchema): Array<{type: TopicType, name: string}> {
-  const allExamples: Array<{type: TopicType, name: string}> = [];
+export function getAllExamplesFromSubcategory(
+  subcategory: SubcategorySchema,
+): Array<{ type: TopicType; name: string }> {
+  const allExamples: Array<{ type: TopicType; name: string }> = [];
 
   for (const topicType of subcategory.topicTypes) {
     const examples = subcategory[topicType as keyof SubcategorySchema];
     if (Array.isArray(examples)) {
-      examples.forEach(name => {
+      examples.forEach((name) => {
         allExamples.push({ type: topicType, name });
       });
     }
@@ -759,54 +747,69 @@ export default categorySchema;
 #### File: `src/utils/prompts.ts`
 
 ```typescript
-import { Topic, TopicType, SubcategorySchema } from '../types';
+import { Topic, TopicType, SubcategorySchema } from "../types";
 
 export const promptTemplates = {
   /**
    * Unified topic generation for both Surprise Me and Guide Me flows
    */
   generateTopic: (
-    mode: 'surprise' | 'guided',
+    mode: "surprise" | "guided",
     alreadyDiscovered: string[],
     dismissed: string[],
     categorySchema: any,
     constraints?: {
       category?: string;
       subcategory?: string;
-      topicType?: TopicType;  // Now explicitly selected
-      learningGoal?: 'discover_new' | 'popular_choice' | 'compare_options' | 'advanced_topic';
-    }
+      topicType?: TopicType; // Now explicitly selected
+      learningGoal?:
+        | "discover_new"
+        | "popular_choice"
+        | "compare_options"
+        | "advanced_topic";
+    },
   ): string => {
     const subcategory: SubcategorySchema | undefined =
       constraints?.category && constraints?.subcategory
-        ? categorySchema[constraints.category]?.subcategories[constraints.subcategory]
+        ? categorySchema[constraints.category]?.subcategories[
+            constraints.subcategory
+          ]
         : undefined;
 
     // Get examples for the specific topic type if constrained
-    const relevantExamples = subcategory && constraints?.topicType
-      ? subcategory[constraints.topicType as keyof SubcategorySchema] || []
-      : [];
+    const relevantExamples =
+      subcategory && constraints?.topicType
+        ? subcategory[constraints.topicType as keyof SubcategorySchema] || []
+        : [];
 
     return `
 You are an expert software architecture mentor generating learning content.
 
 GENERATION MODE: ${mode}
 
-${mode === 'guided' ? `
+${
+  mode === "guided"
+    ? `
 GUIDED CONSTRAINTS:
 - Category: ${constraints?.category}
 - Subcategory: ${constraints?.subcategory}
 - Topic Type: ${constraints?.topicType} (MUST generate this type)
 - Learning Goal: ${constraints?.learningGoal}
-${relevantExamples.length > 0 ? `
+${
+  relevantExamples.length > 0
+    ? `
 - Example ${constraints?.topicType}: ${JSON.stringify(relevantExamples)}
-` : ''}
-` : `
+`
+    : ""
+}
+`
+    : `
 SURPRISE MODE:
 - Randomly select from the entire category schema
 - Randomly select topic type from the subcategory's topicTypes array
 - Ensure variety across all topic types
-`}
+`
+}
 
 TOPIC TYPE DEFINITIONS:
 - concepts: Theoretical foundations and principles (CAP Theorem, Consistency Models)
@@ -823,20 +826,24 @@ TOPIC TYPE DEFINITIONS:
 CONTEXT:
 - Already discovered topics: ${JSON.stringify(alreadyDiscovered)}
 - Recently dismissed: ${JSON.stringify(dismissed)}
-${mode === 'surprise' ? `- Available schema: ${JSON.stringify(categorySchema)}` : ''}
+${mode === "surprise" ? `- Available schema: ${JSON.stringify(categorySchema)}` : ""}
 
 SELECTION REQUIREMENTS:
-${mode === 'guided' ? `
+${
+  mode === "guided"
+    ? `
 1. MUST generate a topic of type: ${constraints?.topicType}
 2. Topic should be from subcategory: ${constraints?.subcategory}
 3. Align with learning goal: ${constraints?.learningGoal}
 4. Can use examples as inspiration OR generate any valid ${constraints?.topicType} in this domain
-` : `
+`
+    : `
 1. Randomly select a category from the schema
 2. Randomly select a subcategory within that category
 3. Randomly select ONE topicType from that subcategory's topicTypes array
 4. Generate a topic of that specific type
-`}
+`
+}
 5. Topic name must NOT be in discovered or dismissed lists
 6. Ensure topic is real, recognized, and architecturally significant
 
@@ -895,9 +902,9 @@ architectures:
 OUTPUT FORMAT (JSON - flat structure for streaming):
 {
   "name": "Specific Topic Name",
-  "topicType": "${constraints?.topicType || 'auto-detect from subcategory'}",
-  "category": "${constraints?.category || 'from schema'}",
-  "subcategory": "${constraints?.subcategory || 'from schema'}",
+  "topicType": "${constraints?.topicType || "auto-detect from subcategory"}",
+  "category": "${constraints?.category || "from schema"}",
+  "subcategory": "${constraints?.subcategory || "from schema"}",
   "what": "2-3 substantial paragraphs explaining the topic in depth. Tailor explanation to the topic type. Be specific, technical, and comprehensive.",
   "why": "2-3 substantial paragraphs on architectural significance, when to use, problems it solves, strategic value.",
   "pro_0": "First key advantage/strength (contextualized to topic type)",
@@ -921,7 +928,7 @@ CRITICAL REQUIREMENTS:
 - Content must be accurate, substantial, and architecturally relevant
 - Comparisons must be with genuinely related topics of same or related types
 - Return ONLY valid JSON without markdown code blocks or preamble
-- topicType must exactly match ${constraints?.topicType ? `"${constraints.topicType}"` : 'the subcategory definition'}
+- topicType must exactly match ${constraints?.topicType ? `"${constraints.topicType}"` : "the subcategory definition"}
 
 Generate the topic now:`;
   },
@@ -997,7 +1004,7 @@ OUTPUT FORMAT (JSON):
 }
 
 Return ONLY valid JSON without markdown code blocks.
-Generate the quiz now:`
+Generate the quiz now:`,
 };
 ```
 
@@ -1010,8 +1017,8 @@ Generate the quiz now:`
 #### New File: `src/constants/guideMeFlow.ts`
 
 ```typescript
-import categorySchema, { getAllExamplesFromSubcategory } from './categories';
-import { TopicType } from '../types';
+import categorySchema, { getAllExamplesFromSubcategory } from "./categories";
+import { TopicType } from "../types";
 
 export interface GuideOption {
   value: string;
@@ -1044,8 +1051,8 @@ export class GuideMeFlow {
       options: sorted.map(([key, value]) => ({
         value: key,
         label: key,
-        description: `${value.description} (${value.architectureLevel})`
-      }))
+        description: `${value.description} (${value.architectureLevel})`,
+      })),
     };
   }
 
@@ -1065,8 +1072,8 @@ export class GuideMeFlow {
       options: subcategories.map(([key, value]) => ({
         value: key,
         label: key,
-        description: value.description
-      }))
+        description: value.description,
+      })),
     };
   }
 
@@ -1076,68 +1083,72 @@ export class GuideMeFlow {
    */
   static getStep3Question(
     selectedCategory: string,
-    selectedSubcategory: string
+    selectedSubcategory: string,
   ): GuideQuestion | null {
-    const subcategory = categorySchema[selectedCategory]?.subcategories[selectedSubcategory];
+    const subcategory =
+      categorySchema[selectedCategory]?.subcategories[selectedSubcategory];
     if (!subcategory) {
       throw new Error(`Invalid subcategory: ${selectedSubcategory}`);
     }
 
     // CRITICAL: If only one topic type, skip this step
     if (subcategory.topicTypes.length === 1) {
-      return null;  // No question needed
+      return null; // No question needed
     }
 
-    const typeLabels: Record<TopicType, {label: string, description: string}> = {
+    const typeLabels: Record<
+      TopicType,
+      { label: string; description: string }
+    > = {
       concepts: {
         label: "Concepts & Theory",
-        description: "Learn theoretical foundations and principles"
+        description: "Learn theoretical foundations and principles",
       },
       patterns: {
         label: "Patterns & Solutions",
-        description: "Discover reusable architectural patterns"
+        description: "Discover reusable architectural patterns",
       },
       technologies: {
         label: "Tools & Technologies",
-        description: "Explore specific tools and platforms"
+        description: "Explore specific tools and platforms",
       },
       strategies: {
         label: "Strategies & Approaches",
-        description: "Understand different approaches and methods"
+        description: "Understand different approaches and methods",
       },
       models: {
         label: "Models & Paradigms",
-        description: "Learn architectural models and paradigms"
+        description: "Learn architectural models and paradigms",
       },
       frameworks: {
         label: "Frameworks & Methodologies",
-        description: "Explore structured frameworks"
+        description: "Explore structured frameworks",
       },
       protocols: {
         label: "Protocols & Standards",
-        description: "Understand protocols and specifications"
+        description: "Understand protocols and specifications",
       },
       practices: {
         label: "Practices & Techniques",
-        description: "Learn development and operational practices"
+        description: "Learn development and operational practices",
       },
       methodologies: {
         label: "Methodologies",
-        description: "Comprehensive development approaches"
+        description: "Comprehensive development approaches",
       },
       architectures: {
         label: "Architectures & Styles",
-        description: "System-level architectural styles"
-      }
+        description: "System-level architectural styles",
+      },
     };
 
     return {
       question: `What type of knowledge would you like to explore in ${selectedSubcategory}?`,
-      options: subcategory.topicTypes.map(type => ({
+      options: subcategory.topicTypes.map((type) => ({
         value: type,
         label: typeLabels[type].label,
-        description: typeLabels[type].description
-      }))
+        description: typeLabels[type].description,
+      })),
     };
   }
 
@@ -1147,7 +1158,7 @@ export class GuideMeFlow {
   static getStep4Question(
     selectedCategory: string,
     selectedSubcategory: string,
-    selectedTopicType: TopicType
+    selectedTopicType: TopicType,
   ): GuideQuestion {
     const typeDescriptions: Record<TopicType, string> = {
       concepts: "concepts",
@@ -1159,7 +1170,7 @@ export class GuideMeFlow {
       protocols: "protocols",
       practices: "practices",
       methodologies: "methodologies",
-      architectures: "architectures"
+      architectures: "architectures",
     };
 
     const typeLabel = typeDescriptions[selectedTopicType];
@@ -1170,24 +1181,24 @@ export class GuideMeFlow {
         {
           value: "discover_new",
           label: "Discover Something New",
-          description: `Find ${typeLabel} you haven't encountered before`
+          description: `Find ${typeLabel} you haven't encountered before`,
         },
         {
           value: "popular_choice",
           label: "Popular & Widely Used",
-          description: `Learn about commonly adopted ${typeLabel}`
+          description: `Learn about commonly adopted ${typeLabel}`,
         },
         {
           value: "compare_options",
           label: "Compare Alternatives",
-          description: `Understand trade-offs between different ${typeLabel}`
+          description: `Understand trade-offs between different ${typeLabel}`,
         },
         {
           value: "advanced_topic",
           label: "Advanced Challenge",
-          description: `Explore complex or cutting-edge ${typeLabel}`
-        }
-      ]
+          description: `Explore complex or cutting-edge ${typeLabel}`,
+        },
+      ],
     };
   }
 
@@ -1198,7 +1209,7 @@ export class GuideMeFlow {
     category: string,
     subcategory: string,
     topicType: TopicType,
-    learningGoal: string
+    learningGoal: string,
   ): {
     category: string;
     subcategory: string;
@@ -1209,14 +1220,17 @@ export class GuideMeFlow {
       category,
       subcategory,
       topicType,
-      learningGoal
+      learningGoal,
     };
   }
 
   /**
    * Get the single topic type if subcategory has only one
    */
-  static getSingleTopicType(category: string, subcategory: string): TopicType | null {
+  static getSingleTopicType(
+    category: string,
+    subcategory: string,
+  ): TopicType | null {
     const sub = categorySchema[category]?.subcategories[subcategory];
     if (!sub || sub.topicTypes.length !== 1) {
       return null;
@@ -1413,9 +1427,11 @@ export default GuideMeFlowComponent;
 #### File: `src/services/llmService.ts`
 
 ```typescript
-import { Topic, TopicType } from '../types';
-import categorySchema, { getAllExamplesFromSubcategory } from '../constants/categories';
-import { promptTemplates } from '../utils/prompts';
+import { Topic, TopicType } from "../types";
+import categorySchema, {
+  getAllExamplesFromSubcategory,
+} from "../constants/categories";
+import { promptTemplates } from "../utils/prompts";
 
 class LLMService {
   /**
@@ -1425,21 +1441,21 @@ class LLMService {
   async generateSurpriseTopic(
     alreadyDiscovered: string[],
     dismissed: string[],
-    onProgress?: (partialText: string) => void
+    onProgress?: (partialText: string) => void,
   ): Promise<Topic> {
     // Build the prompt - LLM will handle random selection
     const prompt = promptTemplates.generateTopic(
-      'surprise',
+      "surprise",
       alreadyDiscovered,
       dismissed,
-      categorySchema
+      categorySchema,
     );
 
     // Call LLM with streaming
     const rawTopic = await this.streamingGenerate(prompt, onProgress);
 
     // Validate and return
-    return this.validateAndBuildTopic(rawTopic, 'surprise');
+    return this.validateAndBuildTopic(rawTopic, "surprise");
   }
 
   /**
@@ -1453,19 +1469,19 @@ class LLMService {
       learningGoal: string;
     },
     alreadyDiscovered: string[],
-    onProgress?: (partialText: string) => void
+    onProgress?: (partialText: string) => void,
   ): Promise<Topic> {
     const prompt = promptTemplates.generateTopic(
-      'guided',
+      "guided",
       alreadyDiscovered,
-      [],  // No dismissed list for guided
+      [], // No dismissed list for guided
       categorySchema,
-      constraints
+      constraints,
     );
 
     const rawTopic = await this.streamingGenerate(prompt, onProgress);
 
-    return this.validateAndBuildTopic(rawTopic, 'guided');
+    return this.validateAndBuildTopic(rawTopic, "guided");
   }
 
   /**
@@ -1492,9 +1508,9 @@ class LLMService {
 #### File: `src/store/useAppStore.ts`
 
 ```typescript
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { Topic, Quiz, TopicType } from '../types';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { Topic, Quiz, TopicType } from "../types";
 
 interface AppState {
   topics: Topic[];
@@ -1503,7 +1519,10 @@ interface AppState {
 
   // Actions
   addTopic: (topic: Topic) => void;
-  updateTopicStatus: (topicId: string, status: 'discovered' | 'learned') => void;
+  updateTopicStatus: (
+    topicId: string,
+    status: "discovered" | "learned",
+  ) => void;
   dismissTopic: (topicName: string) => void;
   deleteTopic: (topicId: string) => void;
 
@@ -1516,32 +1535,34 @@ interface AppState {
 const migrateData = (persistedState: any) => {
   // If old 'technologies' field exists, migrate to 'topics'
   if (persistedState.technologies && !persistedState.topics) {
-    console.log('Migrating technologies to topics...');
+    console.log("Migrating technologies to topics...");
 
     return {
       ...persistedState,
       topics: persistedState.technologies.map((tech: any) => ({
         ...tech,
         // Default to 'technologies' type if not specified
-        topicType: tech.topicType || 'technologies' as TopicType,
+        topicType: tech.topicType || ("technologies" as TopicType),
         content: {
           ...tech.content,
-          compareToSimilar: tech.content.compareToSimilar?.map((item: any) => ({
-            topic: item.technology || item.topic,
-            comparison: item.comparison
-          })) || []
-        }
+          compareToSimilar:
+            tech.content.compareToSimilar?.map((item: any) => ({
+              topic: item.technology || item.topic,
+              comparison: item.comparison,
+            })) || [],
+        },
       })),
       dismissedTopics: persistedState.dismissedTechnologies || [],
-      quizzes: persistedState.quizzes?.map((quiz: any) => ({
-        ...quiz,
-        topicId: quiz.technologyId || quiz.topicId,
-        topicName: quiz.technologyName || quiz.topicName,
-        topicType: quiz.topicType || 'technologies'
-      })) || [],
+      quizzes:
+        persistedState.quizzes?.map((quiz: any) => ({
+          ...quiz,
+          topicId: quiz.technologyId || quiz.topicId,
+          topicName: quiz.technologyName || quiz.topicName,
+          topicType: quiz.topicType || "technologies",
+        })) || [],
       // Remove old fields
       technologies: undefined,
-      dismissedTechnologies: undefined
+      dismissedTechnologies: undefined,
     };
   }
 
@@ -1557,57 +1578,64 @@ export const useAppStore = create<AppState>()(
 
       addTopic: (topic) =>
         set((state) => ({
-          topics: [...state.topics, topic]
+          topics: [...state.topics, topic],
         })),
 
       updateTopicStatus: (topicId, status) =>
         set((state) => ({
           topics: state.topics.map((t) =>
             t.id === topicId
-              ? { ...t, status, learnedAt: status === 'learned' ? new Date().toISOString() : t.learnedAt }
-              : t
-          )
+              ? {
+                  ...t,
+                  status,
+                  learnedAt:
+                    status === "learned"
+                      ? new Date().toISOString()
+                      : t.learnedAt,
+                }
+              : t,
+          ),
         })),
 
       dismissTopic: (topicName) =>
         set((state) => ({
-          dismissedTopics: [...state.dismissedTopics, topicName]
+          dismissedTopics: [...state.dismissedTopics, topicName],
         })),
 
       deleteTopic: (topicId) =>
         set((state) => ({
           topics: state.topics.filter((t) => t.id !== topicId),
-          quizzes: state.quizzes.filter((q) => q.topicId !== topicId)
+          quizzes: state.quizzes.filter((q) => q.topicId !== topicId),
         })),
 
       addQuiz: (quiz) =>
         set((state) => ({
-          quizzes: [...state.quizzes, quiz]
+          quizzes: [...state.quizzes, quiz],
         })),
 
       updateQuiz: (quizId, updates) =>
         set((state) => ({
           quizzes: state.quizzes.map((q) =>
-            q.id === quizId ? { ...q, ...updates } : q
-          )
+            q.id === quizId ? { ...q, ...updates } : q,
+          ),
         })),
 
       deleteQuiz: (quizId) =>
         set((state) => ({
-          quizzes: state.quizzes.filter((q) => q.id !== quizId)
-        }))
+          quizzes: state.quizzes.filter((q) => q.id !== quizId),
+        })),
     }),
     {
-      name: 'breadthwise-storage',
-      version: 2,  // Increment version for migration
+      name: "breadthwise-storage",
+      version: 2, // Increment version for migration
       migrate: (persistedState: any, version: number) => {
         if (version < 2) {
           return migrateData(persistedState);
         }
         return persistedState;
-      }
-    }
-  )
+      },
+    },
+  ),
 );
 ```
 
@@ -1616,35 +1644,43 @@ export const useAppStore = create<AppState>()(
 ## 6. Critical Issues & Considerations
 
 ### Issue 1: Type Safety for Dynamic Properties
+
 **Problem**: TypeScript can't enforce that `subcategory[topicType]` exists at compile time.
 
 **Solution**:
+
 ```typescript
 // Runtime helper
 function getExamplesForTopicType(
   subcategory: SubcategorySchema,
-  topicType: TopicType
+  topicType: TopicType,
 ): string[] | undefined {
-  return subcategory[topicType as keyof SubcategorySchema] as string[] | undefined;
+  return subcategory[topicType as keyof SubcategorySchema] as
+    | string[]
+    | undefined;
 }
 
 // Usage
-const examples = getExamplesForTopicType(subcategory, 'patterns') || [];
+const examples = getExamplesForTopicType(subcategory, "patterns") || [];
 ```
 
 ### Issue 2: LLM Compliance
+
 **Problem**: LLM might not respect the topicType constraint in guided mode.
 
 **Mitigation**:
+
 1. **Prompt engineering**: Emphasize "MUST generate type X" multiple times
 2. **Validation**: Check returned topicType matches constraint
 3. **Retry**: If mismatch, retry with more emphatic prompt
 4. **Examples**: Provide examples of the desired type in the prompt
 
 ### Issue 3: Empty Examples Arrays
+
 **Problem**: What if topicTypes declares a type but array is empty?
 
 **Decision**: **Allow it**. Reasons:
+
 - Examples are inspirational, not exhaustive
 - LLM can generate valid topics without examples
 - Forces us to trust LLM's domain knowledge
@@ -1653,23 +1689,27 @@ const examples = getExamplesForTopicType(subcategory, 'patterns') || [];
 **Validation**: Warn in console but don't block.
 
 ### Issue 4: Guide Me UX Complexity
+
 **Problem**: 4 steps might feel long.
 
 **Mitigations**:
+
 1. **Conditional step**: Skip topic type selection if only one type (implemented)
 2. **Progress indicator**: Show "Step 2 of 3" or "Step 3 of 4"
 3. **Back button**: Allow users to change previous selections
 4. **Breadcrumb**: Show selections made so far
 
 ### Issue 5: Surprise Me Randomness
+
 **Problem**: True randomness might repeatedly hit same categories.
 
 **Enhancement** (future):
+
 ```typescript
 // Weighted random selection
 function selectRandomSubcategory(
   categorySchema: any,
-  discoveredTopics: Topic[]
+  discoveredTopics: Topic[],
 ): { category: string; subcategory: string; topicType: TopicType } {
   // Weight toward categories with fewer discovered topics
   // This encourages exploration breadth
@@ -1681,7 +1721,10 @@ function selectRandomSubcategory(
 ## 7. Implementation Phases
 
 ### Phase 1: Core Types & Schema (3 hours)
-**Files**: `src/types/index.ts`, `src/constants/categories.ts`
+
+**Files**: `src/types/index.ts`, `backend/src/modules/llm/categories.ts`
+
+> The category schema now lives in the backend. Frontend types are defined locally in `src/types/categorySchema.ts`.
 
 1. Add new TopicType union
 2. Update SubcategorySchema with topicTypes array and dynamic properties
@@ -1692,6 +1735,7 @@ function selectRandomSubcategory(
 **Deliverable**: Type-safe schema with validation
 
 ### Phase 2: Prompt Engineering (2 hours)
+
 **Files**: `src/utils/prompts.ts`, `src/services/llmService.ts`
 
 1. Create unified generateTopic prompt with mode parameter
@@ -1703,6 +1747,7 @@ function selectRandomSubcategory(
 **Deliverable**: Single prompt template for both flows
 
 ### Phase 3: Guide Me Flow (3 hours)
+
 **Files**: `src/constants/guideMeFlow.ts`, `src/components/discover/GuideMeFlow.tsx`
 
 1. Create GuideMeFlow class with step methods
@@ -1714,6 +1759,7 @@ function selectRandomSubcategory(
 **Deliverable**: Hardcoded guided flow with conditional steps
 
 ### Phase 4: Store & Migration (1 hour)
+
 **Files**: `src/store/useAppStore.ts`
 
 1. Rename all technology references to topic
@@ -1725,6 +1771,7 @@ function selectRandomSubcategory(
 **Deliverable**: Backward-compatible store
 
 ### Phase 5: UI Updates (2 hours)
+
 **Files**: All component files
 
 1. Rename TechnologyCard → TopicCard
@@ -1751,43 +1798,51 @@ function selectRandomSubcategory(
 ## 8. Testing Strategy
 
 ### Unit Tests
+
 ```typescript
-describe('SubcategorySchema', () => {
-  it('should have topicTypes array', () => {
-    const sub = categorySchema['System Design Fundamentals'].subcategories['Distributed Systems Theory'];
-    expect(sub.topicTypes).toEqual(['concepts', 'models']);
+describe("SubcategorySchema", () => {
+  it("should have topicTypes array", () => {
+    const sub =
+      categorySchema["System Design Fundamentals"].subcategories[
+        "Distributed Systems Theory"
+      ];
+    expect(sub.topicTypes).toEqual(["concepts", "models"]);
   });
 
-  it('should have corresponding property for each topicType', () => {
-    const sub = categorySchema['System Design Fundamentals'].subcategories['Distributed Systems Theory'];
-    sub.topicTypes.forEach(type => {
+  it("should have corresponding property for each topicType", () => {
+    const sub =
+      categorySchema["System Design Fundamentals"].subcategories[
+        "Distributed Systems Theory"
+      ];
+    sub.topicTypes.forEach((type) => {
       expect(sub[type]).toBeDefined();
       expect(Array.isArray(sub[type])).toBe(true);
     });
   });
 });
 
-describe('GuideMeFlow', () => {
-  it('should return null for step 3 if subcategory has single type', () => {
+describe("GuideMeFlow", () => {
+  it("should return null for step 3 if subcategory has single type", () => {
     const question = GuideMeFlow.getStep3Question(
-      'Architecture Patterns & Styles',
-      'Integration Patterns'
+      "Architecture Patterns & Styles",
+      "Integration Patterns",
     );
     expect(question).toBeNull();
   });
 
-  it('should return question for step 3 if subcategory has multiple types', () => {
+  it("should return question for step 3 if subcategory has multiple types", () => {
     const question = GuideMeFlow.getStep3Question(
-      'System Design Fundamentals',
-      'Distributed Systems Theory'
+      "System Design Fundamentals",
+      "Distributed Systems Theory",
     );
     expect(question).not.toBeNull();
-    expect(question?.options.length).toBe(2);  // concepts and models
+    expect(question?.options.length).toBe(2); // concepts and models
   });
 });
 ```
 
 ### Integration Tests
+
 - Generate 10 surprise topics, verify all have valid topicTypes
 - Generate 10 guided topics, verify topicType matches constraint
 - Test migration with old data structure
@@ -1806,6 +1861,7 @@ describe('GuideMeFlow', () => {
 ✅ **Simplified UX** - Conditional UI steps keep it simple
 
 **Key Decisions:**
+
 1. Always use `topicTypes: TopicType[]` (array even if length 1)
 2. Dynamic properties optional - allow empty/missing examples
 3. Guide Me: Skip topic type step if `topicTypes.length === 1`
