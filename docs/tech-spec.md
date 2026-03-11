@@ -10,30 +10,31 @@ A cross-platform mobile-first application that helps senior software engineers s
 
 ### Core Problem
 
-Senior software engineers have **deep knowledge** (known knowns) in their specialized areas—for example, expertise in JavaScript/TypeScript, Node.js, and Angular—but lack the **breadth knowledge** (known unknowns) needed to transition into software architecture roles. 
+Senior software engineers have **deep knowledge** (known knowns) in their specialized areas—for example, expertise in JavaScript/TypeScript, Node.js, and Angular—but lack the **breadth knowledge** (known unknowns) needed to transition into software architecture roles.
 
-The challenge isn't just learning more—it's knowing *what* to learn. Random consumption of tech articles, newsletters, and blogs creates a chaotic, unfocused learning journey that doesn't systematically expand breadth.
+The challenge isn't just learning more—it's knowing _what_ to learn. Random consumption of tech articles, newsletters, and blogs creates a chaotic, unfocused learning journey that doesn't systematically expand breadth.
 
 ### The Knowledge Triangle - Clarified
 
 ```
 ┌─────────────────────────────────────────────────┐
-│   UNKNOWN UNKNOWNS                              │  
+│   UNKNOWN UNKNOWNS                              │
 │   (Technologies you've never heard of)          │  ← Infinite & unquantifiable
 │   [Cannot be measured - dynamically infinite]   │     Our app helps you discover
 ├─────────────────────────────────────────────────┤     from this infinite space
-│   KNOWN UNKNOWNS (BREADTH)                      │  
+│   KNOWN UNKNOWNS (BREADTH)                      │
 │   (Technologies you've discovered)              │  ← THIS IS OUR FOCUS
 │   • Discovered: 15 (in bucket list)             │     We track your growth here
 │   • Learned: 23 (quiz passed)                   │     Total breadth: 38 techs
 ├─────────────────────────────────────────────────┤
-│   KNOWN KNOWNS (DEPTH)                          │  
+│   KNOWN KNOWNS (DEPTH)                          │
 │   (Your existing expertise)                     │  ← Out of scope
 │   JS/TS, Node.js, Angular, etc.                 │     We don't track this
 └─────────────────────────────────────────────────┘
 ```
 
 **Key Principles**:
+
 - The app transforms **Unknown Unknowns** → **Known Unknowns** (breadth expansion)
 - Unknown unknowns are **infinite and dynamically generated** by the LLM—we cannot quantify them
 - We measure **growth** (technologies discovered and learned), not reduction of unknowns
@@ -49,6 +50,7 @@ UNDISCOVERED → DISCOVERED → LEARNED
 ```
 
 **Status Definitions**:
+
 - **Undiscovered**: Technologies the user has never encountered (infinite pool)
 - **Discovered**: Technologies populated by the app and saved to bucket list (status: "discovered")
 - **Learned**: Technologies where user passed the quiz (≥80% score, status: "learned")
@@ -56,6 +58,7 @@ UNDISCOVERED → DISCOVERED → LEARNED
 ### Solution
 
 A personalized, LLM-powered learning system that:
+
 - **Discovers** new technologies systematically through two modes: random ("Surprise Me") or guided ("Guide Me")
 - **Tests** comprehension through AI-generated quizzes
 - **Tracks** progress with growth-focused metrics and visualizations
@@ -85,6 +88,7 @@ A personalized, LLM-powered learning system that:
 **Description**: The LLM randomly selects and generates content for a technology the user hasn't discovered, providing a serendipitous learning experience.
 
 **User Flow**:
+
 1. User taps "Surprise Me" button on Discover screen
 2. App shows loading state with encouraging message ("Finding something exciting for you...")
 3. System calls Claude API with context:
@@ -97,12 +101,14 @@ A personalized, LLM-powered learning system that:
 7. User chooses one action (see Action Buttons section below)
 
 **LLM Context Requirements**:
+
 - **Must Have**: Complete list of discovered technology names
 - **Must Have**: List of dismissed technology names
 - **Must Have**: Category/subcategory structure
 - **Output**: Single technology with comprehensive content
 
 **Content Structure Generated**:
+
 ```
 Technology Name: [e.g., "Event Sourcing"]
 Category: [e.g., "Architecture Patterns"]
@@ -120,6 +126,7 @@ COMPARE TO SIMILAR: 2-3 technology comparisons with clear distinctions
 **Description**: A conversational flow where the LLM asks 2-4 questions to understand user interests, then suggests the most relevant undiscovered technology.
 
 **User Flow**:
+
 1. User taps "Guide Me" button
 2. App presents first question: "What area interests you most right now?"
 3. User selects from category options (e.g., Data Storage, Architecture Patterns, Cloud Infrastructure)
@@ -130,20 +137,21 @@ COMPARE TO SIMILAR: 2-3 technology comparisons with clear distinctions
 8. User chooses action from three buttons
 
 **Conversational Flow Example**:
+
 ```
 Q1: "I'm your architect mentor! What area interests you most right now?"
-    Options: [Data Storage] [Architecture Patterns] [Cloud Infrastructure] 
+    Options: [Data Storage] [Architecture Patterns] [Cloud Infrastructure]
              [Observability] [Security] [API Design]
 
 User selects: "Architecture Patterns"
 
-Q2: "Great choice! Are you more curious about handling high traffic or 
+Q2: "Great choice! Are you more curious about handling high traffic or
      managing distributed systems?"
     Options: [High Traffic Handling] [Distributed Systems] [Both Interest Me]
 
 User selects: "Distributed Systems"
 
-Q3: "Perfect! Would you like to learn about coordination, communication, 
+Q3: "Perfect! Would you like to learn about coordination, communication,
      or data consistency?"
     Options: [Coordination] [Communication] [Data Consistency]
 
@@ -153,6 +161,7 @@ Result: LLM generates content for "Saga Pattern" or "Eventual Consistency"
 ```
 
 **LLM Context Requirements**:
+
 - **Must Have**: User's selection history in this session
 - **Must Have**: List of discovered technologies (avoid duplicates)
 - **Must Have**: Category tree matching user preferences
@@ -163,6 +172,7 @@ Result: LLM generates content for "Saga Pattern" or "Eventual Consistency"
 After content is displayed, user must choose one of three actions:
 
 **1. Dismiss (✕)**
+
 - Technology is **NOT saved** to profile
 - Disappears from current view
 - Added to temporary "dismissed" list (prevents immediate reappearance)
@@ -170,6 +180,7 @@ After content is displayed, user must choose one of three actions:
 - Use case: User already knows this technology or isn't interested
 
 **2. Add to Bucket List (📋)**
+
 - Technology saved with status: "discovered"
 - Appears in Profile's "Discovered Technologies" list
 - Available for quiz later via "Test Knowledge" button
@@ -177,6 +188,7 @@ After content is displayed, user must choose one of three actions:
 - Use case: Wants to learn but not ready to test immediately
 
 **3. Acquire Now (🎯)**
+
 - Technology saved with status: "discovered"
 - Immediately launches quiz flow (no navigation)
 - If quiz passed (≥80%), status changes to "learned"
@@ -228,15 +240,18 @@ After content is displayed, user must choose one of three actions:
 #### Quiz Question Types
 
 **Type 1: Conceptual Understanding (2 questions)**
+
 - Tests "What" and "Why" comprehension
 - Example: "What is the primary characteristic of Event Sourcing?"
 - Example: "Why would an architect choose Event Sourcing for a financial system?"
 
 **Type 2: Practical Application (1 question)**
+
 - Tests "When to use" knowledge
 - Example: "In which scenario is Event Sourcing most beneficial?"
 
 **Type 3: Trade-offs Analysis (1 question)**
+
 - Tests understanding of pros/cons
 - Example: "What is the main trade-off when implementing Event Sourcing?"
 
@@ -248,6 +263,7 @@ Score < 80% → Status remains "discovered" → Can retry later
 ```
 
 **Retry Policy**:
+
 - Unlimited retry attempts
 - Each attempt generates new questions (to prevent memorization)
 - All attempts are logged for statistics
@@ -275,6 +291,7 @@ Learning Rate: 61%
 ```
 
 **What This Shows**:
+
 - **Learned**: Technologies where quiz passed (≥80%)
 - **Discovered**: Technologies in bucket list (not yet tested or failed quiz)
 - **Total Breadth**: Sum of learned + discovered (total expansion)
@@ -284,6 +301,7 @@ Learning Rate: 61%
 #### Section 2: Growth Metrics
 
 **Time-Based Progress**:
+
 - Technologies discovered this week
 - Technologies discovered this month
 - Monthly growth rate (comparison to previous month)
@@ -291,6 +309,7 @@ Learning Rate: 61%
 - Trend indicator (increasing/steady/decreasing)
 
 **Performance Metrics**:
+
 - Total quizzes taken
 - Average quiz score (%)
 - Pass rate (% of quizzes passed)
@@ -299,6 +318,7 @@ Learning Rate: 61%
 - Longest streak achieved
 
 **Example Display**:
+
 ```
 📊 Quiz Performance
 • Average Score: 82%
@@ -341,6 +361,7 @@ Learning Rate: 61%
    - All Categories Explored 🌟
 
 **Display Format**:
+
 ```
 🏆 Milestones
 ✓ First 10 Discovered (Sept 15)
@@ -358,7 +379,7 @@ Learning Rate: 61%
 Architecture Patterns
 ████████░░ 8 learned / 12 discovered (67%)
 
-Data Storage  
+Data Storage
 ██████████ 6 learned / 8 discovered (75%)
 
 Cloud Infrastructure
@@ -374,7 +395,8 @@ Security & Identity
 ███████░░░ 4 learned / 6 discovered (67%)
 ```
 
-**Purpose**: 
+**Purpose**:
+
 - Identifies strong areas (high learning %)
 - Highlights areas needing attention (low learning %)
 - Encourages balanced exploration across categories
@@ -382,11 +404,13 @@ Security & Identity
 #### Section 5: Discovered Technologies List
 
 **Display Options**:
+
 - **Filters**: All | Learned | Discovered (bucket list only)
 - **Search**: By technology name
 - **Sort**: By date (newest/oldest) or by category
 
 **List Item Structure**:
+
 ```
 ┌─────────────────────────────────────────┐
 │ Event Sourcing              [Learned] ✓ │
@@ -402,6 +426,7 @@ Security & Identity
 ```
 
 **Interactions**:
+
 - Tap any item → View full content again
 - "Test Knowledge" button → Launch quiz (for discovered items)
 - "Review" button → See content + past quiz results (for learned items)
@@ -409,11 +434,12 @@ Security & Identity
 #### Section 6: Learning Timeline (Optional Enhancement)
 
 **Visual representation of discovery journey**:
+
 ```
 September 2025
 
 Week 1  ●───●───●              3 discovered
-Week 2  ●───●───●───●───●      5 discovered  
+Week 2  ●───●───●───●───●      5 discovered
 Week 3  ●───●                  2 discovered
 Week 4  ●───●───●───●          4 discovered (so far)
 
@@ -432,6 +458,7 @@ Yellow ● = In bucket list
 **Secondary Target**: Web (via React Native Web)
 
 **Why Cross-Platform**:
+
 - Learning happens everywhere (commute, breaks, evening)
 - Single codebase reduces development time
 - Consistent experience across devices
@@ -439,40 +466,46 @@ Yellow ● = In bucket list
 ### Tech Stack
 
 **Frontend Framework**:
+
 - **React Native** with Expo
 - Enables iOS, Android, and Web from single codebase
 - Expo provides simplified build process and OTA updates
 - React Native Web for responsive web experience
 
 **Navigation**:
+
 - **React Navigation**
 - Bottom tabs for primary screens (Discover, Profile)
 - Stack navigator for modal flows (Quiz, Technology Detail)
 
 **State Management**:
+
 - **Zustand** (lightweight, React Native friendly)
 - Global state for technologies, quizzes, profile
 - Automatic persistence to AsyncStorage
 
 **Data Persistence**:
+
 - **AsyncStorage** (cross-platform localStorage equivalent)
 - JSON-stringified data structures
 - No backend or authentication in MVP
 
 **UI Components & Styling**:
+
 - **React Native Paper** or **NativeBase** for Material Design
 - Custom components for visualizations
 - **React Native SVG** for charts and graphics
 - Tailwind-inspired utility styles
 
 **LLM Integration**:
-- Direct fetch calls to **Anthropic Claude API**
-- Claude Sonnet 4.5 model
-- Streaming support for better UX during generation
-- Environment variables via react-native-config
-- Custom Custom prompt templates
-- Zod (validation)
 
+- All LLM logic runs server-side in the **Fastify backend** (`backend/src/modules/llm/`)
+- Frontend is a thin SSE consumer — no API keys, no prompt templates, no provider code
+- Backend handles provider abstraction (Anthropic Claude), prompt building, and streaming relay
+- `POST /llm/topic` and `POST /llm/quiz` → normalized `data: {"text":"..."}` SSE stream
+- Category schema served from `GET /llm/categories`; frontend caches it for Guide Me UI
+- Zod validation of accumulated LLM output on frontend after stream completes
+- Streaming support for progressive rendering via `useStreamingData` hook + `streamingParser.ts`
 
 ### Application Structure
 
@@ -485,13 +518,13 @@ Yellow ● = In bucket list
       GuideMeFlow.jsx             # Guided question flow
       TechnologyCard.jsx          # Content display
       ActionButtons.jsx           # Dismiss/Bucket/Acquire
-    
+
     /Quiz
       QuizScreen.jsx              # Quiz-taking interface
       QuestionCard.jsx            # Single question display
       QuizResults.jsx             # Score and results
       FeedbackCard.jsx            # Answer feedback
-    
+
     /Profile
       ProfileScreen.jsx           # Main profile dashboard
       BreadthDashboard.jsx        # Top metrics cards
@@ -499,7 +532,7 @@ Yellow ● = In bucket list
       MilestonesSection.jsx       # Achievement display
       DiscoveredList.jsx          # Technology list
       TechnologyDetail.jsx        # Full content review
-  
+
   /components
     /common
       Header.jsx
@@ -507,28 +540,30 @@ Yellow ● = In bucket list
       Button.jsx
       Card.jsx
       EmptyState.jsx
-  
+
   /navigation
     AppNavigator.jsx              # Root navigator
     TabNavigator.jsx              # Bottom tabs
-  
+
   /services
-    claudeService.js              # Claude API integration
-    storageService.js             # AsyncStorage operations
-  
+    llmService.ts                 # Thin backend SSE client (no API keys)
+    authService.ts                # GitHub OAuth + token management
+    categorySchemaService.ts      # Fetches & caches category schema from backend
+    sseService.ts                 # Universal SSE fetch client
+
   /store
     useAppStore.js                # Zustand global state
-  
+
   /utils
     helpers.js
     validation.js
-  
+
   /constants
-    categories.js                 # Category tree
+    # Note: category schema lives in backend/src/modules/llm/categories.ts
     milestones.js                 # Milestone definitions
     colors.js
     typography.js
-  
+
   App.jsx                         # Root component
 ```
 
@@ -565,17 +600,17 @@ The category schema serves as **conceptual guardrails** that guide the LLM's und
 ```javascript
 /**
  * SOFTWARE ARCHITECTURE KNOWLEDGE FRAMEWORK
- * 
+ *
  * PURPOSE:
  * This schema defines the conceptual landscape of software architecture knowledge.
  * It serves as GUARDRAILS for LLM-powered technology discovery, NOT as a finite database.
- * 
+ *
  * HOW IT WORKS:
  * - Domains and subcategories define the architectural knowledge space
  * - Descriptions explain what each area encompasses
  * - Examples illustrate the TYPES of technologies that belong (not exhaustive)
  * - LLM uses this framework to generate relevant, novel technology suggestions
- * 
+ *
  * IMPORTANT:
  * - The example arrays are NOT selection menus
  * - LLM can suggest ANY technology that fits the conceptual space
@@ -1142,7 +1177,7 @@ The category schema serves as **conceptual guardrails** that guide the LLM's und
 
 1. **Domain Selection**: Randomly choose from top-level Architecture Knowledge Domains
 2. **Subcategory Selection**: Randomly choose a subcategory within that domain
-3. **Technology Generation**: 
+3. **Technology Generation**:
    - LLM thinks of ANY architecturally significant technology/concept/pattern that legitimately belongs to this subcategory
    - Examples in schema serve as **inspiration and calibration**, not constraints
    - LLM can suggest technologies NOT listed in the schema
@@ -1158,7 +1193,7 @@ The category schema serves as **conceptual guardrails** that guide the LLM's und
 Step 1: Random domain selection
 → Selected: "Data Storage & Management"
 
-Step 2: Random subcategory selection  
+Step 2: Random subcategory selection
 → Selected: "Database Paradigms" → "Time-Series Databases"
 
 Step 3: Understand the conceptual space
@@ -1171,9 +1206,9 @@ Step 4: Check what user has already discovered
 → User dismissed: ["Prometheus"]
 
 Step 5: Generate novel technology in this space
-→ LLM thinks: "What OTHER time-series databases exist that are 
+→ LLM thinks: "What OTHER time-series databases exist that are
    architecturally significant and fit this category?"
-   
+
    Potential options:
    - QuestDB (high-performance, SQL-compatible)
    - VictoriaMetrics (Prometheus alternative, better performance)
@@ -1203,7 +1238,7 @@ Step 7: Generate comprehensive content for "QuestDB"
       subcategories: {
         "Time-Series Databases": {
           description: "Optimized for time-stamped data",
-          technologies: ["InfluxDB", "TimescaleDB", "Prometheus"]  
+          technologies: ["InfluxDB", "TimescaleDB", "Prometheus"]
           // ↑ These are EXAMPLES showing what belongs here
           // LLM can suggest: QuestDB, VictoriaMetrics, Druid, etc.
         }
@@ -1212,7 +1247,7 @@ Step 7: Generate comprehensive content for "QuestDB"
   },
   instruction: `
     TASK: Discover a new technology for a software architect
-    
+
     PROCESS:
     1. Randomly select domain → subcategory from categorySchema
     2. Read the description to understand the conceptual space
@@ -1223,16 +1258,16 @@ Step 7: Generate comprehensive content for "QuestDB"
        - Must be credible (no hallucinations)
        - Must be architecturally relevant (production-grade, not hobby projects)
     5. Generate comprehensive content following the required structure
-    
+
     SELECTED PATH:
     - Domain: Data Storage & Management
     - Subcategory: Time-Series Databases
     - Description: Optimized for time-stamped data
     - Example technologies: InfluxDB, TimescaleDB, Prometheus
-    
+
     YOUR TASK:
-    Think of an architecturally relevant time-series database that the user 
-    hasn't discovered yet. This can be from the examples OR any other 
+    Think of an architecturally relevant time-series database that the user
+    hasn't discovered yet. This can be from the examples OR any other
     legitimate time-series database you know about.
   `
 }
@@ -1245,6 +1280,7 @@ Step 7: Generate comprehensive content for "QuestDB"
 **Conversational Discovery Process**:
 
 **Phase 1: Domain Selection (Question 1)**
+
 ```
 LLM: "I'm your architecture mentor! What area interests you most right now?"
 
@@ -1261,6 +1297,7 @@ Options (dynamically generated from top-level domains):
 ```
 
 **Phase 2: Subcategory Narrowing (Question 2)**
+
 ```
 User selected: "Data Storage & Management"
 
@@ -1274,6 +1311,7 @@ Options (from selected domain's subcategories):
 ```
 
 **Phase 3: Conceptual Refinement (Question 3)**
+
 ```
 User selected: "Database Paradigms"
 
@@ -1290,6 +1328,7 @@ Options (intelligently derived from subcategory structure):
 ```
 
 **Phase 4: Technology Generation & Content Creation**
+
 ```
 User selected: "Graph Databases"
 
@@ -1306,7 +1345,7 @@ Schema examples show: Neo4j, Amazon Neptune, JanusGraph
 
 What graph databases should I consider?
 - From schema: Neo4j, Amazon Neptune, JanusGraph
-- Beyond schema: 
+- Beyond schema:
   * TigerGraph (high-performance, enterprise-grade)
   * ArangoDB (multi-model with graph capabilities)
   * OrientDB (distributed graph database)
@@ -1320,13 +1359,14 @@ Checking novelty:
 - Always prioritize architecturally significant, production-grade options
 
 Selected: TigerGraph (assuming Neo4j already discovered)
-Rationale: Enterprise-grade, strong performance characteristics, 
+Rationale: Enterprise-grade, strong performance characteristics,
            different architecture from Neo4j"
 
 Result: Generate comprehensive content for "TigerGraph"
 ```
 
 **Adaptive Question Logic**:
+
 - **If subcategory is broad** (10+ potential technologies): Ask 3-4 questions to narrow focus
 - **If subcategory is narrow** (3-5 potential technologies): Ask 2 questions only
 - **Final step**: Always LLM generation, not selection from a list
@@ -1361,20 +1401,20 @@ Result: Generate comprehensive content for "TigerGraph"
   },
   instruction: `
     TASK: Based on user's guided selections, suggest most relevant undiscovered technology
-    
+
     USER JOURNEY:
     1. Selected domain: Data Storage & Management
     2. Selected subcategory: Database Paradigms
     3. Selected type: Graph Databases
-    
+
     SCHEMA CONTEXT:
     - Description: Databases optimized for connected data and relationships
     - Example technologies: Neo4j, Amazon Neptune, JanusGraph
-    
+
     USER HISTORY:
     - Already discovered: Neo4j, MongoDB, Redis
     - Dismissed: (none)
-    
+
     YOUR REASONING:
     1. What graph databases exist in the architecture landscape?
        - Consider schema examples (Neo4j, Neptune, JanusGraph)
@@ -1382,11 +1422,11 @@ Result: Generate comprehensive content for "TigerGraph"
     2. Which are architecturally significant and production-grade?
     3. Which match the user's expressed interest in graph databases?
     4. Which has the user NOT discovered yet?
-    
+
     SELECT: One technology that best matches user interest + is undiscovered
     GENERATE: Full comprehensive content for selected technology
-    
-    Remember: Schema examples are NOT the only options. Think of ANY 
+
+    Remember: Schema examples are NOT the only options. Think of ANY
     legitimate graph database that would be valuable for an architect to learn.
   `
 }
@@ -1514,7 +1554,7 @@ ALL generated technology cards must include:
 IF genuinely cannot find undiscovered technology in selected area:
 
 1. Be transparent:
-   "You've explored most of the mainstream technologies in [Category]! 
+   "You've explored most of the mainstream technologies in [Category]!
     Impressive breadth in this area."
 
 2. Suggest alternatives:
@@ -1615,21 +1655,17 @@ As the system evolves:
 ---
 
 This approach ensures:
+
 - ✅ **Infinite discovery** (not limited to schema contents)
 - ✅ **Architectural grounding** (schema prevents irrelevant suggestions)
 - ✅ **Novelty maintenance** (always undiscovered technologies)
 - ✅ **Quality assurance** (credible, production-grade suggestions)
 - ✅ **Genuine surprise** (even developers can't predict what's next)
 
-
-
-
-
-
-
 ### AsyncStorage Schema
 
 **Key: `@architectApp_technologies`**
+
 ```javascript
 [
   {
@@ -1667,6 +1703,7 @@ This approach ensures:
 ```
 
 **Key: `@architectApp_quizzes`**
+
 ```javascript
 [
   {
@@ -1679,19 +1716,20 @@ This approach ensures:
         options: ["A", "B", "C", "D"],
         correctAnswer: 1,
         explanation: "...",
-        userAnswer: 1
-      }
+        userAnswer: 1,
+      },
     ],
     score: 85,
     passed: true,
     attemptNumber: 1,
     attemptedAt: "2025-09-29T15:00:00Z",
-    completedAt: "2025-09-29T15:15:00Z"
-  }
-]
+    completedAt: "2025-09-29T15:15:00Z",
+  },
+];
 ```
 
 **Key: `@architectApp_profile`**
+
 ```javascript
 {
   statistics: {
@@ -1701,27 +1739,27 @@ This approach ensures:
       inBucketList: 15,
       learningRate: 61
     },
-    
+
     growthMetrics: {
       technologiesThisWeek: 7,
       technologiesThisMonth: 28,
       monthlyGrowthRate: "+12 from last month",
       averagePerWeek: 3.5
     },
-    
+
     discoveryStats: {
       surpriseMeCount: 22,
       guideMeCount: 16,
       dismissedCount: 8
     },
-    
+
     quizPerformance: {
       totalQuizzesTaken: 25,
       averageScore: 82,
       passRate: 92,
       firstTimePassRate: 88
     },
-    
+
     categoryBreakdown: {
       "Architecture Patterns": {
         discovered: 12,
@@ -1734,7 +1772,7 @@ This approach ensures:
         learningRate: 75
       }
     },
-    
+
     activity: {
       currentStreak: 7,
       longestStreak: 14,
@@ -1743,7 +1781,7 @@ This approach ensures:
       categoriesExplored: ["Architecture Patterns", "Data Storage", ...]
     }
   },
-  
+
   milestones: [
     {
       type: "discovered",
@@ -1760,21 +1798,19 @@ This approach ensures:
       achievedAt: "2025-09-28T14:00:00Z"
     }
   ],
-  
+
   createdAt: "2025-09-01T09:00:00Z",
   updatedAt: "2025-09-29T15:30:00Z"
 }
 ```
 
 **Key: `@architectApp_dismissed`**
+
 ```javascript
-[
-  "Cassandra",
-  "ScyllaDB",
-  "Apache Flink"
-]
+["Cassandra", "ScyllaDB", "Apache Flink"];
 ```
-*Note: Dismissed technologies can reappear in future sessions to allow reconsideration*
+
+_Note: Dismissed technologies can reappear in future sessions to allow reconsideration_
 
 ---
 

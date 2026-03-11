@@ -1,20 +1,21 @@
 import { useTheme } from '@/contexts/ThemeContext';
+import llmService from '@/services/llmService';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import categorySchema from "../../constants/categories";
 import { useStreamingData } from "../../hooks/useStreamingData";
-import llmService from "../../services/llmService";
+import categorySchemaService from '../../services/categorySchemaService';
 import { useAppStore } from "../../store/useAppStore";
 import { Topic, TopicType } from "../../types";
+import { CategorySchemaMap } from '../../types/categorySchema';
 import { GuideMeHelper, GuideQuestion } from "../../utils/guideMeHelper";
 import { hasMinimumData } from "../../utils/streamingParser";
 import { LoadingSpinner } from "../common/LoadingSpinner";
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
+  const [categorySchema, setCategorySchema] = useState<CategorySchemaMap | null>(null);
   const [step, setStep] = useState(0);
   const [selections, setSelections] = useState({
     category: '',
@@ -105,8 +107,18 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   }), [colors, typography, spacing, themeStyles]);
 
   useEffect(() => {
-    // Load first question immediately (no LLM call)
-    setCurrentQuestion(GuideMeHelper.getStep1Question());
+    const loadSchema = async () => {
+      try {
+        const schema = await categorySchemaService.getSchema();
+        setCategorySchema(schema);
+        setCurrentQuestion(GuideMeHelper.getStep1Question(schema));
+      } catch (err) {
+        setError('Failed to load discovery schema. Please try again.');
+        console.error(err);
+      }
+    };
+
+    void loadSchema();
   }, []);
 
   useEffect(() => {
@@ -119,12 +131,13 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
 
   const handleOptionSelect = async (option: string) => {
     if (!currentQuestion) return;
+    if (!categorySchema) return;
     if (topicStreaming.isLoading) return; // Prevent multiple topic generations
 
     if (step === 0) {
       // Step 1: Category selected
       setSelections({ ...selections, category: option });
-      setCurrentQuestion(GuideMeHelper.getStep2Question(option));
+      setCurrentQuestion(GuideMeHelper.getStep2Question(categorySchema, option));
       setStep(1);
 
     } else if (step === 1) {
@@ -132,11 +145,11 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
       setSelections({ ...selections, subcategory: option });
 
       // Check if this subcategory has multiple topic types
-      const nextQuestion = GuideMeHelper.getStep3Question(selections.category, option);
+      const nextQuestion = GuideMeHelper.getStep3Question(categorySchema, selections.category, option);
 
       if (nextQuestion === null) {
         // Only one topic type - auto-select it and move to step 4
-        const singleType = GuideMeHelper.getSingleTopicType(selections.category, option);
+        const singleType = GuideMeHelper.getSingleTopicType(categorySchema, selections.category, option);
         if (singleType) {
           setSelections(prev => ({ ...prev, subcategory: option, topicType: singleType }));
           setCurrentQuestion(GuideMeHelper.getStep4Question(selections.category, option, singleType));
@@ -166,6 +179,11 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   };
 
   const generateFinalTopic = useCallback(async (learningGoal: string) => {
+    if (!categorySchema) {
+      setError('Discovery schema is not loaded yet. Please try again.');
+      return;
+    }
+
     reset(); // This sets isLoading=true internally
     setError(null);
     setCurrentQuestion(null); // Clear question immediately to hide UI
@@ -185,7 +203,6 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
         'guided',
         alreadyDiscovered,
         [], // No dismissed list for guided mode
-        categorySchema,
         constraints,
         onProgress
       );
@@ -196,7 +213,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
       console.error(err);
       handleError(err as Error);
     }
-  }, [selections, topics, onProgress, handleComplete, handleError, reset]);
+  }, [categorySchema, selections, topics, onProgress, handleComplete, handleError, reset]);
 
   const handleDismiss = () => {
     if (topic) {
@@ -229,6 +246,10 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
         message="Finding the perfect topic for you..."
       />
     );
+  }
+
+  if (!categorySchema && !error) {
+    return <LoadingSpinner message="Loading discovery schema..." />;
   }
 
   if (error) {
@@ -270,8 +291,8 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   // Show question and options
   if (currentQuestion) {
     // Calculate total steps (3 or 4 depending on whether topic type selection is needed)
-    const totalSteps = selections.subcategory &&
-      GuideMeHelper.getStep3Question(selections.category, selections.subcategory) === null
+    const totalSteps = categorySchema && selections.subcategory &&
+      GuideMeHelper.getStep3Question(categorySchema, selections.category, selections.subcategory) === null
       ? 3 : 4;
 
     return (

@@ -12,71 +12,60 @@ try {
   // Fallback to global fetch on web or if expo/fetch not available
 }
 
+export class SSEError extends Error {
+  constructor(message: string, public statusCode: number) {
+    super(message);
+    this.name = 'SSEError';
+  }
+}
+
 interface SSECallbacks {
   onMessage: (data: any) => void;
   onError?: (error: Error) => void;
   onComplete?: () => void;
 }
 
+interface SSERequestOptions {
+  headers?: Record<string, string>;
+  credentials?: RequestCredentials;
+}
+
 class SSEClient {
   private abortController: AbortController | null = null;
-  private isWeb: boolean;
-
-  constructor() {
-    this.isWeb = typeof navigator !== 'undefined' && typeof window !== 'undefined';
-  }
-
   /**
    * Connect to SSE stream and handle messages
    * @param url The streaming endpoint URL
    * @param body The request body
    * @param callbacks Callbacks for messages, errors, and completion
-   * @param useProxy Whether using proxy (normalized format) or direct API (provider-specific format)
+   * @param options Optional request options like auth headers and credentials
    */
   async connect(
     url: string,
     body: any,
     callbacks: SSECallbacks,
-    useProxy: boolean = true
+    options: SSERequestOptions = {}
   ): Promise<() => void> {
     this.abortController = new AbortController();
 
     // Use fetch streaming for all platforms (expo/fetch supports streaming)
-    return this.connectFetch(url, body, callbacks, useProxy);
+    return this.connectFetch(url, body, callbacks, options);
   }
 
   /**
    * Fetch-based streaming implementation (works on all platforms via expo/fetch)
-   * @param useProxy Whether using proxy (normalized SSE format) or direct API (provider-specific streaming)
    */
   private connectFetch(
     url: string,
     body: any,
     callbacks: SSECallbacks,
-    useProxy: boolean
+    options: SSERequestOptions
   ): () => void {
     const signal = this.abortController!.signal;
 
-    // Build headers - add auth headers if not using proxy
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      ...(options.headers || {}),
     };
-
-    if (!useProxy) {
-      // Direct API call - need to add authentication headers
-      // Get from Constants (already available in the app)
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const Constants = require('expo-constants').default;
-      const provider = Constants.expoConfig?.extra?.llmProvider || 'anthropic';
-      const apiKey = Constants.expoConfig?.extra?.llmApiKey;
-
-      if (provider === 'anthropic') {
-        headers['x-api-key'] = apiKey;
-        headers['anthropic-version'] = Constants.expoConfig?.extra?.llmAnthropicVersion || '2023-06-01';
-      } else {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-      }
-    }
 
     // Use expo/fetch on native for streaming support, global fetch on web
     const fetchFn = expoFetch || fetch;
@@ -86,10 +75,11 @@ class SSEClient {
       headers,
       body: JSON.stringify(body),
       signal,
+      credentials: options.credentials,
     })
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error(`SSE connection failed: ${response.statusText}`);
+          throw new SSEError(`SSE connection failed: ${response.statusText}`, response.status);
         }
 
         if (!response.body) {
@@ -105,6 +95,7 @@ class SSEClient {
             const { done, value } = await reader.read();
 
             if (done) {
+              this.abortController = null;
               callbacks.onComplete?.();
               break;
             }
@@ -124,35 +115,25 @@ class SSEClient {
                 const data = line.slice(6);
 
                 if (data === '[DONE]') {
+                  this.abortController = null;
                   callbacks.onComplete?.();
-                  break;
+                  return;
                 }
 
                 try {
                   const parsed = JSON.parse(data);
 
                   if (parsed.error) {
+                    this.abortController = null;
                     callbacks.onError?.(new Error(parsed.error));
-                  } else {
-                    // Handle different formats
-                    if (useProxy) {
-                      // Proxy format: { text: "..." }
-                      callbacks.onMessage(parsed);
-                    } else {
-                      // Direct API format - provider specific
-                      const text = this.extractStreamText(parsed);
-                      if (text) {
-                        callbacks.onMessage({ text });
-                      }
-                      // Check for completion events
-                      if (this.isStreamComplete(parsed)) {
-                        callbacks.onComplete?.();
-                        break;
-                      }
-                    }
+                    return;
                   }
-                } catch (e) {
-                  console.error('[SSE] Failed to parse message:', e, data);
+
+                  callbacks.onMessage(parsed);
+                } catch {
+                  this.abortController = null;
+                  callbacks.onError?.(new Error(`Malformed SSE frame: ${data}`));
+                  return;
                 }
               }
             }
@@ -162,6 +143,7 @@ class SSEClient {
             // Intentional abort, not an error
             return;
           }
+          this.abortController = null;
           callbacks.onError?.(error instanceof Error ? error : new Error(String(error)));
         }
       })
@@ -170,6 +152,7 @@ class SSEClient {
           // Intentional abort, not an error
           return;
         }
+        this.abortController = null;
         callbacks.onError?.(error instanceof Error ? error : new Error(String(error)));
       });
 
@@ -177,40 +160,6 @@ class SSEClient {
     return () => {
       this.abortController?.abort();
     };
-  }
-
-  /**
-   * Extract text from provider-specific streaming event
-   */
-  private extractStreamText(event: any): string | null {
-    // Anthropic format: { type: "content_block_delta", delta: { text: "..." } }
-    if (event.type === 'content_block_delta' && event.delta?.text) {
-      return event.delta.text;
-    }
-
-    // OpenAI format: { choices: [{ delta: { content: "..." } }] }
-    if (event.choices?.[0]?.delta?.content) {
-      return event.choices[0].delta.content;
-    }
-
-    return null;
-  }
-
-  /**
-   * Check if stream is complete based on provider-specific event
-   */
-  private isStreamComplete(event: any): boolean {
-    // Anthropic: { type: "message_stop" }
-    if (event.type === 'message_stop' || event.type === 'message_end') {
-      return true;
-    }
-
-    // OpenAI: { choices: [{ finish_reason: "stop" }] }
-    if (event.choices?.[0]?.finish_reason) {
-      return true;
-    }
-
-    return false;
   }
 
   /**

@@ -1,8 +1,8 @@
 import type { OAuth2Namespace } from '@fastify/oauth2';
 import { FastifyReply, FastifyRequest } from 'fastify';
+import { env } from '../shared/config/env.js';
 import { refreshTokenSchema, type RefreshTokenDto } from './auth.schemas.js';
 import { AuthService } from './auth.service.js';
-import { env } from '../shared/config/env.js';
 
 interface LogoutBody {
   refreshToken?: string;
@@ -85,7 +85,12 @@ export class AuthController {
       const cookieValue = request.cookies.refresh_token;
 
       if (!cookieValue) {
-        throw new Error('No refresh token provided');
+        reply.status(400).send({
+          error: 'No refresh token provided',
+          code: 'MISSING_REFRESH_TOKEN',
+          statusCode: 400,
+        });
+        return;
       }
 
       refreshTokenValue = cookieValue;

@@ -2,13 +2,12 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import categorySchema from '../../constants/categories';
 import { useStreamingData } from '../../hooks/useStreamingData';
 import llmService from '../../services/llmService';
 import { useAppStore } from '../../store/useAppStore';
@@ -59,7 +58,6 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
         'surprise',
         alreadyDiscovered,
         dismissedTopics,
-        categorySchema,
         undefined, // No constraints for surprise mode
         onProgress
       );

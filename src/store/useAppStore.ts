@@ -279,6 +279,21 @@ const storeCreator: StateCreator<AppState> = (set, get) => ({
         return;
       }
 
+      // Session probe failed — attempt a token refresh if a refresh
+      // token may exist.  On mobile we check SecureStore; on web we
+      // always try because we can't inspect httpOnly cookies.
+      if (await authService.hasRefreshToken()) {
+        try {
+          await authService.refreshAccessToken();
+          // Refresh succeeded → new access token is stored; fetch user.
+          const user = await authService.getCurrentUser();
+          set({ user, isAuthenticated: true, isAuthLoading: false });
+          return;
+        } catch {
+          // Refresh also failed — user is truly unauthenticated.
+        }
+      }
+
       set({ user: null, isAuthenticated: false, isAuthLoading: false });
     } catch {
       set({ user: null, isAuthenticated: false, isAuthLoading: false });

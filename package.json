@@ -4,10 +4,9 @@
   "version": "1.0.0",
   "scripts": {
     "start": "expo start --tunnel",
-    "proxy": "node ./scripts/llm-proxy.mjs",
     "reset-project": "node ./scripts/reset-project.js",
     "debug": "expo start --dev-client",
-    "web": "EXPO_PUBLIC_LLM_PROXY_URL=http://localhost:8787 LLM_PROXY_PORT=8787 concurrently -n proxy,web -c yellow,cyan \"npm:proxy\" \"expo start --web\"",
+    "web": "expo start --web",
     "lint": "expo lint",
     "android": "expo run:android",
     "ios": "expo run:ios",

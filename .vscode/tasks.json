@@ -20,69 +20,15 @@
 			"isBackground": false
 		},
 		{
-			"label": "Check current proxy health",
+			"label": "Check backend categories endpoint",
 			"type": "shell",
-			"command": "curl -s http://localhost:8787/health",
+			"command": "curl -s http://localhost:3000/llm/categories",
 			"isBackground": false
 		},
 		{
-			"label": "Find process on 8787",
+			"label": "Test backend topic stream",
 			"type": "shell",
-			"command": "lsof -nP -iTCP:8787 -sTCP:LISTEN",
-			"isBackground": false
-		},
-		{
-			"label": "Kill old proxy processes",
-			"type": "shell",
-			"command": "pkill -f llm-proxy.mjs || true",
-			"isBackground": false
-		},
-		{
-			"label": "Start proxy server",
-			"type": "shell",
-			"command": "npm run proxy",
-			"isBackground": true
-		},
-		{
-			"label": "Verify proxy model after restart",
-			"type": "shell",
-			"command": "curl -s http://localhost:8787/health",
-			"isBackground": false
-		},
-		{
-			"label": "Proxy health model check",
-			"type": "shell",
-			"command": "curl -s http://localhost:8787/health",
-			"isBackground": false
-		},
-		{
-			"label": "Reproduce old-model override",
-			"type": "shell",
-			"command": "curl -s -X POST http://localhost:8787/api/llm -H 'Content-Type: application/json' -d '{\"model\":\"claude-3-5-haiku-20241022\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":16}'",
-			"isBackground": false
-		},
-		{
-			"label": "Test proxy default model",
-			"type": "shell",
-			"command": "curl -s -X POST http://localhost:8787/api/llm -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"Reply OK\"}],\"max_tokens\":16}'",
-			"isBackground": false
-		},
-		{
-			"label": "Restart hardened proxy",
-			"type": "shell",
-			"command": "pkill -f llm-proxy.mjs || true && npm run proxy",
-			"isBackground": true
-		},
-		{
-			"label": "Wait for proxy boot",
-			"type": "shell",
-			"command": "sleep 2 && curl -s http://localhost:8787/health",
-			"isBackground": false
-		},
-		{
-			"label": "Verify stale model ignored",
-			"type": "shell",
-			"command": "curl -s -X POST http://localhost:8787/api/llm -H 'Content-Type: application/json' -d '{\"model\":\"claude-3-5-haiku-20241022\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with OK\"}],\"max_tokens\":16}'",
+			"command": "curl -N -X POST http://localhost:3000/llm/topic -H 'Content-Type: application/json' -d '{\"mode\":\"surprise\",\"alreadyDiscovered\":[],\"dismissed\":[]}'",
 			"isBackground": false
 		},
 		{
@@ -125,6 +71,18 @@
 			"label": "Rebuild backend api container",
 			"type": "shell",
 			"command": "docker compose -f backend/docker/docker-compose.yml up -d --build api",
+			"isBackground": false
+		},
+		{
+			"label": "Rebuild api (one-off verify)",
+			"type": "shell",
+			"command": "docker compose -f backend/docker/docker-compose.yml up -d --build api && docker compose -f backend/docker/docker-compose.yml ps api",
+			"isBackground": false
+		},
+		{
+			"label": "Rebuild api after preflight route",
+			"type": "shell",
+			"command": "docker compose -f backend/docker/docker-compose.yml up -d --build api && docker compose -f backend/docker/docker-compose.yml ps api && curl -s http://localhost:3000/health",
 			"isBackground": false
 		}
 	]

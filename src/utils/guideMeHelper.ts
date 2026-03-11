@@ -1,5 +1,5 @@
-import categorySchema from '../constants/categories';
 import { TopicType } from '../types';
+import { CategorySchemaMap } from '../types/categorySchema';
 
 export interface GuideOption {
   value: string;
@@ -16,7 +16,7 @@ export class GuideMeHelper {
   /**
    * Step 1: Select architectural domain (category)
    */
-  static getStep1Question(): GuideQuestion {
+  static getStep1Question(categorySchema: CategorySchemaMap): GuideQuestion {
     const categories = Object.entries(categorySchema);
 
     // Sort by architecture level: foundational -> intermediate -> advanced
@@ -40,7 +40,10 @@ export class GuideMeHelper {
   /**
    * Step 2: Select subcategory within domain
    */
-  static getStep2Question(selectedCategory: string): GuideQuestion {
+  static getStep2Question(
+    categorySchema: CategorySchemaMap,
+    selectedCategory: string
+  ): GuideQuestion {
     const category = categorySchema[selectedCategory];
     if (!category) {
       throw new Error(`Invalid category: ${selectedCategory}`);
@@ -63,6 +66,7 @@ export class GuideMeHelper {
    * Returns null if subcategory has only one topic type
    */
   static getStep3Question(
+    categorySchema: CategorySchemaMap,
     selectedCategory: string,
     selectedSubcategory: string
   ): GuideQuestion | null {
@@ -204,7 +208,11 @@ export class GuideMeHelper {
   /**
    * Get the single topic type if subcategory has only one
    */
-  static getSingleTopicType(category: string, subcategory: string): TopicType | null {
+  static getSingleTopicType(
+    categorySchema: CategorySchemaMap,
+    category: string,
+    subcategory: string
+  ): TopicType | null {
     const sub = categorySchema[category]?.subcategories[subcategory];
     if (!sub || sub.topicTypes.length !== 1) {
       return null;
