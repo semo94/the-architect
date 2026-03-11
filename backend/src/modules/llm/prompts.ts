@@ -1,4 +1,4 @@
-﻿import categorySchema from './categories.js';
+import categorySchema from './categories.js';
 import type { GenerateTopicConstraints, TopicPromptInput, TopicType } from './llm.schemas.js';
 
 interface TopicTypeDefinition {

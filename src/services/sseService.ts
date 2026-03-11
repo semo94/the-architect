@@ -95,6 +95,7 @@ class SSEClient {
             const { done, value } = await reader.read();
 
             if (done) {
+              this.abortController = null;
               callbacks.onComplete?.();
               break;
             }
@@ -114,20 +115,25 @@ class SSEClient {
                 const data = line.slice(6);
 
                 if (data === '[DONE]') {
+                  this.abortController = null;
                   callbacks.onComplete?.();
-                  break;
+                  return;
                 }
 
                 try {
                   const parsed = JSON.parse(data);
 
                   if (parsed.error) {
+                    this.abortController = null;
                     callbacks.onError?.(new Error(parsed.error));
+                    return;
                   }
 
                   callbacks.onMessage(parsed);
-                } catch (e) {
-                  console.error('[SSE] Failed to parse message:', e, data);
+                } catch {
+                  this.abortController = null;
+                  callbacks.onError?.(new Error(`Malformed SSE frame: ${data}`));
+                  return;
                 }
               }
             }
@@ -137,6 +143,7 @@ class SSEClient {
             // Intentional abort, not an error
             return;
           }
+          this.abortController = null;
           callbacks.onError?.(error instanceof Error ? error : new Error(String(error)));
         }
       })
@@ -145,6 +152,7 @@ class SSEClient {
           // Intentional abort, not an error
           return;
         }
+        this.abortController = null;
         callbacks.onError?.(error instanceof Error ? error : new Error(String(error)));
       });
 

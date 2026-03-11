@@ -1,4 +1,4 @@
-﻿import { FastifyInstance } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { LLMController } from './llm.controller.js';
 
 export async function llmRoutes(fastify: FastifyInstance): Promise<void> {

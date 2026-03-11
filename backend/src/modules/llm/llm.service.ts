@@ -1,4 +1,4 @@
-﻿import { AppError } from '../shared/middleware/error-handler.js';
+import { AppError } from '../shared/middleware/error-handler.js';
 import { llmProvider } from './llm.provider.js';
 import type { GenerateQuizRequest, GenerateTopicRequest } from './llm.schemas.js';
 import { promptTemplates } from './prompts.js';

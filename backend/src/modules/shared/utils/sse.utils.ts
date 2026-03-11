@@ -1,4 +1,4 @@
-﻿import { FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import { env } from '../config/env.js';
 
 /**

@@ -1,4 +1,4 @@
-﻿import { FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import { startSseResponse } from '../shared/utils/sse.utils.js';
 import categorySchema from './categories.js';
 import {
@@ -36,9 +36,10 @@ export class LLMController {
         abortController.signal
       );
     } catch (error) {
+      streamDone = true;
+      if (reply.raw.destroyed) return;
       const message = error instanceof Error ? error.message : 'LLM stream failed';
       request.log.error({ err: error }, 'generateTopic stream error');
-      streamDone = true;
       reply.raw.write(`data: ${JSON.stringify({ error: message })}\n\n`);
       reply.raw.end();
     }
@@ -68,9 +69,10 @@ export class LLMController {
         abortController.signal
       );
     } catch (error) {
+      streamDone = true;
+      if (reply.raw.destroyed) return;
       const message = error instanceof Error ? error.message : 'LLM stream failed';
       request.log.error({ err: error }, 'generateQuiz stream error');
-      streamDone = true;
       reply.raw.write(`data: ${JSON.stringify({ error: message })}\n\n`);
       reply.raw.end();
     }
