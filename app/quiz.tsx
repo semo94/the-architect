@@ -3,17 +3,17 @@ import { QuestionCard } from '@/components/quiz/QuestionCard';
 import { QuizResults } from '@/components/quiz/QuizResults';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useStreamingData } from '@/hooks/useStreamingData';
-import llmService from '@/services/llmService';
+import quizService from '@/services/quizService';
 import { useAppStore } from '@/store/useAppStore';
-import { Quiz, QuizQuestion } from '@/types';
+import { QuizQuestion } from '@/types';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 
 export default function QuizScreen() {
@@ -21,15 +21,17 @@ export default function QuizScreen() {
   const router = useRouter();
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
 
-  const { topics, quizzes, addQuiz } = useAppStore();
+  const { topics, updateTopicStatusInCache, fetchTopics } = useAppStore();
   const topic = topics.find((t) => t.id === topicId);
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]); // Final complete questions (for quiz results)
+  const [quizId, setQuizId] = useState<string | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<number[]>([]);
   const [showFeedback, setShowFeedback] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
   const [finalScore, setFinalScore] = useState<number>(0); // Store the final score to avoid recalculation
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Streaming state for quiz questions
@@ -84,12 +86,10 @@ export default function QuizScreen() {
     reset(); // This sets isLoading=true internally
 
     try {
-      const generatedQuestions = await llmService.generateQuizQuestions(
-        topic,
-        onProgress
-      );
+      const result = await quizService.generateQuiz(topic.id, onProgress);
+      setQuizId(result.quizId);
       // Don't set questions here - let onComplete handle it to avoid premature UI transition
-      handleComplete({ questions: generatedQuestions });
+      handleComplete({ questions: result.questions });
     } catch (err) {
       console.error('Failed to generate quiz:', err);
       setError('Failed to generate quiz questions. Please try again.');
@@ -131,54 +131,39 @@ export default function QuizScreen() {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setShowFeedback(false);
     } else {
-      completeQuiz();
+      void completeQuiz();
     }
   };
 
-  const completeQuiz = () => {
-    if (!topic) return;
+  const completeQuiz = async () => {
+    if (!topic || !quizId) {
+      setError('Quiz not ready. Please retry generation.');
+      return;
+    }
 
     // Use the stable questions state (set by onComplete) instead of streaming partialData
     const quizQuestions = questions.length > 0 ? questions : (quizStreaming.partialData.questions || []);
 
-    // Calculate score once and store it
-    let correct = 0;
-    quizQuestions.forEach((q, idx) => {
-      if (userAnswers[idx] === q.correctAnswer) {
-        correct++;
+    setIsSubmitting(true);
+    try {
+      const result = await quizService.submitQuizAttempt(quizId, userAnswers);
+
+      if (result.topicStatusUpdated) {
+        updateTopicStatusInCache(topic.id, 'learned');
       }
-    });
-    const score = Math.round((correct / quizQuestions.length) * 100);
-    const passed = score >= 80;
 
-    // Count previous attempts for this topic
-    const previousAttempts = quizzes.filter(
-      (q) => q.topicId === topic.id
-    ).length;
-
-    const quiz: Quiz = {
-      id: `quiz-${Date.now()}`,
-      topicId: topic.id,
-      topicName: topic.name,
-      questions: quizQuestions.map((q, idx) => ({
-        ...q,
-        userAnswer: userAnswers[idx],
-      })),
-      score,
-      passed,
-      attemptNumber: previousAttempts + 1,
-      attemptedAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(),
-    };
-
-    addQuiz(quiz);
-
-    // Store the final score and questions to prevent recalculation during render
-    setFinalScore(score);
-    if (questions.length === 0) {
-      setQuestions(quizQuestions);
+      setFinalScore(result.score);
+      if (questions.length === 0) {
+        setQuestions(quizQuestions);
+      }
+      setQuizComplete(true);
+      await fetchTopics();
+    } catch (err) {
+      console.error('Failed to submit quiz:', err);
+      setError('Failed to submit quiz. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-    setQuizComplete(true);
   };
 
   const handleRetry = () => {
@@ -187,6 +172,7 @@ export default function QuizScreen() {
     setShowFeedback(false);
     setQuizComplete(false);
     setFinalScore(0);
+    setQuizId(null);
     generateQuiz();
   };
 
@@ -371,9 +357,10 @@ export default function QuizScreen() {
               pressed && styles.pressed,
             ]}
             onPress={handleNext}
+            disabled={isSubmitting}
           >
             <Text style={styles.nextButtonText}>
-              {currentQuestionIndex < 3 ? "Next Question" : "Complete Quiz"}
+              {isSubmitting ? 'Submitting...' : currentQuestionIndex < 3 ? 'Next Question' : 'Complete Quiz'}
             </Text>
           </Pressable>
         </View>

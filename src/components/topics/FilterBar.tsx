@@ -12,6 +12,8 @@ interface FilterBarProps {
   onTypePress: () => void;
   categoryFilter: string;
   onCategoryPress: () => void;
+  subcategoryFilter: string;
+  onSubcategoryPress: () => void;
   activeFiltersCount: number;
   onClearAll: () => void;
 }
@@ -64,6 +66,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onTypePress,
   categoryFilter,
   onCategoryPress,
+  subcategoryFilter,
+  onSubcategoryPress,
   activeFiltersCount,
   onClearAll,
 }) => {
@@ -118,6 +122,15 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             onPress={onCategoryPress}
             showIcon
           />
+
+          {categoryFilter !== 'all' && (
+            <FilterChip
+              label={subcategoryFilter === 'all' ? 'Subcategory' : subcategoryFilter}
+              active={subcategoryFilter !== 'all'}
+              onPress={onSubcategoryPress}
+              showIcon
+            />
+          )}
         </ScrollView>
       </View>
 
@@ -161,6 +174,21 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   Category: {categoryFilter}
                 </Text>
                 <Pressable onPress={onCategoryPress}>
+                  <Ionicons
+                    name="close"
+                    size={14}
+                    color={colors.primary}
+                  />
+                </Pressable>
+              </View>
+            )}
+
+            {subcategoryFilter !== 'all' && (
+              <View style={styles.activeFilterChip}>
+                <Text style={styles.activeFilterText}>
+                  Subcategory: {subcategoryFilter}
+                </Text>
+                <Pressable onPress={onSubcategoryPress}>
                   <Ionicons
                     name="close"
                     size={14}

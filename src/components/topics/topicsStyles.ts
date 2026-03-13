@@ -49,6 +49,10 @@ export const useTopicListCardStyles = () => {
         cardLearned: {
           borderLeftColor: colors.success || '#10B981',
         },
+        cardDismissed: {
+          borderLeftColor: colors.textSecondary,
+          opacity: 0.55,
+        },
         header: {
           flexDirection: 'row',
           justifyContent: 'space-between',
@@ -85,6 +89,9 @@ export const useTopicListCardStyles = () => {
         statusBadgeLearned: {
           backgroundColor: (colors.success || '#10B981') + '15',
         },
+        statusBadgeDismissed: {
+          backgroundColor: colors.border,
+        },
         statusText: {
           fontSize: typography.fontSize.xs,
           fontWeight: typography.fontWeight.medium,
@@ -94,6 +101,9 @@ export const useTopicListCardStyles = () => {
         },
         statusTextLearned: {
           color: colors.success || '#10B981',
+        },
+        statusTextDismissed: {
+          color: colors.textSecondary,
         },
         preview: {
           fontSize: typography.fontSize.sm,

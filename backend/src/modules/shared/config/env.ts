@@ -28,7 +28,9 @@ const envSchema = z.object({
   COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
 
   // Security
-  ALLOWED_ORIGINS: z.string().transform(s => s.split(',')),
+  ALLOWED_ORIGINS: z
+    .string()
+    .transform(s => s.split(',').map(origin => origin.trim()).filter(Boolean)),
   ENABLE_FINGERPRINTING: z.string().default('true').transform(val => val === 'true'),
 
   // LLM

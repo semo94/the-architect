@@ -1,12 +1,15 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
-import { UserService } from './user.service.js';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import { updateUserSchema } from './user.schemas.js';
+import { UserService } from './user.service.js';
+import { UserStatsService } from './user.stats.service.js';
 
 export class UserController {
   private userService: UserService;
+  private userStatsService: UserStatsService;
 
   constructor() {
     this.userService = new UserService();
+    this.userStatsService = new UserStatsService();
   }
 
   async getCurrentUser(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -29,6 +32,19 @@ export class UserController {
 
     reply.send({
       user: sanitizedUser,
+    });
+  }
+
+  async getCurrentUserStats(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const userId = request.user.sub;
+    const [statistics, milestones] = await Promise.all([
+      this.userStatsService.getUserStats(userId),
+      this.userStatsService.getMilestones(userId),
+    ]);
+
+    reply.send({
+      statistics,
+      milestones,
     });
   }
 }

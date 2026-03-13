@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import llmService from '../services/llmService';
+import sseClient from '../services/sseService';
 import { parseStreamingJson } from '../utils/streamingParser';
 
 export interface UseStreamingDataOptions<T> {
@@ -167,7 +167,7 @@ export function useStreamingData<T>(
 
   const cancel = useCallback(() => {
     console.log('[useStreamingData] Cancelling stream...');
-    llmService.cancelStream();
+    sseClient.cancel();
     setIsStreaming(false);
     setIsLoading(false);
   }, []);

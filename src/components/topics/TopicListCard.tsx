@@ -8,11 +8,11 @@ import React from 'react';
 import { Platform, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  runOnJS,
-  useAnimatedReaction,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
+    runOnJS,
+    useAnimatedReaction,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
 } from 'react-native-reanimated';
 import { useTopicListCardStyles } from './topicsStyles';
 
@@ -38,6 +38,8 @@ interface TopicListCardProps {
   onPress: (topicId: string) => void;
   onTest?: (topicId: string) => void;
   onDelete: (topicId: string) => void;
+  onDismiss?: (topicId: string) => void;
+  onRestore?: (topicId: string) => void;
 }
 
 export const TopicListCard: React.FC<TopicListCardProps> = ({
@@ -45,12 +47,14 @@ export const TopicListCard: React.FC<TopicListCardProps> = ({
   onPress,
   onTest,
   onDelete,
+  onDismiss,
+  onRestore,
 }) => {
   const { colors } = useTheme();
   const styles = useTopicListCardStyles();
 
   const translateX = useSharedValue(0);
-  const actionTrigger = useSharedValue(0); // 0: none, 1: test, 2: delete
+  const actionTrigger = useSharedValue(0); // 0: none, 1: test, 2: delete, 3: dismiss, 4: restore
   const SWIPE_THRESHOLD = 80;
 
   // Handle actions on JS thread using useAnimatedReaction
@@ -73,13 +77,48 @@ export const TopicListCard: React.FC<TopicListCardProps> = ({
         }
         runOnJS(onDelete)(topic.id);
         actionTrigger.value = 0; // Reset
+      } else if (trigger === 3) {
+        if (Platform.OS !== 'web') {
+          runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+        }
+        if (onDismiss) {
+          runOnJS(onDismiss)(topic.id);
+        }
+        actionTrigger.value = 0;
+      } else if (trigger === 4) {
+        if (Platform.OS !== 'web') {
+          runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+        }
+        if (onRestore) {
+          runOnJS(onRestore)(topic.id);
+        }
+        actionTrigger.value = 0;
       }
     }
   );
 
   const tapGesture = Gesture.Tap().onEnd(() => {
     'worklet';
+    if (topic.status === 'dismissed') {
+      return;
+    }
     runOnJS(onPress)(topic.id);
+  });
+
+  const longPressGesture = Gesture.LongPress().minDuration(500).onEnd((_event, success) => {
+    'worklet';
+    if (!success) {
+      return;
+    }
+
+    if (topic.status === 'discovered') {
+      actionTrigger.value = 3;
+      return;
+    }
+
+    if (topic.status === 'dismissed') {
+      actionTrigger.value = 4;
+    }
   });
 
   const panGesture = Gesture.Pan()
@@ -106,7 +145,7 @@ export const TopicListCard: React.FC<TopicListCardProps> = ({
       }
     });
 
-  const composedGesture = Gesture.Exclusive(panGesture, tapGesture);
+  const composedGesture = Gesture.Exclusive(panGesture, longPressGesture, tapGesture);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
@@ -149,7 +188,9 @@ export const TopicListCard: React.FC<TopicListCardProps> = ({
               styles.card,
               topic.status === 'learned'
                 ? styles.cardLearned
-                : styles.cardDiscovered,
+                : topic.status === 'dismissed'
+                  ? styles.cardDismissed
+                  : styles.cardDiscovered,
             ]}
           >
             {/* Topic Type Chip */}
@@ -189,23 +230,39 @@ export const TopicListCard: React.FC<TopicListCardProps> = ({
                   styles.statusBadge,
                   topic.status === 'learned'
                     ? styles.statusBadgeLearned
-                    : styles.statusBadgeDiscovered,
+                    : topic.status === 'dismissed'
+                      ? styles.statusBadgeDismissed
+                      : styles.statusBadgeDiscovered,
                 ]}
               >
                 <Ionicons
-                  name={topic.status === 'learned' ? 'checkmark-circle' : 'book-outline'}
+                  name={
+                    topic.status === 'learned'
+                      ? 'checkmark-circle'
+                      : topic.status === 'dismissed'
+                        ? 'ban-outline'
+                        : 'book-outline'
+                  }
                   size={12}
-                  color={topic.status === 'learned' ? (colors.success || '#10B981') : colors.primary}
+                  color={
+                    topic.status === 'learned'
+                      ? (colors.success || '#10B981')
+                      : topic.status === 'dismissed'
+                        ? colors.textSecondary
+                        : colors.primary
+                  }
                 />
                 <Text
                   style={[
                     styles.statusText,
                     topic.status === 'learned'
                       ? styles.statusTextLearned
-                      : styles.statusTextDiscovered,
+                      : topic.status === 'dismissed'
+                        ? styles.statusTextDismissed
+                        : styles.statusTextDiscovered,
                   ]}
                 >
-                  {topic.status === 'learned' ? 'Learned' : 'Discovered'}
+                  {topic.status === 'learned' ? 'Learned' : topic.status === 'dismissed' ? 'Dismissed' : 'Discovered'}
                 </Text>
               </View>
             </View>

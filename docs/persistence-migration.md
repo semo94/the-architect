@@ -140,7 +140,7 @@ export const userTopics = pgTable(
 - When a topic is generated and the user taps **Dismiss**, the topic is persisted to the `topics` table and a `user_topics` row is created with `status: 'dismissed'`.
 - When the user taps **Add to Bucket**, status is `'discovered'`. When the user passes a quiz, status is updated to `'learned'`.
 - Users can toggle between `'dismissed'` ↔ `'discovered'` from the Topics page.
-- By default, the Topics list shows `discovered` + `learned` topics. A **Dismissed** filter reveals dismissed topics.
+- By default (no filters applied), the Topics list shows **all** statuses: `discovered` + `learned` + `dismissed`.
 - Dismissed topic cards are visually muted — they cannot be viewed or quizzed, but can be deleted (swipe-left) or restored (long-press).
 - `discoveryMethod` is `'surprise' | 'guided'`.
 - The unique constraint on `(user_id, topic_id)` prevents duplicate associations.
@@ -835,7 +835,7 @@ Same pattern as `SurpriseMeFlow.tsx` — replace `llmService` calls with `topicS
 #### `TopicsScreen.tsx`
 
 - Replace `topics` from store with hydrated data (already in store after `fetchTopics()`).
-- Default view shows `discovered` + `learned` topics. A **Dismissed** filter option reveals dismissed topics.
+- Default view (no filters applied) shows `discovered` + `learned` + `dismissed` topics.
 - After any status toggle, call `fetchTopics()` to re-hydrate the local cache.
 - `deleteTopic()` calls `topicService.deleteTopic()` then `fetchTopics()`.
 
@@ -1201,7 +1201,7 @@ Submit a quiz attempt. Persists `user_quizzes` row. Updates `user_topics.status`
 - [ ] Dismissed topics are tracked via `user_topics.status = 'dismissed'` and excluded from future discoveries
 - [ ] Dismissed topics can be toggled back to `discovered` from Topics page
 - [ ] Dismissed topic cards are visually muted (cannot view or quiz, but can delete via swipe-left or restore via long-press)
-- [ ] Topics tab shows discovered + learned by default, dismissed via filter
+- [ ] Topics tab shows all topics by default (discovered + learned + dismissed)
 - [ ] Topics tab uses paginated loading (`GET /topics?page=N&limit=50`)
 - [ ] Topic detail screen loads from backend
 - [ ] Quiz generation serves existing unattempted quiz from DB when available; generates new via LLM otherwise

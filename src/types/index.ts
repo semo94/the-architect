@@ -49,6 +49,31 @@ export interface Quiz {
   completedAt: string;
 }
 
+export interface QuizResult {
+  id: string;
+  topicId: string;
+  topicName: string;
+  questions: QuizQuestion[];
+  score: number;
+  passed: boolean;
+  attemptNumber: number;
+  attemptedAt: string;
+  completedAt: string;
+  topicStatusUpdated: boolean;
+}
+
+export interface UserQuizWithDetails {
+  userQuizId: string;
+  quizId: string;
+  topicId: string;
+  topicName: string;
+  questions: QuizQuestion[];
+  score: number;
+  passed: boolean;
+  attemptedAt: string;
+  completedAt: string;
+}
+
 export interface QuizQuestion {
   question: string;
   options: string[];
