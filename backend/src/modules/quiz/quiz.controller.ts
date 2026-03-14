@@ -1,10 +1,9 @@
 ﻿import { FastifyReply, FastifyRequest } from 'fastify';
 import { startSseResponse } from '../shared/utils/sse.utils.js';
 import {
-    GenerateQuizRequestSchema,
-    ListQuizzesQuerySchema,
-    QuizIdParamSchema,
-    SubmitQuizAttemptRequestSchema,
+  GenerateQuizRequestSchema,
+  QuizIdParamSchema,
+  SubmitQuizAttemptRequestSchema,
 } from './quiz.schemas.js';
 import { QuizService } from './quiz.service.js';
 
@@ -60,27 +59,6 @@ export class QuizController {
       reply.raw.write(`data: ${JSON.stringify({ error: message })}\n\n`);
       reply.raw.end();
     }
-  }
-
-  async listQuizzes(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const userId = request.user.sub;
-    const query = ListQuizzesQuerySchema.parse(request.query);
-    const quizzes = await this.quizService.getQuizHistory(userId, query.topicId);
-    reply.send({ quizzes });
-  }
-
-  async getQuizDetail(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const userId = request.user.sub;
-    const { id } = QuizIdParamSchema.parse(request.params);
-    const history = await this.quizService.getQuizHistory(userId);
-    const quiz = history.find((entry) => entry.quizId === id);
-
-    if (!quiz) {
-      reply.status(404).send({ error: 'Quiz not found', code: 'QUIZ_NOT_FOUND', statusCode: 404 });
-      return;
-    }
-
-    reply.send({ quiz });
   }
 
   async submitQuizAttempt(request: FastifyRequest, reply: FastifyReply): Promise<void> {

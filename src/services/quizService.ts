@@ -1,4 +1,4 @@
-import { QuizQuestion, QuizResult, UserQuizWithDetails } from '@/types';
+import { QuizQuestion, QuizResult } from '@/types';
 import { z } from 'zod';
 import { authService } from './authService';
 import sseClient, { SSEError } from './sseService';
@@ -139,25 +139,7 @@ class QuizService {
     return (await response.json()) as QuizResult;
   }
 
-  async getQuizHistory(topicId?: string): Promise<UserQuizWithDetails[]> {
-    const params = new URLSearchParams();
-    if (topicId) {
-      params.set('topicId', topicId);
-    }
-
-    const query = params.toString();
-    const response = await authService.authenticatedFetch(
-      `${API_URL}/quizzes${query ? `?${query}` : ''}`,
-      { method: 'GET' }
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch quiz history');
-    }
-
-    const data = await response.json();
-    return data.quizzes as UserQuizWithDetails[];
-  }
 }
+
 
 export default new QuizService();

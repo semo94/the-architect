@@ -1,27 +1,15 @@
 ﻿import { and, count, eq, inArray, notExists, sql } from 'drizzle-orm';
 import { db } from '../shared/database/client.js';
 import {
-    type NewQuiz,
-    type NewUserQuiz,
-    type Quiz,
-    quizTopics,
-    quizzes,
-    type Topic,
-    topics,
-    userQuizzes,
+  type NewQuiz,
+  type NewUserQuiz,
+  type Quiz,
+  quizTopics,
+  quizzes,
+  type Topic,
+  topics,
+  userQuizzes,
 } from '../shared/database/schema.js';
-
-export interface UserQuizWithDetails {
-  userQuizId: string;
-  quizId: string;
-  topicId: string;
-  topicName: string;
-  questions: unknown;
-  score: number;
-  passed: boolean;
-  attemptedAt: Date;
-  completedAt: Date;
-}
 
 export class QuizRepository {
   async create(data: NewQuiz): Promise<Quiz> {
@@ -58,34 +46,6 @@ export class QuizRepository {
   async createUserQuiz(data: NewUserQuiz) {
     const result = await db.insert(userQuizzes).values(data).returning();
     return result[0];
-  }
-
-  async getUserQuizzes(userId: string, topicId?: string): Promise<UserQuizWithDetails[]> {
-    const conditions = [eq(userQuizzes.userId, userId)];
-
-    if (topicId) {
-      conditions.push(eq(quizTopics.topicId, topicId));
-    }
-
-    const rows = await db
-      .select({
-        userQuizId: userQuizzes.id,
-        quizId: quizzes.id,
-        topicId: topics.id,
-        topicName: topics.name,
-        questions: quizzes.questions,
-        score: userQuizzes.score,
-        passed: userQuizzes.passed,
-        attemptedAt: userQuizzes.attemptedAt,
-        completedAt: userQuizzes.completedAt,
-      })
-      .from(userQuizzes)
-      .innerJoin(quizzes, eq(userQuizzes.quizId, quizzes.id))
-      .innerJoin(quizTopics, eq(quizTopics.quizId, quizzes.id))
-      .innerJoin(topics, eq(quizTopics.topicId, topics.id))
-      .where(and(...conditions));
-
-    return rows;
   }
 
   async countUserAttemptsForTopic(userId: string, topicId: string): Promise<number> {

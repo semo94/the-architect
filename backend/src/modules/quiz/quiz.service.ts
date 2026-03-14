@@ -3,12 +3,12 @@ import { llmService } from '../llm/llm.service.js';
 import { AppError } from '../shared/middleware/error-handler.js';
 import { TopicRepository } from '../topic/topic.repository.js';
 import { TopicService } from '../topic/topic.service.js';
-import { QuizRepository, type UserQuizWithDetails } from './quiz.repository.js';
+import { QuizRepository } from './quiz.repository.js';
 import {
-    FlatQuizQuestionsSchema,
-    type GenerateQuizRequest,
-    type QuizQuestion,
-    type SubmitQuizAttemptRequest,
+  FlatQuizQuestionsSchema,
+  type GenerateQuizRequest,
+  type QuizQuestion,
+  type SubmitQuizAttemptRequest,
 } from './quiz.schemas.js';
 
 interface StreamCallbacks {
@@ -171,10 +171,6 @@ export class QuizService {
       completedAt: now.toISOString(),
       topicStatusUpdated,
     };
-  }
-
-  async getQuizHistory(userId: string, topicId?: string): Promise<UserQuizWithDetails[]> {
-    return this.quizRepository.getUserQuizzes(userId, topicId);
   }
 
   private extractJson(text: string) {

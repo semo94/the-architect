@@ -8,10 +8,6 @@ export const QuizIdParamSchema = z.object({
   id: z.string().uuid(),
 });
 
-export const ListQuizzesQuerySchema = z.object({
-  topicId: z.string().uuid().optional(),
-});
-
 export const SubmitQuizAttemptRequestSchema = z.object({
   userAnswers: z.array(z.number().int().min(0).max(3)).length(4),
 });
