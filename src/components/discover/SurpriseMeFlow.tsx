@@ -9,8 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStreamingData } from '../../hooks/useStreamingData';
-import llmService from '../../services/llmService';
-import { useAppStore } from '../../store/useAppStore';
+import topicService from '../../services/topicService';
 import { Topic } from '../../types';
 import { hasMinimumData } from '../../utils/streamingParser';
 import { LoadingSpinner } from '../common/LoadingSpinner';
@@ -23,17 +22,12 @@ interface Props {
 
 export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const [topic, setTopic] = useState<Topic | null>(null);
+  const [topicId, setTopicId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
 
-  const {
-    topics,
-    dismissedTopics,
-    addTopic,
-    dismissTopic
-  } = useAppStore();
 
   // Use streaming hook for state management and cleanup
   const topicStreaming = useStreamingData<Topic>({
@@ -52,23 +46,20 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     reset(); // This sets isLoading=true internally
 
     try {
-      const alreadyDiscovered = topics.map(t => t.name);
-
-      const newTopic = await llmService.generateTopic(
+      const result = await topicService.discoverTopic(
         'surprise',
-        alreadyDiscovered,
-        dismissedTopics,
         undefined, // No constraints for surprise mode
         onProgress
       );
 
-      handleComplete(newTopic);
+      setTopicId(result.topicId);
+      handleComplete(result.topic);
     } catch (err) {
       setError('Failed to generate topic. Please try again.');
       console.error(err);
       handleError(err as Error);
     }
-  }, [topics, dismissedTopics, onProgress, handleComplete, handleError, reset]);
+  }, [onProgress, handleComplete, handleError, reset]);
 
   useEffect(() => {
     generateSurpriseTopic();
@@ -80,27 +71,26 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     };
   }, [generateSurpriseTopic, cancel]);
 
-  const handleDismiss = () => {
-    if (topic) {
-      dismissTopic(topic.name);
+  const handleDismiss = async () => {
+    if (topic && topicId) {
+      await topicService.updateTopicStatus(topicId, 'dismissed', 'surprise');
     }
     onComplete();
   };
 
-  const handleAddToBucket = () => {
-    if (topic) {
-      addTopic(topic);
+  const handleAddToBucket = async () => {
+    if (topic && topicId) {
+      await topicService.updateTopicStatus(topicId, 'discovered', 'surprise');
     }
     onComplete();
   };
 
-  const handleAcquireNow = () => {
-    if (topic) {
-      addTopic(topic);
-      // Navigate to quiz using expo-router
+  const handleAcquireNow = async () => {
+    if (topic && topicId) {
+      await topicService.updateTopicStatus(topicId, 'discovered', 'surprise');
       router.replace({
         pathname: '/quiz',
-        params: { topicId: topic.id }
+        params: { topicId }
       });
     }
   };

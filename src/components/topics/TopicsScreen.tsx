@@ -1,26 +1,49 @@
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { ToastNotification } from '@/components/common/ToastNotification';
 import { useTheme } from '@/contexts/ThemeContext';
+import topicService from '@/services/topicService';
 import { useAppStore } from '@/store/useAppStore';
 import { TopicStatus, TopicType } from '@/types';
-import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { Alert, FlatList, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CategoryFilterSheet } from './CategoryFilterSheet';
 import { EmptyState } from './EmptyState';
 import { FilterBar } from './FilterBar';
 import {
-    FilterSheet,
-    generateCategoryOptions,
-    generateSubcategoryOptions,
-    topicTypeOptions,
+  FilterSheet,
+  topicTypeOptions,
+  type FilterOption,
 } from './FilterSheet';
 import { SearchBar } from './SearchBar';
 import { TopicListCard } from './TopicListCard';
 
 export const TopicsScreen: React.FC = () => {
-  const { topics, dismissedTopics, deleteTopic } = useAppStore();
+  const { topics, fetchTopics } = useAppStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [isFetching, setIsFetching] = useState(false);
+
+  const [toast, setToast] = useState<{
+    message: string;
+    topicId: string;
+    undoStatus: 'discovered' | 'dismissed';
+  } | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    visible: boolean;
+    topicId: string | null;
+    topicName: string;
+    isLoading: boolean;
+  }>({
+    visible: false,
+    topicId: null,
+    topicName: '',
+    isLoading: false,
+  });
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,49 +55,93 @@ export const TopicsScreen: React.FC = () => {
   // Modal states
   const [typeSheetVisible, setTypeSheetVisible] = useState(false);
   const [categorySheetVisible, setCategorySheetVisible] = useState(false);
-  const [subcategorySheetVisible, setSubcategorySheetVisible] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<FilterOption[]>([
+    { value: 'all', label: 'All Categories' },
+  ]);
+  const [subcategoriesByCategory, setSubcategoriesByCategory] = useState<Record<string, FilterOption[]>>({});
 
-  // Filter logic with useMemo for performance
-  const filteredTopics = useMemo(() => {
-    return topics.filter((topic) => {
-      // Search filter
-      const matchesSearch =
-        !searchQuery ||
-        topic.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        topic.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        topic.subcategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        topic.topicType.toLowerCase().includes(searchQuery.toLowerCase());
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
-      // Status filter
-      let matchesStatus = true;
-      if (statusFilter !== 'all') {
-        if (statusFilter === 'dismissed') {
-          matchesStatus = dismissedTopics.includes(topic.name);
-        } else {
-          matchesStatus = topic.status === statusFilter;
-        }
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  const loadTopics = useCallback(
+    async (nextPage: number, append: boolean) => {
+      setIsFetching(true);
+      try {
+        const result = await fetchTopics(
+          {
+            search: debouncedSearchQuery || undefined,
+            status: statusFilter,
+            topicType: typeFilter === 'all' ? undefined : typeFilter,
+            category: categoryFilter === 'all' ? undefined : categoryFilter,
+            subcategory: subcategoryFilter === 'all' ? undefined : subcategoryFilter,
+            page: nextPage,
+            limit: 5,
+          },
+          append
+        );
+        setTotalCount(result.total);
+      } finally {
+        setIsFetching(false);
+      }
+    },
+    [categoryFilter, debouncedSearchQuery, fetchTopics, statusFilter, subcategoryFilter, typeFilter]
+  );
+
+  const loadTopicFacets = useCallback(async () => {
+    try {
+      const facets = await topicService.getTopicFacets();
+      setCategoryOptions(facets.categories);
+      setSubcategoriesByCategory(facets.subcategoriesByCategory);
+
+      if (
+        categoryFilter !== 'all' &&
+        !facets.categories.some((option) => option.value === categoryFilter)
+      ) {
+        setCategoryFilter('all');
+        setSubcategoryFilter('all');
+        return;
       }
 
-      // Topic type filter
-      const matchesType = typeFilter === 'all' || topic.topicType === typeFilter;
+      if (categoryFilter !== 'all' && subcategoryFilter !== 'all') {
+        const subcategories = facets.subcategoriesByCategory[categoryFilter] ?? [];
+        if (!subcategories.some((option) => option.value === subcategoryFilter)) {
+          setSubcategoryFilter('all');
+        }
+      }
+    } catch {
+      setCategoryOptions([{ value: 'all', label: 'All Categories' }]);
+      setSubcategoriesByCategory({});
+    }
+  }, [categoryFilter, subcategoryFilter]);
 
-      // Category filter
-      const matchesCategory =
-        categoryFilter === 'all' || topic.category === categoryFilter;
+  // Reload when filters change.
+  useEffect(() => {
+    setPage(1);
+    void loadTopics(1, false);
+  }, [loadTopics]);
 
-      // Subcategory filter
-      const matchesSubcategory =
-        subcategoryFilter === 'all' || topic.subcategory === subcategoryFilter;
+  // Keep a stable ref so the focus effect doesn't re-trigger the filter useEffect.
+  const loadTopicsRef = useRef(loadTopics);
+  loadTopicsRef.current = loadTopics;
 
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesType &&
-        matchesCategory &&
-        matchesSubcategory
-      );
-    });
-  }, [topics, dismissedTopics, searchQuery, statusFilter, typeFilter, categoryFilter, subcategoryFilter]);
+  // Always reload page 1 when the tab gains focus (e.g. returning from Discover/Quiz).
+  useFocusEffect(
+    useCallback(() => {
+      setPage(1);
+      void loadTopicsRef.current(1, false);
+    }, [])
+  );
+
+  useEffect(() => {
+    void loadTopicFacets();
+  }, [loadTopicFacets]);
 
   // Count active filters
   const activeFiltersCount = useMemo(() => {
@@ -85,17 +152,6 @@ export const TopicsScreen: React.FC = () => {
     if (subcategoryFilter !== 'all') count++;
     return count;
   }, [statusFilter, typeFilter, categoryFilter, subcategoryFilter]);
-
-  // Generate dynamic filter options
-  const categoryOptions = useMemo(() => generateCategoryOptions(topics), [topics]);
-
-  const subcategoryOptions = useMemo(
-    () =>
-      categoryFilter !== 'all'
-        ? generateSubcategoryOptions(topics, categoryFilter)
-        : [],
-    [topics, categoryFilter]
-  );
 
   // Handlers
   const handleTopicPress = (topicId: string) => {
@@ -116,21 +172,84 @@ export const TopicsScreen: React.FC = () => {
     const topic = topics.find((t) => t.id === topicId);
     if (!topic) return;
 
-    Alert.alert(
-      'Delete Topic',
-      `Are you sure you want to delete "${topic.name}"? This will permanently remove the topic and all associated quiz data from your profile.`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteTopic(topicId),
-        },
-      ]
-    );
+    setDeleteDialog({
+      visible: true,
+      topicId,
+      topicName: topic.name,
+      isLoading: false,
+    });
+  };
+
+  const handleDeleteCancel = () => {
+    if (deleteDialog.isLoading) {
+      return;
+    }
+
+    setDeleteDialog({
+      visible: false,
+      topicId: null,
+      topicName: '',
+      isLoading: false,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog.topicId || deleteDialog.isLoading) {
+      return;
+    }
+
+    setDeleteDialog((prev) => ({ ...prev, isLoading: true }));
+    try {
+      await topicService.deleteTopic(deleteDialog.topicId);
+      setDeleteDialog({
+        visible: false,
+        topicId: null,
+        topicName: '',
+        isLoading: false,
+      });
+      setPage(1);
+      await loadTopics(1, false);
+      await loadTopicFacets();
+    } catch {
+      setDeleteDialog((prev) => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const handleDismiss = async (topicId: string) => {
+    await topicService.updateTopicStatus(topicId, 'dismissed');
+    setPage(1);
+    await Promise.all([loadTopics(1, false), loadTopicFacets()]);
+
+    const topic = topics.find((item) => item.id === topicId);
+    setToast({
+      message: `"${topic?.name ?? 'Topic'}" dismissed`,
+      topicId,
+      undoStatus: 'discovered',
+    });
+  };
+
+  const handleRestore = async (topicId: string) => {
+    await topicService.updateTopicStatus(topicId, 'discovered');
+    setPage(1);
+    await Promise.all([loadTopics(1, false), loadTopicFacets()]);
+
+    const topic = topics.find((item) => item.id === topicId);
+    setToast({
+      message: `"${topic?.name ?? 'Topic'}" restored to bucket list`,
+      topicId,
+      undoStatus: 'dismissed',
+    });
+  };
+
+  const handleUndoToast = async () => {
+    if (!toast) {
+      return;
+    }
+
+    await topicService.updateTopicStatus(toast.topicId, toast.undoStatus);
+    setToast(null);
+    setPage(1);
+    await Promise.all([loadTopics(1, false), loadTopicFacets()]);
   };
 
   const handleClearAllFilters = () => {
@@ -139,14 +258,21 @@ export const TopicsScreen: React.FC = () => {
     setTypeFilter('all');
     setCategoryFilter('all');
     setSubcategoryFilter('all');
+    setPage(1);
   };
 
-  const handleCategoryChange = (category: string) => {
+  const handleCategoryChange = (category: string, subcategory: string) => {
     setCategoryFilter(category);
-    // Reset subcategory when category changes
-    if (category === 'all') {
-      setSubcategoryFilter('all');
-    }
+    setSubcategoryFilter(subcategory);
+  };
+
+  const handleClearCategory = () => {
+    setCategoryFilter('all');
+    setSubcategoryFilter('all');
+  };
+
+  const handleClearSubcategory = () => {
+    setSubcategoryFilter('all');
   };
 
   const handleTypeFilterPress = () => {
@@ -174,8 +300,8 @@ export const TopicsScreen: React.FC = () => {
       <SearchBar
         value={searchQuery}
         onChangeText={setSearchQuery}
-        resultCount={filteredTopics.length}
-        totalCount={topics.length}
+        resultCount={topics.length}
+        totalCount={totalCount}
       />
 
       <FilterBar
@@ -185,11 +311,14 @@ export const TopicsScreen: React.FC = () => {
         onTypePress={handleTypeFilterPress}
         categoryFilter={categoryFilter}
         onCategoryPress={handleCategoryFilterPress}
+        subcategoryFilter={subcategoryFilter}
+        onClearCategory={handleClearCategory}
+        onClearSubcategory={handleClearSubcategory}
         activeFiltersCount={activeFiltersCount}
         onClearAll={handleClearAllFilters}
       />
 
-      {filteredTopics.length === 0 ? (
+      {topics.length === 0 ? (
         <EmptyState
           type={getEmptyStateType()}
           onClearFilters={
@@ -200,17 +329,28 @@ export const TopicsScreen: React.FC = () => {
         />
       ) : (
         <FlatList
-          data={filteredTopics}
+          data={topics}
           renderItem={({ item }) => (
             <TopicListCard
               topic={item}
               onPress={handleTopicPress}
               onTest={handleTestKnowledge}
               onDelete={handleDelete}
+              onDismiss={handleDismiss}
+              onRestore={handleRestore}
             />
           )}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingVertical: 10 }}
+          onEndReachedThreshold={0.4}
+          onEndReached={() => {
+            if (isFetching) return;
+            const hasMore = topics.length < totalCount;
+            if (!hasMore) return;
+            const nextPage = page + 1;
+            setPage(nextPage);
+            void loadTopics(nextPage, true);
+          }}
         />
       )}
 
@@ -225,26 +365,35 @@ export const TopicsScreen: React.FC = () => {
       />
 
       {/* Category Filter Sheet */}
-      <FilterSheet
+      <CategoryFilterSheet
         visible={categorySheetVisible}
         onClose={() => setCategorySheetVisible(false)}
-        title="Filter by Category"
-        options={categoryOptions}
-        selectedValue={categoryFilter}
-        onSelect={handleCategoryChange}
+        categories={categoryOptions}
+        subcategoriesByCategory={subcategoriesByCategory}
+        selectedCategory={categoryFilter}
+        selectedSubcategory={subcategoryFilter}
+        onApply={handleCategoryChange}
       />
 
-      {/* Subcategory Filter Sheet (if category is selected) */}
-      {categoryFilter !== 'all' && (
-        <FilterSheet
-          visible={subcategorySheetVisible}
-          onClose={() => setSubcategorySheetVisible(false)}
-          title="Filter by Subcategory"
-          options={subcategoryOptions}
-          selectedValue={subcategoryFilter}
-          onSelect={(value) => setSubcategoryFilter(value)}
-        />
-      )}
+      <ToastNotification
+        message={toast?.message ?? ''}
+        visible={!!toast}
+        actionLabel="Undo"
+        onAction={() => void handleUndoToast()}
+        onDismiss={() => setToast(null)}
+      />
+
+      <ConfirmDialog
+        visible={deleteDialog.visible}
+        title="Delete Topic"
+        message={`Are you sure you want to delete "${deleteDialog.topicName}"? This will permanently remove the topic and all associated quiz data from your profile.`}
+        onCancel={handleDeleteCancel}
+        onConfirm={() => void handleDeleteConfirm()}
+        cancelText="Cancel"
+        confirmText="Delete"
+        destructive
+        isLoading={deleteDialog.isLoading}
+      />
     </View>
   );
 };

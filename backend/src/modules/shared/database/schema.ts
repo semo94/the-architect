@@ -1,4 +1,15 @@
-import { pgTable, uuid, varchar, timestamp, text, index } from 'drizzle-orm/pg-core';
+import {
+    boolean,
+    index,
+    integer,
+    jsonb,
+    pgTable,
+    text,
+    timestamp,
+    uniqueIndex,
+    uuid,
+    varchar,
+} from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -26,8 +37,78 @@ export const refreshTokens = pgTable('refresh_tokens', {
   tokenHashIdx: index('idx_refresh_tokens_token_hash').on(table.tokenHash),
 }));
 
+export const topics = pgTable('topics', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: varchar('name', { length: 255 }).unique().notNull(),
+  topicType: varchar('topic_type', { length: 50 }).notNull(),
+  category: varchar('category', { length: 255 }).notNull(),
+  subcategory: varchar('subcategory', { length: 255 }).notNull(),
+  contentWhat: text('content_what').notNull(),
+  contentWhy: text('content_why').notNull(),
+  contentPros: jsonb('content_pros').notNull(),
+  contentCons: jsonb('content_cons').notNull(),
+  contentCompareToSimilar: jsonb('content_compare_to_similar').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  nameIdx: index('idx_topics_name').on(table.name),
+  categoryIdx: index('idx_topics_category').on(table.category),
+}));
+
+export const userTopics = pgTable('user_topics', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  topicId: uuid('topic_id').notNull().references(() => topics.id, { onDelete: 'cascade' }),
+  status: varchar('status', { length: 20 }).notNull().default('discovered'),
+  discoveryMethod: varchar('discovery_method', { length: 20 }).notNull(),
+  discoveredAt: timestamp('discovered_at').notNull(),
+  learnedAt: timestamp('learned_at'),
+}, (table) => ({
+  userTopicUnique: uniqueIndex('idx_user_topics_unique').on(table.userId, table.topicId),
+  userIdIdx: index('idx_user_topics_user_id').on(table.userId),
+  topicIdIdx: index('idx_user_topics_topic_id').on(table.topicId),
+}));
+
+export const quizzes = pgTable('quizzes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  questions: jsonb('questions').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const quizTopics = pgTable('quiz_topics', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  quizId: uuid('quiz_id').notNull().references(() => quizzes.id, { onDelete: 'cascade' }),
+  topicId: uuid('topic_id').notNull().references(() => topics.id, { onDelete: 'cascade' }),
+}, (table) => ({
+  quizTopicUnique: uniqueIndex('idx_quiz_topics_unique').on(table.quizId, table.topicId),
+  quizIdIdx: index('idx_quiz_topics_quiz_id').on(table.quizId),
+  topicIdIdx: index('idx_quiz_topics_topic_id').on(table.topicId),
+}));
+
+export const userQuizzes = pgTable('user_quizzes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  quizId: uuid('quiz_id').notNull().references(() => quizzes.id, { onDelete: 'cascade' }),
+  score: integer('score').notNull(),
+  passed: boolean('passed').notNull(),
+  attemptedAt: timestamp('attempted_at').notNull(),
+  completedAt: timestamp('completed_at').notNull(),
+}, (table) => ({
+  userIdIdx: index('idx_user_quizzes_user_id').on(table.userId),
+  quizIdIdx: index('idx_user_quizzes_quiz_id').on(table.quizId),
+}));
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type RefreshToken = typeof refreshTokens.$inferSelect;
 export type NewRefreshToken = typeof refreshTokens.$inferInsert;
+export type Topic = typeof topics.$inferSelect;
+export type NewTopic = typeof topics.$inferInsert;
+export type UserTopic = typeof userTopics.$inferSelect;
+export type NewUserTopic = typeof userTopics.$inferInsert;
+export type Quiz = typeof quizzes.$inferSelect;
+export type NewQuiz = typeof quizzes.$inferInsert;
+export type QuizTopic = typeof quizTopics.$inferSelect;
+export type NewQuizTopic = typeof quizTopics.$inferInsert;
+export type UserQuiz = typeof userQuizzes.$inferSelect;
+export type NewUserQuiz = typeof userQuizzes.$inferInsert;

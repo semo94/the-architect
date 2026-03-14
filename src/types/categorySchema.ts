@@ -1,4 +1,4 @@
-﻿import { TopicType } from './index';
+import { TopicType } from './index';
 
 export interface SubcategorySchema {
   description: string;

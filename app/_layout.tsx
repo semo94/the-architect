@@ -1,4 +1,5 @@
 import { AuthLoadingOverlay } from "@/components/auth/AuthLoadingOverlay";
+import { ToastNotification } from "@/components/common/ToastNotification";
 import {
   DarkTheme,
   DefaultTheme,
@@ -6,7 +7,7 @@ import {
 } from "@react-navigation/native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
@@ -26,7 +27,13 @@ export default function RootLayout() {
   const isAuthenticated = useAppStore((state) => state.isAuthenticated);
   const isAuthLoading = useAppStore((state) => state.isAuthLoading);
   const checkSession = useAppStore((state) => state.checkSession);
+  const globalError = useAppStore((state) => state.globalError);
+  const clearGlobalError = useAppStore((state) => state.clearGlobalError);
   const inAuthGroup = segments[0] === "(auth)";
+
+  const handleErrorDismiss = useCallback(() => {
+    clearGlobalError();
+  }, [clearGlobalError]);
 
   useEffect(() => {
     checkSession();
@@ -115,6 +122,13 @@ export default function RootLayout() {
                 />
               </Stack>
             )}
+            <ToastNotification
+              message={globalError ?? ''}
+              visible={!!globalError}
+              onDismiss={handleErrorDismiss}
+              duration={5000}
+              bottomOffset={0}
+            />
             <StatusBar style="auto" />
           </NavigationThemeProvider>
         </ThemeProvider>

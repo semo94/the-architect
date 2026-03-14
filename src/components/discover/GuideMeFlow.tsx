@@ -1,5 +1,5 @@
 import { useTheme } from '@/contexts/ThemeContext';
-import llmService from '@/services/llmService';
+import topicService from '@/services/topicService';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -13,7 +13,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStreamingData } from "../../hooks/useStreamingData";
 import categorySchemaService from '../../services/categorySchemaService';
-import { useAppStore } from "../../store/useAppStore";
 import { Topic, TopicType } from "../../types";
 import { CategorySchemaMap } from '../../types/categorySchema';
 import { GuideMeHelper, GuideQuestion } from "../../utils/guideMeHelper";
@@ -37,11 +36,11 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   });
   const [currentQuestion, setCurrentQuestion] = useState<GuideQuestion | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
+  const [topicId, setTopicId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, typography, spacing, styles: themeStyles } = useTheme();
-  const { topics, addTopic, dismissTopic } = useAppStore();
 
   // Use streaming hook for state management and cleanup
   const topicStreaming = useStreamingData<Topic>({
@@ -197,44 +196,41 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
         learningGoal
       };
 
-      const alreadyDiscovered = topics.map((t) => t.name);
-
-      const newTopic = await llmService.generateTopic(
+      const result = await topicService.discoverTopic(
         'guided',
-        alreadyDiscovered,
-        [], // No dismissed list for guided mode
         constraints,
         onProgress
       );
 
-      handleComplete(newTopic);
+      setTopicId(result.topicId);
+      handleComplete(result.topic);
     } catch (err) {
       setError("Failed to generate topic. Please try again.");
       console.error(err);
       handleError(err as Error);
     }
-  }, [categorySchema, selections, topics, onProgress, handleComplete, handleError, reset]);
+  }, [categorySchema, selections, onProgress, handleComplete, handleError, reset]);
 
-  const handleDismiss = () => {
-    if (topic) {
-      dismissTopic(topic.name);
+  const handleDismiss = async () => {
+    if (topic && topicId) {
+      await topicService.updateTopicStatus(topicId, 'dismissed', 'guided');
     }
     onComplete();
   };
 
-  const handleAddToBucket = () => {
-    if (topic) {
-      addTopic(topic);
+  const handleAddToBucket = async () => {
+    if (topic && topicId) {
+      await topicService.updateTopicStatus(topicId, 'discovered', 'guided');
     }
     onComplete();
   };
 
-  const handleAcquireNow = () => {
-    if (topic) {
-      addTopic(topic);
+  const handleAcquireNow = async () => {
+    if (topic && topicId) {
+      await topicService.updateTopicStatus(topicId, 'discovered', 'guided');
       router.replace({
         pathname: "/quiz",
-        params: { topicId: topic.id },
+        params: { topicId },
       });
     }
   };

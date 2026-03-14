@@ -2,17 +2,17 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+    Modal,
+    Pressable,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import Animated, { SlideInDown } from 'react-native-reanimated';
 import { useFilterSheetStyles } from './topicsStyles';
 
-interface FilterOption {
+export interface FilterOption {
   value: string;
   label: string;
   count?: number;

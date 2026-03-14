@@ -1,20 +1,18 @@
 import { Card } from '@/components/common/Card';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useAppStore } from '@/store/useAppStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
 import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function DiscoverScreen() {
-  const { profile } = useAppStore();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
@@ -29,14 +27,6 @@ export default function DiscoverScreen() {
     },
     title: themeStyles.headerTitle,
     subtitle: themeStyles.headerSubtitle,
-    statsContainer: {
-      flexDirection: 'row',
-      padding: spacing.xl,
-      gap: spacing.lg,
-    },
-    statCard: themeStyles.statCard,
-    statNumber: themeStyles.statNumber,
-    statLabel: themeStyles.statLabel,
     sectionTitle: {
       fontSize: typography.fontSize.lg,
       fontWeight: typography.fontWeight.semibold,
@@ -97,24 +87,7 @@ export default function DiscoverScreen() {
     <ScrollView style={styles.container}>
       <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.xl) }]}>
         <Text style={styles.title}>Expand Your Architecture Knowledge</Text>
-        <Text style={styles.subtitle}>
-          You&apos;ve discovered {profile.statistics.breadthExpansion.totalDiscovered} topics
-        </Text>
-      </View>
-
-      <View style={styles.statsContainer}>
-        <Card style={styles.statCard}>
-          <Text style={styles.statNumber}>
-            {profile.statistics.breadthExpansion.totalLearned}
-          </Text>
-          <Text style={styles.statLabel}>Learned</Text>
-        </Card>
-        <Card style={styles.statCard}>
-          <Text style={styles.statNumber}>
-            {profile.statistics.breadthExpansion.inBucketList}
-          </Text>
-          <Text style={styles.statLabel}>In Bucket</Text>
-        </Card>
+        <Text style={styles.subtitle}>Choose how you want to discover today</Text>
       </View>
 
       <Text style={styles.sectionTitle}>Discovery Mode</Text>

@@ -7,10 +7,12 @@ import Fastify from 'fastify';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { jwtGuard } from './modules/auth/guards/jwt.guard.js';
 import { llmRoutes } from './modules/llm/llm.routes.js';
+import { quizRoutes } from './modules/quiz/quiz.routes.js';
 import { RATE_LIMITS } from './modules/shared/config/constants.js';
 import { env } from './modules/shared/config/env.js';
 import { errorHandler } from './modules/shared/middleware/error-handler.js';
 import { requestLogger } from './modules/shared/middleware/request-logger.js';
+import { topicRoutes } from './modules/topic/topic.routes.js';
 import { userRoutes } from './modules/user/user.routes.js';
 
 export async function buildApp() {
@@ -45,6 +47,7 @@ export async function buildApp() {
   await app.register(cors, {
     origin: env.ALLOWED_ORIGINS,
     credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   // Register rate limiting
@@ -86,6 +89,8 @@ export async function buildApp() {
   // Register routes
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(userRoutes, { prefix: '/users' });
+  await app.register(topicRoutes, { prefix: '/topics' });
+  await app.register(quizRoutes, { prefix: '/quizzes' });
   await app.register(llmRoutes, { prefix: '/llm' });
 
   return app;

@@ -16,4 +16,9 @@ export async function userRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.patch('/me', async (request, reply) => {
     await controller.updateCurrentUser(request, reply);
   });
+
+  // GET /users/me/stats - Get current user stats and milestones
+  fastify.get('/me/stats', async (request, reply) => {
+    await controller.getCurrentUserStats(request, reply);
+  });
 }
