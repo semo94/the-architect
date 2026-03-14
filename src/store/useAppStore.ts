@@ -23,7 +23,6 @@ interface AppState {
   fetchProfile: () => Promise<void>;
   fetchTopics: (filters?: TopicFilters, append?: boolean) => Promise<{ total: number; page: number; limit: number }>;
   fetchStats: () => Promise<void>;
-  hydrateAppData: () => Promise<void>;
   updateTopicStatusInCache: (topicId: string, status: 'discovered' | 'learned' | 'dismissed') => void;
   checkSession: () => Promise<void>;
   logout: () => Promise<void>;
@@ -126,14 +125,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
     }));
   },
 
-  hydrateAppData: async () => {
-    await Promise.all([
-      get().fetchProfile(),
-      get().fetchTopics(),
-      get().fetchStats(),
-    ]);
-  },
-
   updateTopicStatusInCache: (topicId: string, status: 'discovered' | 'learned' | 'dismissed') => {
     set((state) => ({
       topics: state.topics.map((topic) =>
@@ -156,7 +147,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
       if (isValid) {
         const user = await authService.getCurrentUser();
         set({ user, isAuthenticated: true, isAuthLoading: false });
-        await Promise.all([get().fetchTopics(), get().fetchStats()]);
         return;
       }
 
@@ -165,7 +155,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
           await authService.refreshAccessToken();
           const user = await authService.getCurrentUser();
           set({ user, isAuthenticated: true, isAuthLoading: false });
-          await Promise.all([get().fetchTopics(), get().fetchStats()]);
           return;
         } catch {
           // Ignore refresh errors and continue to unauthenticated state.

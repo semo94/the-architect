@@ -8,15 +8,22 @@ import { UserProfileHeader } from '@/components/profile/UserProfileHeader';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppStore } from '@/store/useAppStore';
-import React from 'react';
+import { useFocusEffect } from 'expo-router';
+import React, { useCallback } from 'react';
 import { ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
-  const { profile } = useAppStore();
+  const { profile, fetchStats } = useAppStore();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
   const { user, isAuthenticated } = useAuth();
+
+  useFocusEffect(
+    useCallback(() => {
+      void fetchStats();
+    }, [fetchStats])
+  );
 
   return (
     <ScrollView style={themeStyles.container}>

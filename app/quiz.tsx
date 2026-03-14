@@ -21,7 +21,7 @@ export default function QuizScreen() {
   const router = useRouter();
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
 
-  const { topics, updateTopicStatusInCache, fetchTopics, fetchStats } = useAppStore();
+  const { topics, updateTopicStatusInCache } = useAppStore();
   const topic = topics.find((t) => t.id === topicId);
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]); // Final complete questions (for quiz results)
@@ -181,7 +181,6 @@ export default function QuizScreen() {
         setQuestions(quizQuestions);
       }
       setQuizComplete(true);
-      await Promise.all([fetchTopics(), fetchStats()]);
     } catch (err) {
       console.error('Failed to submit quiz:', err);
       setError('Failed to submit quiz. Please try again.');

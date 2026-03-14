@@ -4,8 +4,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import topicService from '@/services/topicService';
 import { useAppStore } from '@/store/useAppStore';
 import { TopicStatus, TopicType } from '@/types';
-import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CategoryFilterSheet } from './CategoryFilterSheet';
@@ -20,7 +20,7 @@ import { SearchBar } from './SearchBar';
 import { TopicListCard } from './TopicListCard';
 
 export const TopicsScreen: React.FC = () => {
-  const { topics, fetchTopics, fetchStats } = useAppStore();
+  const { topics, fetchTopics } = useAppStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
@@ -82,7 +82,7 @@ export const TopicsScreen: React.FC = () => {
             category: categoryFilter === 'all' ? undefined : categoryFilter,
             subcategory: subcategoryFilter === 'all' ? undefined : subcategoryFilter,
             page: nextPage,
-            limit: 50,
+            limit: 5,
           },
           append
         );
@@ -121,10 +121,23 @@ export const TopicsScreen: React.FC = () => {
     }
   }, [categoryFilter, subcategoryFilter]);
 
+  // Reload when filters change.
   useEffect(() => {
     setPage(1);
     void loadTopics(1, false);
   }, [loadTopics]);
+
+  // Keep a stable ref so the focus effect doesn't re-trigger the filter useEffect.
+  const loadTopicsRef = useRef(loadTopics);
+  loadTopicsRef.current = loadTopics;
+
+  // Always reload page 1 when the tab gains focus (e.g. returning from Discover/Quiz).
+  useFocusEffect(
+    useCallback(() => {
+      setPage(1);
+      void loadTopicsRef.current(1, false);
+    }, [])
+  );
 
   useEffect(() => {
     void loadTopicFacets();
@@ -205,7 +218,7 @@ export const TopicsScreen: React.FC = () => {
   const handleDismiss = async (topicId: string) => {
     await topicService.updateTopicStatus(topicId, 'dismissed');
     setPage(1);
-    await Promise.all([loadTopics(1, false), loadTopicFacets(), fetchStats()]);
+    await Promise.all([loadTopics(1, false), loadTopicFacets()]);
 
     const topic = topics.find((item) => item.id === topicId);
     setToast({
@@ -218,7 +231,7 @@ export const TopicsScreen: React.FC = () => {
   const handleRestore = async (topicId: string) => {
     await topicService.updateTopicStatus(topicId, 'discovered');
     setPage(1);
-    await Promise.all([loadTopics(1, false), loadTopicFacets(), fetchStats()]);
+    await Promise.all([loadTopics(1, false), loadTopicFacets()]);
 
     const topic = topics.find((item) => item.id === topicId);
     setToast({
@@ -236,7 +249,7 @@ export const TopicsScreen: React.FC = () => {
     await topicService.updateTopicStatus(toast.topicId, toast.undoStatus);
     setToast(null);
     setPage(1);
-    await Promise.all([loadTopics(1, false), loadTopicFacets(), fetchStats()]);
+    await Promise.all([loadTopics(1, false), loadTopicFacets()]);
   };
 
   const handleClearAllFilters = () => {

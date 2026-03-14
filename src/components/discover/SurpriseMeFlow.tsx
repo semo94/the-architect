@@ -2,15 +2,14 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStreamingData } from '../../hooks/useStreamingData';
 import topicService from '../../services/topicService';
-import { useAppStore } from '../../store/useAppStore';
 import { Topic } from '../../types';
 import { hasMinimumData } from '../../utils/streamingParser';
 import { LoadingSpinner } from '../common/LoadingSpinner';
@@ -29,8 +28,6 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
 
-  const fetchTopics = useAppStore((state) => state.fetchTopics);
-  const fetchStats = useAppStore((state) => state.fetchStats);
 
   // Use streaming hook for state management and cleanup
   const topicStreaming = useStreamingData<Topic>({
@@ -77,7 +74,6 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleDismiss = async () => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'dismissed', 'surprise');
-      await Promise.all([fetchTopics(), fetchStats()]);
     }
     onComplete();
   };
@@ -85,7 +81,6 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleAddToBucket = async () => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'surprise');
-      await Promise.all([fetchTopics(), fetchStats()]);
     }
     onComplete();
   };
@@ -93,7 +88,6 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleAcquireNow = async () => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'surprise');
-      await Promise.all([fetchTopics(), fetchStats()]);
       router.replace({
         pathname: '/quiz',
         params: { topicId }

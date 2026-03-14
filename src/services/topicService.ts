@@ -182,6 +182,8 @@ class TopicService {
     } catch (error) {
       if (error instanceof SSEError && error.statusCode === 401) {
         await authService.refreshAccessToken();
+        const refreshedHeaders = await this.getAuthHeaders();
+        Object.assign(headers, refreshedHeaders);
         return doRequest();
       }
       throw error;

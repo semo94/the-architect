@@ -13,7 +13,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStreamingData } from "../../hooks/useStreamingData";
 import categorySchemaService from '../../services/categorySchemaService';
-import { useAppStore } from "../../store/useAppStore";
 import { Topic, TopicType } from "../../types";
 import { CategorySchemaMap } from '../../types/categorySchema';
 import { GuideMeHelper, GuideQuestion } from "../../utils/guideMeHelper";
@@ -42,7 +41,6 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, typography, spacing, styles: themeStyles } = useTheme();
-  const { fetchTopics, fetchStats } = useAppStore();
 
   // Use streaming hook for state management and cleanup
   const topicStreaming = useStreamingData<Topic>({
@@ -216,7 +214,6 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleDismiss = async () => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'dismissed', 'guided');
-      await Promise.all([fetchTopics(), fetchStats()]);
     }
     onComplete();
   };
@@ -224,7 +221,6 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleAddToBucket = async () => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'guided');
-      await Promise.all([fetchTopics(), fetchStats()]);
     }
     onComplete();
   };
@@ -232,7 +228,6 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleAcquireNow = async () => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'guided');
-      await Promise.all([fetchTopics(), fetchStats()]);
       router.replace({
         pathname: "/quiz",
         params: { topicId },

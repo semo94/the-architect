@@ -1191,42 +1191,42 @@ Submit a quiz attempt. Persists `user_quizzes` row. Updates `user_topics.status`
 
 ## 8. Verification Checklist
 
-- [ ] "Surprise Me" flow works end-to-end with SSE streaming (typewriter animation) and persistence
-- [ ] "Guide Me" flow works end-to-end (dismissed topics bug fixed — backend fetches from DB)
-- [ ] Streaming works identically whether topic is LLM-generated or DB-cached
-- [ ] DB-first cache: backend queries for unserved topics before calling LLM
-- [ ] SSE meta delivered as regular `data:` line (`{"type":"meta",...}`) — no named `event:` lines needed
-- [ ] `sseService.ts` unchanged — processes `data:` lines only (no `event:` support needed)
-- [ ] `discoverTopic()` returns `{topic: Topic, topicId: string}` (flat→nested conversion in service)
-- [ ] Dismissed topics are tracked via `user_topics.status = 'dismissed'` and excluded from future discoveries
-- [ ] Dismissed topics can be toggled back to `discovered` from Topics page
-- [ ] Dismissed topic cards are visually muted (cannot view or quiz, but can delete via swipe-left or restore via long-press)
-- [ ] Topics tab shows all topics by default (discovered + learned + dismissed)
-- [ ] Topics tab uses paginated loading (`GET /topics?page=N&limit=50`)
-- [ ] Topic detail screen loads from backend
-- [ ] Quiz generation serves existing unattempted quiz from DB when available; generates new via LLM otherwise
-- [ ] Quiz M:N model works: shared quiz content, per-user attempts in `user_quizzes`
-- [ ] Quiz submission via `POST /quizzes/:id/attempts` persists `user_quizzes` row and updates topic status on pass
-- [ ] `QuizResult` response uses single `id` (= `quizzes.id`), no separate `quizId`
-- [ ] Profile stats are computed on-demand (simple counts only) from `user_topics` + `user_quizzes` via `GET /users/me/stats`
+- [x] "Surprise Me" flow works end-to-end with SSE streaming (typewriter animation) and persistence
+- [x] "Guide Me" flow works end-to-end (dismissed topics bug fixed — backend fetches from DB)
+- [x] Streaming works identically whether topic is LLM-generated or DB-cached
+- [x] DB-first cache: backend queries for unserved topics before calling LLM
+- [x] SSE meta delivered as regular `data:` line (`{"type":"meta",...}`) — no named `event:` lines needed
+- [x] `sseService.ts` unchanged — processes `data:` lines only (no `event:` support needed)
+- [x] `discoverTopic()` returns `{topic: Topic, topicId: string}` (flat→nested conversion in service)
+- [x] Dismissed topics are tracked via `user_topics.status = 'dismissed'` and excluded from future discoveries
+- [x] Dismissed topics can be toggled back to `discovered` from Topics page
+- [x] Dismissed topic cards are visually muted (cannot view or quiz, but can delete via swipe-left or restore via long-press)
+- [x] Topics tab shows all topics by default (discovered + learned + dismissed)
+- [x] Topics tab uses paginated loading (`GET /topics?page=N&limit=5`)
+- [x] Topic detail screen loads from backend
+- [x] Quiz generation serves existing unattempted quiz from DB when available; generates new via LLM otherwise
+- [x] Quiz M:N model works: shared quiz content, per-user attempts in `user_quizzes`
+- [x] Quiz submission via `POST /quizzes/:id/attempts` persists `user_quizzes` row and updates topic status on pass
+- [x] `QuizResult` response uses single `id` (= `quizzes.id`), no separate `quizId`
+- [x] Profile stats are computed on-demand (simple counts only) from `user_topics` + `user_quizzes` via `GET /users/me/stats`
 - [ ] Milestones reflect backend state
-- [ ] App state is not persisted locally — store is empty on launch, hydrated from backend after auth
-- [ ] Hydration: eager parallel fetch after auth, per-screen loading spinners
-- [ ] `quizzes[]`, `currentQuiz`, `dismissedTopics`, `dismissTopic()` removed from Zustand store
-- [ ] `PATCH /topics/:id` accepts `discoveryMethod` in body (required on first interaction, optional on toggles)
-- [ ] `DELETE /topics/:id` cascades to `user_quizzes` for quizzes linked to that topic
-- [ ] Two users discovering the same topic share the `topics` row
-- [ ] Orphaned topics (no user association) remain in DB as shared cache — no cleanup
-- [ ] Deleting a topic removes only the `user_topics` row, not the global topic
-- [ ] No changes to `users` table schema in this phase (bio, preferences, lastActiveAt deferred)
-- [ ] All endpoints follow REST conventions (`/topics`, `/quizzes`, `/users` — plural nouns, no verbs)
-- [ ] All endpoints are auth-protected
-- [ ] Text search uses 300ms debounce; all filters sent server-side as query params to `GET /topics`
-- [ ] Long-press on discovered card dismisses it (haptic + toast with undo)
-- [ ] Long-press on learned card: no action
-- [ ] Long-press on dismissed card restores it to bucket list (haptic + toast with undo)
-- [ ] Swipe-right (Test) disabled on learned and dismissed cards
-- [ ] Dismissed cards: reduced opacity, tap disabled, swipe-right disabled, swipe-left (delete) enabled
-- [ ] Toast auto-dismisses after ~4s; undo reverts to previous status
-- [ ] Infinite scroll pagination appends results on scroll
-- [ ] Works on iOS, Android, and web
+- [x] App state is not persisted locally — store is empty on launch, hydrated from backend after auth
+- [x] Hydration: eager parallel fetch after auth, per-screen loading spinners
+- [x] `quizzes[]`, `currentQuiz`, `dismissedTopics`, `dismissTopic()` removed from Zustand store
+- [x] `PATCH /topics/:id` accepts `discoveryMethod` in body (required on first interaction, optional on toggles)
+- [x] `DELETE /topics/:id` cascades to `user_quizzes` for quizzes linked to that topic
+- [x] Two users discovering the same topic share the `topics` row
+- [x] Orphaned topics (no user association) remain in DB as shared cache — no cleanup
+- [x] Deleting a topic removes only the `user_topics` row, not the global topic
+- [x] No changes to `users` table schema in this phase (bio, preferences, lastActiveAt deferred)
+- [x] All endpoints follow REST conventions (`/topics`, `/quizzes`, `/users` — plural nouns, no verbs)
+- [x] All endpoints are auth-protected
+- [x] Text search uses 300ms debounce; all filters sent server-side as query params to `GET /topics`
+- [x] Long-press on discovered card dismisses it (haptic + toast with undo)
+- [x] Long-press on learned card: no action
+- [x] Long-press on dismissed card restores it to bucket list (haptic + toast with undo)
+- [x] Swipe-right (Test) disabled on learned and dismissed cards
+- [x] Dismissed cards: reduced opacity, tap disabled, swipe-right disabled, swipe-left (delete) enabled
+- [x] Toast auto-dismisses after ~4s; undo reverts to previous status
+- [x] Infinite scroll pagination appends results on scroll
+- [x] Works on iOS, Android, and web
