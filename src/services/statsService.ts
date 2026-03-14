@@ -1,4 +1,4 @@
-﻿import { Milestone, ProfileStatistics } from '@/types';
+import { Milestone, ProfileStatistics } from '@/types';
 import { authService } from './authService';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';

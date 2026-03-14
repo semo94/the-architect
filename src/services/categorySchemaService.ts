@@ -1,4 +1,4 @@
-﻿import type { CategorySchemaMap } from '../types/categorySchema';
+import type { CategorySchemaMap } from '../types/categorySchema';
 import { authService } from './authService';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';

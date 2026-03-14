@@ -1,4 +1,4 @@
-﻿import { QuizQuestion, QuizResult, UserQuizWithDetails } from '@/types';
+import { QuizQuestion, QuizResult, UserQuizWithDetails } from '@/types';
 import { z } from 'zod';
 import { authService } from './authService';
 import sseClient, { SSEError } from './sseService';
