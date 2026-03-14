@@ -13,7 +13,8 @@ interface FilterBarProps {
   categoryFilter: string;
   onCategoryPress: () => void;
   subcategoryFilter: string;
-  onSubcategoryPress: () => void;
+  onClearCategory: () => void;
+  onClearSubcategory: () => void;
   activeFiltersCount: number;
   onClearAll: () => void;
 }
@@ -67,7 +68,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   categoryFilter,
   onCategoryPress,
   subcategoryFilter,
-  onSubcategoryPress,
+  onClearCategory,
+  onClearSubcategory,
   activeFiltersCount,
   onClearAll,
 }) => {
@@ -117,20 +119,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
           {/* Category Filter */}
           <FilterChip
-            label={categoryFilter === 'all' ? 'Category' : categoryFilter}
+            label={
+              categoryFilter === 'all'
+                ? 'Category'
+                : subcategoryFilter !== 'all'
+                  ? `${categoryFilter} > ${subcategoryFilter}`
+                  : categoryFilter
+            }
             active={categoryFilter !== 'all'}
             onPress={onCategoryPress}
             showIcon
           />
-
-          {categoryFilter !== 'all' && (
-            <FilterChip
-              label={subcategoryFilter === 'all' ? 'Subcategory' : subcategoryFilter}
-              active={subcategoryFilter !== 'all'}
-              onPress={onSubcategoryPress}
-              showIcon
-            />
-          )}
         </ScrollView>
       </View>
 
@@ -173,7 +172,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 <Text style={styles.activeFilterText}>
                   Category: {categoryFilter}
                 </Text>
-                <Pressable onPress={onCategoryPress}>
+                <Pressable onPress={onClearCategory}>
                   <Ionicons
                     name="close"
                     size={14}
@@ -188,7 +187,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 <Text style={styles.activeFilterText}>
                   Subcategory: {subcategoryFilter}
                 </Text>
-                <Pressable onPress={onSubcategoryPress}>
+                <Pressable onPress={onClearSubcategory}>
                   <Ionicons
                     name="close"
                     size={14}

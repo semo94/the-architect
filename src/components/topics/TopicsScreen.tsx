@@ -7,12 +7,13 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CategoryFilterSheet } from './CategoryFilterSheet';
 import { EmptyState } from './EmptyState';
 import { FilterBar } from './FilterBar';
 import {
-    FilterSheet,
-    topicTypeOptions,
-    type FilterOption,
+  FilterSheet,
+  topicTypeOptions,
+  type FilterOption,
 } from './FilterSheet';
 import { SearchBar } from './SearchBar';
 import { TopicListCard } from './TopicListCard';
@@ -53,7 +54,6 @@ export const TopicsScreen: React.FC = () => {
   // Modal states
   const [typeSheetVisible, setTypeSheetVisible] = useState(false);
   const [categorySheetVisible, setCategorySheetVisible] = useState(false);
-  const [subcategorySheetVisible, setSubcategorySheetVisible] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<FilterOption[]>([
     { value: 'all', label: 'All Categories' },
   ]);
@@ -138,19 +138,6 @@ export const TopicsScreen: React.FC = () => {
     if (subcategoryFilter !== 'all') count++;
     return count;
   }, [statusFilter, typeFilter, categoryFilter, subcategoryFilter]);
-
-  const subcategoryOptions = useMemo(
-    () => {
-      if (categoryFilter === 'all') {
-        return [];
-      }
-
-      return subcategoriesByCategory[categoryFilter] ?? [
-        { value: 'all', label: 'All Subcategories' },
-      ];
-    },
-    [categoryFilter, subcategoriesByCategory]
-  );
 
   // Handlers
   const handleTopicPress = (topicId: string) => {
@@ -275,12 +262,18 @@ export const TopicsScreen: React.FC = () => {
     setPage(1);
   };
 
-  const handleCategoryChange = (category: string) => {
+  const handleCategoryChange = (category: string, subcategory: string) => {
     setCategoryFilter(category);
-    // Reset subcategory when category changes
-    if (category === 'all') {
-      setSubcategoryFilter('all');
-    }
+    setSubcategoryFilter(subcategory);
+  };
+
+  const handleClearCategory = () => {
+    setCategoryFilter('all');
+    setSubcategoryFilter('all');
+  };
+
+  const handleClearSubcategory = () => {
+    setSubcategoryFilter('all');
   };
 
   const handleTypeFilterPress = () => {
@@ -289,14 +282,6 @@ export const TopicsScreen: React.FC = () => {
 
   const handleCategoryFilterPress = () => {
     setCategorySheetVisible(true);
-  };
-
-  const handleSubcategoryFilterPress = () => {
-    if (categoryFilter === 'all') {
-      return;
-    }
-
-    setSubcategorySheetVisible(true);
   };
 
   // Determine empty state type
@@ -328,7 +313,8 @@ export const TopicsScreen: React.FC = () => {
         categoryFilter={categoryFilter}
         onCategoryPress={handleCategoryFilterPress}
         subcategoryFilter={subcategoryFilter}
-        onSubcategoryPress={handleSubcategoryFilterPress}
+        onClearCategory={handleClearCategory}
+        onClearSubcategory={handleClearSubcategory}
         activeFiltersCount={activeFiltersCount}
         onClearAll={handleClearAllFilters}
       />
@@ -380,26 +366,15 @@ export const TopicsScreen: React.FC = () => {
       />
 
       {/* Category Filter Sheet */}
-      <FilterSheet
+      <CategoryFilterSheet
         visible={categorySheetVisible}
         onClose={() => setCategorySheetVisible(false)}
-        title="Filter by Category"
-        options={categoryOptions}
-        selectedValue={categoryFilter}
-        onSelect={handleCategoryChange}
+        categories={categoryOptions}
+        subcategoriesByCategory={subcategoriesByCategory}
+        selectedCategory={categoryFilter}
+        selectedSubcategory={subcategoryFilter}
+        onApply={handleCategoryChange}
       />
-
-      {/* Subcategory Filter Sheet (if category is selected) */}
-      {categoryFilter !== 'all' && (
-        <FilterSheet
-          visible={subcategorySheetVisible}
-          onClose={() => setSubcategorySheetVisible(false)}
-          title="Filter by Subcategory"
-          options={subcategoryOptions}
-          selectedValue={subcategoryFilter}
-          onSelect={(value) => setSubcategoryFilter(value)}
-        />
-      )}
 
       {toast && (
         <View

@@ -4,11 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStreamingData } from "../../hooks/useStreamingData";
@@ -42,7 +42,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, typography, spacing, styles: themeStyles } = useTheme();
-  const { fetchTopics } = useAppStore();
+  const { fetchTopics, fetchStats } = useAppStore();
 
   // Use streaming hook for state management and cleanup
   const topicStreaming = useStreamingData<Topic>({
@@ -216,7 +216,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleDismiss = async () => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'dismissed', 'guided');
-      await fetchTopics();
+      await Promise.all([fetchTopics(), fetchStats()]);
     }
     onComplete();
   };
@@ -224,7 +224,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleAddToBucket = async () => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'guided');
-      await fetchTopics();
+      await Promise.all([fetchTopics(), fetchStats()]);
     }
     onComplete();
   };
@@ -232,7 +232,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleAcquireNow = async () => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'guided');
-      await fetchTopics();
+      await Promise.all([fetchTopics(), fetchStats()]);
       router.replace({
         pathname: "/quiz",
         params: { topicId },

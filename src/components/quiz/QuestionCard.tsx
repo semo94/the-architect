@@ -2,10 +2,10 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import {
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { QuizQuestion } from '../../types';
 import { SkeletonLoader } from '../common/SkeletonLoader';
@@ -200,7 +200,7 @@ export const QuestionCard: React.FC<Props> = ({
             const optionTextStyle = [styles.optionText];
             const optionLabelStyle = [styles.optionLabel];
             const optionLabelTextStyle = [styles.optionLabelText];
-            let showIcon = '';
+            let showIcon: 'correct' | 'incorrect' | null = null;
 
             // Apply feedback styles
             if (showFeedback && isComplete) {
@@ -253,14 +253,14 @@ export const QuestionCard: React.FC<Props> = ({
                     {/* Option Text and Icon */}
                     <View style={styles.optionTextWrapper}>
                       <Text style={optionTextStyle}>{option}</Text>
-                      {showIcon && (
+                      {showIcon ? (
                         <Ionicons
                           name={showIcon === 'correct' ? 'checkmark-circle' : 'close-circle'}
                           size={22}
                           color={showIcon === 'correct' ? colors.primary : colors.error}
                           style={styles.iconText}
                         />
-                      )}
+                      ) : null}
                     </View>
                   </View>
                 </Pressable>

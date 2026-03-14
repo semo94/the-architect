@@ -9,11 +9,11 @@ import { QuizQuestion } from '@/types';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 export default function QuizScreen() {
@@ -21,7 +21,7 @@ export default function QuizScreen() {
   const router = useRouter();
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
 
-  const { topics, updateTopicStatusInCache, fetchTopics } = useAppStore();
+  const { topics, updateTopicStatusInCache, fetchTopics, fetchStats } = useAppStore();
   const topic = topics.find((t) => t.id === topicId);
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]); // Final complete questions (for quiz results)
@@ -98,16 +98,40 @@ export default function QuizScreen() {
   }, [topic, onProgress, handleComplete, handleError, reset]);
 
   useEffect(() => {
-    if (topic) {
-      generateQuiz();
+    if (!topic) {
+      return;
     }
 
-    // Cleanup: cancel streaming when component unmounts or topic changes
+    // Auto-generate only when entering the screen for a topic.
+    // Prevent re-generation after submission/result state updates.
+    if (
+      quizComplete ||
+      !!quizId ||
+      questions.length > 0 ||
+      quizStreaming.isLoading ||
+      quizStreaming.isStreaming
+    ) {
+      return;
+    }
+
+    void generateQuiz();
+  }, [
+    topic,
+    generateQuiz,
+    quizComplete,
+    quizId,
+    questions.length,
+    quizStreaming.isLoading,
+    quizStreaming.isStreaming,
+  ]);
+
+  useEffect(() => {
+    // Cleanup only on unmount.
     return () => {
       console.log('[Quiz] Cleaning up - cancelling stream');
       cancel();
     };
-  }, [topic, generateQuiz, cancel]);
+  }, [cancel]);
 
   // Helper to check if a question is complete (has all required fields for interaction)
   const isQuestionComplete = (q: Partial<QuizQuestion>): boolean => {
@@ -157,7 +181,7 @@ export default function QuizScreen() {
         setQuestions(quizQuestions);
       }
       setQuizComplete(true);
-      await fetchTopics();
+      await Promise.all([fetchTopics(), fetchStats()]);
     } catch (err) {
       console.error('Failed to submit quiz:', err);
       setError('Failed to submit quiz. Please try again.');
@@ -264,7 +288,7 @@ export default function QuizScreen() {
   }
 
   // Show loading spinner before streaming starts
-  if (quizStreaming.isLoading && !quizStreaming.isStreaming) {
+  if (!quizComplete && quizStreaming.isLoading && !quizStreaming.isStreaming) {
     return <LoadingSpinner message="Preparing your quiz..." />;
   }
 
