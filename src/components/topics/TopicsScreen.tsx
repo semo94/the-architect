@@ -1,11 +1,12 @@
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { ToastNotification } from '@/components/common/ToastNotification';
 import { useTheme } from '@/contexts/ThemeContext';
 import topicService from '@/services/topicService';
 import { useAppStore } from '@/store/useAppStore';
 import { TopicStatus, TopicType } from '@/types';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CategoryFilterSheet } from './CategoryFilterSheet';
 import { EmptyState } from './EmptyState';
@@ -19,10 +20,10 @@ import { SearchBar } from './SearchBar';
 import { TopicListCard } from './TopicListCard';
 
 export const TopicsScreen: React.FC = () => {
-  const { topics, fetchTopics } = useAppStore();
+  const { topics, fetchTopics, fetchStats } = useAppStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, spacing, typography, borderRadius, styles: themeStyles } = useTheme();
+  const { styles: themeStyles } = useTheme();
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [isFetching, setIsFetching] = useState(false);
@@ -204,8 +205,7 @@ export const TopicsScreen: React.FC = () => {
   const handleDismiss = async (topicId: string) => {
     await topicService.updateTopicStatus(topicId, 'dismissed');
     setPage(1);
-    await loadTopics(1, false);
-    await loadTopicFacets();
+    await Promise.all([loadTopics(1, false), loadTopicFacets(), fetchStats()]);
 
     const topic = topics.find((item) => item.id === topicId);
     setToast({
@@ -218,8 +218,7 @@ export const TopicsScreen: React.FC = () => {
   const handleRestore = async (topicId: string) => {
     await topicService.updateTopicStatus(topicId, 'discovered');
     setPage(1);
-    await loadTopics(1, false);
-    await loadTopicFacets();
+    await Promise.all([loadTopics(1, false), loadTopicFacets(), fetchStats()]);
 
     const topic = topics.find((item) => item.id === topicId);
     setToast({
@@ -237,21 +236,8 @@ export const TopicsScreen: React.FC = () => {
     await topicService.updateTopicStatus(toast.topicId, toast.undoStatus);
     setToast(null);
     setPage(1);
-    await loadTopics(1, false);
-    await loadTopicFacets();
+    await Promise.all([loadTopics(1, false), loadTopicFacets(), fetchStats()]);
   };
-
-  useEffect(() => {
-    if (!toast) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setToast(null);
-    }, 4000);
-
-    return () => clearTimeout(timer);
-  }, [toast]);
 
   const handleClearAllFilters = () => {
     setSearchQuery('');
@@ -376,46 +362,13 @@ export const TopicsScreen: React.FC = () => {
         onApply={handleCategoryChange}
       />
 
-      {toast && (
-        <View
-          style={{
-            position: 'absolute',
-            left: spacing.lg,
-            right: spacing.lg,
-            bottom: Math.max(insets.bottom + 70, spacing.xl),
-            backgroundColor: colors.text,
-            borderRadius: borderRadius.md,
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.sm,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Text
-            style={{
-              color: colors.background,
-              fontSize: typography.fontSize.sm,
-              flex: 1,
-              marginRight: spacing.sm,
-            }}
-            numberOfLines={2}
-          >
-            {toast.message}
-          </Text>
-          <Pressable onPress={() => void handleUndoToast()}>
-            <Text
-              style={{
-                color: colors.primaryLight,
-                fontSize: typography.fontSize.sm,
-                fontWeight: typography.fontWeight.bold,
-              }}
-            >
-              Undo
-            </Text>
-          </Pressable>
-        </View>
-      )}
+      <ToastNotification
+        message={toast?.message ?? ''}
+        visible={!!toast}
+        actionLabel="Undo"
+        onAction={() => void handleUndoToast()}
+        onDismiss={() => setToast(null)}
+      />
 
       <ConfirmDialog
         visible={deleteDialog.visible}
