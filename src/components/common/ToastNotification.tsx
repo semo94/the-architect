@@ -1,4 +1,4 @@
-﻿import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,6 +37,8 @@ export function ToastNotification({
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(12)).current;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isShownRef = useRef(false);
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   // Store callbacks in refs so they never become effect/callback dependencies.
   // This prevents stale-closure race conditions where a hide animation triggered
@@ -53,24 +55,67 @@ export function ToastNotification({
     }
   };
 
+  const stopAnimation = React.useCallback(() => {
+    if (animationRef.current) {
+      animationRef.current.stop();
+      animationRef.current = null;
+    }
+  }, []);
+
+  const show = React.useCallback(() => {
+    clearTimer();
+    stopAnimation();
+    isShownRef.current = true;
+
+    const animation = Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]);
+
+    animationRef.current = animation;
+    animation.start(({ finished }) => {
+      if (animationRef.current === animation) {
+        animationRef.current = null;
+      }
+
+      if (!finished) {
+        return;
+      }
+    });
+  }, [opacity, translateY, stopAnimation]);
+
   // hide is stable — opacity/translateY are refs (never change), no onDismiss dep.
   const hide = React.useCallback(() => {
+    if (!isShownRef.current) {
+      return;
+    }
+
     clearTimer();
-    Animated.parallel([
+    stopAnimation();
+    isShownRef.current = false;
+
+    const animation = Animated.parallel([
       Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }),
       Animated.timing(translateY, { toValue: 12, duration: 180, useNativeDriver: true }),
-    ]).start(() => {
+    ]);
+
+    animationRef.current = animation;
+    animation.start(({ finished }) => {
+      if (animationRef.current === animation) {
+        animationRef.current = null;
+      }
+
+      if (!finished) {
+        return;
+      }
+
       onDismissRef.current?.();
     });
-  }, [opacity, translateY]);
+  }, [opacity, translateY, stopAnimation]);
 
   useEffect(() => {
     if (visible) {
-      clearTimer();
-      Animated.parallel([
-        Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
-        Animated.timing(translateY, { toValue: 0, duration: 220, useNativeDriver: true }),
-      ]).start();
+      show();
 
       if (duration > 0) {
         timerRef.current = setTimeout(hide, duration);
@@ -80,12 +125,19 @@ export function ToastNotification({
     }
 
     return clearTimer;
-  }, [visible, duration, hide, opacity, translateY]);
+  }, [visible, duration, hide, show]);
+
+  useEffect(() => {
+    return () => {
+      clearTimer();
+      stopAnimation();
+    };
+  }, [stopAnimation]);
 
   const handleAction = () => {
     clearTimer();
     onActionRef.current?.();
-    onDismissRef.current?.();
+    hide();
   };
 
   const styles = useStyles();

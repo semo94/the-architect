@@ -1,4 +1,4 @@
-﻿import { and, avg, count, eq, sql } from 'drizzle-orm';
+import { and, avg, count, eq, sql } from 'drizzle-orm';
 import { db } from '../shared/database/client.js';
 import { topics, userQuizzes, userTopics } from '../shared/database/schema.js';
 

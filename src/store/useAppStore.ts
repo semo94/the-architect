@@ -18,9 +18,10 @@ interface AppState {
   setUser: (user: User | null) => void;
   setAuthLoading: (loading: boolean) => void;
   setAuthError: (error: string | null) => void;
+  globalError: string | null;
   setProfile: (profile: Profile) => void;
   setTopics: (topics: Topic[]) => void;
-  fetchProfile: () => Promise<void>;
+  clearGlobalError: () => void;
   fetchTopics: (filters?: TopicFilters, append?: boolean) => Promise<{ total: number; page: number; limit: number }>;
   fetchStats: () => Promise<void>;
   updateTopicStatusInCache: (topicId: string, status: 'discovered' | 'learned' | 'dismissed') => void;
@@ -76,6 +77,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   isAuthenticated: false,
   isAuthLoading: true,
   authError: null,
+  globalError: null,
 
   setLoading: (loading: boolean) => set({ isLoading: loading }),
   setError: (error: string | null) => set({ error }),
@@ -84,11 +86,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setAuthError: (authError: string | null) => set({ authError, isAuthLoading: false }),
   setProfile: (profile: Profile) => set({ profile }),
   setTopics: (topics: Topic[]) => set({ topics }),
-
-  fetchProfile: async () => {
-    const user = await authService.getCurrentUser();
-    set({ user, isAuthenticated: true });
-  },
+  clearGlobalError: () => set({ globalError: null }),
 
   fetchTopics: async (filters?: TopicFilters, append = false) => {
     const result = await topicService.getTopics(filters);
@@ -114,15 +112,19 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   fetchStats: async () => {
-    const stats = await statsService.getStats();
-    set((state) => ({
-      profile: {
-        ...state.profile,
-        statistics: stats.statistics,
-        milestones: stats.milestones,
-        updatedAt: new Date().toISOString(),
-      },
-    }));
+    try {
+      const stats = await statsService.getStats();
+      set((state) => ({
+        profile: {
+          ...state.profile,
+          statistics: stats.statistics,
+          milestones: stats.milestones,
+          updatedAt: new Date().toISOString(),
+        },
+      }));
+    } catch {
+      set({ globalError: 'Failed to load stats. Pull down to refresh.' });
+    }
   },
 
   updateTopicStatusInCache: (topicId: string, status: 'discovered' | 'learned' | 'dismissed') => {
