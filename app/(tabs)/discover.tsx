@@ -1,14 +1,15 @@
 import { Card } from '@/components/common/Card';
+import { AppBrandHeader } from '@/components/layout/AppBrandHeader';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,12 +22,6 @@ export default function DiscoverScreen() {
     container: themeStyles.container,
     touchable: themeStyles.touchable,
     pressed: themeStyles.pressed,
-    header: {
-      ...themeStyles.header,
-      padding: spacing.xl,
-    },
-    title: themeStyles.headerTitle,
-    subtitle: themeStyles.headerSubtitle,
     sectionTitle: {
       fontSize: typography.fontSize.lg,
       fontWeight: typography.fontWeight.semibold,
@@ -85,10 +80,7 @@ export default function DiscoverScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.xl) }]}>
-        <Text style={styles.title}>Expand Your Architecture Knowledge</Text>
-        <Text style={styles.subtitle}>Choose how you want to discover today</Text>
-      </View>
+      <AppBrandHeader paddingTop={Math.max(insets.top, spacing.xl)} />
 
       <Text style={styles.sectionTitle}>Discovery Mode</Text>
 
