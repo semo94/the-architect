@@ -52,7 +52,7 @@ const FilterChip: React.FC<FilterChipProps> = ({
           <Ionicons
             name="chevron-down"
             size={14}
-            color={active ? colors.white : colors.text}
+            color={active ? colors.onPrimary : colors.text}
           />
         )}
       </View>
@@ -148,7 +148,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   <Ionicons
                     name="close"
                     size={14}
-                    color={colors.primary}
+                    color={colors.onPrimary}
                   />
                 </Pressable>
               </View>
@@ -161,7 +161,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   <Ionicons
                     name="close"
                     size={14}
-                    color={colors.primary}
+                    color={colors.onPrimary}
                   />
                 </Pressable>
               </View>
@@ -176,7 +176,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   <Ionicons
                     name="close"
                     size={14}
-                    color={colors.primary}
+                    color={colors.onPrimary}
                   />
                 </Pressable>
               </View>
@@ -191,7 +191,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   <Ionicons
                     name="close"
                     size={14}
-                    color={colors.primary}
+                    color={colors.onPrimary}
                   />
                 </Pressable>
               </View>

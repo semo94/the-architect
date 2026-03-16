@@ -1,5 +1,6 @@
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ToastNotification } from '@/components/common/ToastNotification';
+import { AppBrandHeader } from '@/components/layout/AppBrandHeader';
 import { useTheme } from '@/contexts/ThemeContext';
 import topicService from '@/services/topicService';
 import { useAppStore } from '@/store/useAppStore';
@@ -12,9 +13,9 @@ import { CategoryFilterSheet } from './CategoryFilterSheet';
 import { EmptyState } from './EmptyState';
 import { FilterBar } from './FilterBar';
 import {
-  FilterSheet,
-  topicTypeOptions,
-  type FilterOption,
+    FilterSheet,
+    topicTypeOptions,
+    type FilterOption,
 } from './FilterSheet';
 import { SearchBar } from './SearchBar';
 import { TopicListCard } from './TopicListCard';
@@ -294,9 +295,10 @@ export const TopicsScreen: React.FC = () => {
     <View
       style={[
         themeStyles.container,
-        { paddingTop: Math.max(insets.top, 20) },
       ]}
     >
+      <AppBrandHeader paddingTop={Math.max(insets.top, 20)} />
+
       <SearchBar
         value={searchQuery}
         onChangeText={setSearchQuery}

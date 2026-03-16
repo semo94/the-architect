@@ -2,10 +2,10 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import {
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 interface Props {
@@ -36,7 +36,9 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
     },
     pressed: themeStyles.pressed,
     dismissButton: {
-      backgroundColor: colors.background,
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     bucketButton: {
       backgroundColor: colors.secondary,
@@ -56,7 +58,7 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
     },
     acquireText: {
       fontSize: typography.fontSize.xs,
-      color: colors.white,
+      color: colors.onPrimary,
       marginTop: spacing.xs,
     },
   }), [colors, typography, spacing, borderRadius, themeStyles]);
@@ -100,7 +102,7 @@ export const ActionButtons: React.FC<Props> = ({ onDismiss, onAddToBucket, onAcq
           ]}
           onPress={onAcquireNow}
         >
-          <Ionicons name="checkmark-done-outline" size={24} color={colors.white} />
+          <Ionicons name="checkmark-done-outline" size={24} color={colors.onPrimary} />
           <Text style={styles.acquireText}>Acquire Now</Text>
         </Pressable>
       )}

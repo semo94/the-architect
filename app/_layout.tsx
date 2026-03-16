@@ -1,9 +1,9 @@
 import { AuthLoadingOverlay } from "@/components/auth/AuthLoadingOverlay";
 import { ToastNotification } from "@/components/common/ToastNotification";
 import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider as NavigationThemeProvider,
+    DarkTheme,
+    DefaultTheme,
+    ThemeProvider as NavigationThemeProvider,
 } from "@react-navigation/native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -85,8 +85,8 @@ export default function RootLayout() {
                   options={{
                     presentation: "card",
                     title: "Test Your Knowledge",
-                    headerStyle: { backgroundColor: colors.primary },
-                    headerTintColor: colors.white,
+                    headerStyle: { backgroundColor: colorScheme === "dark" ? colors.cardBackground : colors.primary },
+                    headerTintColor: colorScheme === "dark" ? colors.text : colors.white,
                     headerTitleStyle: { fontWeight: "bold" },
                   }}
                 />
@@ -95,8 +95,8 @@ export default function RootLayout() {
                   options={{
                     presentation: "card",
                     title: "Surprise Me",
-                    headerStyle: { backgroundColor: colors.primary },
-                    headerTintColor: colors.white,
+                    headerStyle: { backgroundColor: colorScheme === "dark" ? colors.cardBackground : colors.primary },
+                    headerTintColor: colorScheme === "dark" ? colors.text : colors.white,
                     headerTitleStyle: { fontWeight: "bold" },
                   }}
                 />
@@ -105,8 +105,8 @@ export default function RootLayout() {
                   options={{
                     presentation: "card",
                     title: "Guide Me",
-                    headerStyle: { backgroundColor: colors.primary },
-                    headerTintColor: colors.white,
+                    headerStyle: { backgroundColor: colorScheme === "dark" ? colors.cardBackground : colors.primary },
+                    headerTintColor: colorScheme === "dark" ? colors.text : colors.white,
                     headerTitleStyle: { fontWeight: "bold" },
                   }}
                 />
@@ -115,8 +115,8 @@ export default function RootLayout() {
                   options={{
                     presentation: "card",
                     title: "Topic Details",
-                    headerStyle: { backgroundColor: colors.primary },
-                    headerTintColor: colors.white,
+                    headerStyle: { backgroundColor: colorScheme === "dark" ? colors.cardBackground : colors.primary },
+                    headerTintColor: colorScheme === "dark" ? colors.text : colors.white,
                     headerTitleStyle: { fontWeight: "bold" },
                   }}
                 />

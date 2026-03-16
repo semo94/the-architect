@@ -2,7 +2,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { StyleSheet } from 'react-native';
 
 export const useTopicCardStyles = () => {
-  const { colors, typography, spacing, styles: themeStyles } = useTheme();
+  const { colors, typography, spacing, styles: themeStyles, isDark } = useTheme();
 
   return StyleSheet.create({
     container: {
@@ -11,17 +11,21 @@ export const useTopicCardStyles = () => {
     headerCard: {
       margin: spacing.lg,
       padding: spacing.xl,
-      backgroundColor: colors.primary,
+      backgroundColor: isDark ? colors.cardBackground : colors.primary,
+      ...(isDark && {
+        borderLeftWidth: 5,
+        borderLeftColor: colors.primary,
+      }),
     },
     categoryLabel: {
       fontSize: typography.fontSize.sm,
-      color: colors.primaryLight,
+      color: isDark ? colors.primaryDark : colors.primaryLight,
       marginBottom: spacing.sm,
     },
     title: {
       fontSize: typography.fontSize.xxxl,
       fontWeight: typography.fontWeight.bold,
-      color: colors.white,
+      color: isDark ? colors.text : colors.white,
     },
     contentCard: {
       marginHorizontal: spacing.lg,

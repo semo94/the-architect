@@ -1,15 +1,15 @@
+import { AppBrandHeader } from '@/components/layout/AppBrandHeader';
 import { BreadthExpansionStats } from '@/components/profile/BreadthExpansionStats';
 import { CategoryBreakdownList } from '@/components/profile/CategoryBreakdownList';
 import { LogoutButton } from '@/components/profile/LogoutButton';
 import { MilestonesList } from '@/components/profile/MilestonesList';
-import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { QuizPerformanceCard } from '@/components/profile/QuizPerformanceCard';
 import { UserProfileHeader } from '@/components/profile/UserProfileHeader';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppStore } from '@/store/useAppStore';
 import { useFocusEffect } from 'expo-router';
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,7 +27,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={themeStyles.container}>
-      <ProfileHeader paddingTop={Math.max(insets.top, 20)} />
+      <AppBrandHeader paddingTop={Math.max(insets.top, 20)} />
 
       {isAuthenticated && user && <UserProfileHeader user={user} />}
 

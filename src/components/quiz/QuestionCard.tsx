@@ -2,10 +2,10 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { QuizQuestion } from '../../types';
 import { SkeletonLoader } from '../common/SkeletonLoader';
@@ -81,14 +81,14 @@ export const QuestionCard: React.FC<Props> = ({
       backgroundColor: colors.primary,
     },
     optionLabelTextSelected: {
-      color: colors.white,
+      color: colors.onPrimary,
     },
     optionLabelCorrect: {
       backgroundColor: colors.primary,
       borderColor: colors.primary,
     },
     optionLabelTextCorrect: {
-      color: colors.white,
+      color: colors.onPrimary,
     },
     optionLabelIncorrect: {
       backgroundColor: colors.errorLight,
