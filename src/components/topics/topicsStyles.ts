@@ -250,7 +250,7 @@ export const useFilterBarStyles = () => {
           color: colors.text,
         },
         chipTextActive: {
-          color: colors.white,
+          color: colors.onPrimary,
         },
         divider: {
           width: 1,
@@ -281,12 +281,12 @@ export const useFilterBarStyles = () => {
           paddingRight: spacing.xs,
           paddingVertical: spacing.xs,
           borderRadius: borderRadius.sm,
-          backgroundColor: colors.primaryLight,
+          backgroundColor: colors.primary,
           gap: spacing.xs,
         },
         activeFilterText: {
           fontSize: typography.fontSize.xs,
-          color: colors.primary,
+          color: colors.onPrimary,
           fontWeight: typography.fontWeight.medium,
         },
         clearAllButton: {
@@ -395,7 +395,7 @@ export const useFilterSheetStyles = () => {
           fontWeight: typography.fontWeight.semibold,
         },
         buttonTextPrimary: {
-          color: colors.white,
+          color: colors.onPrimary,
         },
         buttonTextSecondary: {
           color: colors.text,
@@ -452,7 +452,7 @@ export const useEmptyStateStyles = () => {
         buttonText: {
           fontSize: typography.fontSize.base,
           fontWeight: typography.fontWeight.semibold,
-          color: colors.white,
+          color: colors.onPrimary,
         },
       }),
     [colors, typography, spacing, borderRadius]

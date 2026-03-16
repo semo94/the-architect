@@ -1,4 +1,4 @@
-import { Platform, StyleSheet, ColorSchemeName } from 'react-native';
+import { ColorSchemeName, Platform, StyleSheet } from 'react-native';
 
 // ===== COLOR PALETTE =====
 export const LightColors = {
@@ -41,48 +41,59 @@ export const LightColors = {
   icon: '#687076',
   tabIconDefault: '#687076',
   tabIconSelected: '#0a7ea4',
+
+  // Semantic: text color when accent is the background
+  onPrimary: '#FFFFFF',
+  onWarning: '#FFFFFF',
 };
 
 export const DarkColors = {
-  // Primary
-  primary: '#66BB6A',
-  primaryLight: '#2E7D32',
-  primaryDark: '#81C784',
+  // Primary — iOS system green, vivid and crisp on dark surfaces
+  primary: '#34C759',
+  // Deep dark-green surface (chips, option bg, badges); soft mint for text on surface
+  primaryLight: '#0D2A13',
+  primaryDark: '#7ED99A',
 
-  // Secondary
-  secondary: '#42A5F5',
-  secondaryLight: '#1E88E5',
-  secondaryDark: '#64B5F6',
+  // Secondary — iOS system blue
+  secondary: '#0A84FF',
+  // Deep dark-blue surface; soft light-blue for on-surface text
+  secondaryLight: '#051226',
+  secondaryDark: '#82BFFF',
 
-  // Error/Warning
-  error: '#EF5350',
-  errorLight: '#C62828',
-  errorDark: '#E57373',
-  warning: '#FFA726',
-  warningLight: '#EF6C00',
+  // Error/Warning — iOS system reds/oranges
+  error: '#FF453A',
+  errorLight: '#2C0808',
+  errorDark: '#FFADA8',
+  warning: '#FF9F0A',
+  warningLight: '#281800',
 
-  // Neutral
-  text: '#ECEDEE',
-  textSecondary: '#B0B3B8',
-  textLight: '#8E9297',
+  // Neutral — iOS system label hierarchy
+  text: '#F2F2F7',
+  textSecondary: '#AEAEB2',
+  textLight: '#6C6C70',
 
-  border: '#3A3A3C',
-  background: '#000000',
+  border: '#38383A',
+  background: '#0C0C0F',
   cardBackground: '#1C1C1E',
   white: '#fff',
   black: '#000',
 
   // Feedback
-  success: '#66BB6A',
-  successLight: '#2E7D32',
-  info: '#42A5F5',
-  infoLight: '#1565C0',
+  success: '#34C759',
+  successLight: '#0D2A13',
+  info: '#0A84FF',
+  infoLight: '#051226',
 
   // Tab/Navigation
-  tint: '#fff',
-  icon: '#9BA1A6',
-  tabIconDefault: '#9BA1A6',
-  tabIconSelected: '#fff',
+  tint: '#F2F2F7',
+  icon: '#8E8E93',
+  tabIconDefault: '#8E8E93',
+  tabIconSelected: '#F2F2F7',
+
+  // Semantic: text color when accent is the background
+  // dark-mode vivid greens/ambers need dark text for contrast
+  onPrimary: '#000000',
+  onWarning: '#1A1A1A',
 };
 
 // Helper to get theme colors
@@ -155,7 +166,7 @@ export const getShadows = (colorScheme: ColorSchemeName) => {
       ios: {
         shadowColor: isDark ? '#fff' : '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: isDark ? 0.3 : 0.1,
+        shadowOpacity: isDark ? 0.08 : 0.1,
         shadowRadius: 3.84,
       },
       android: {
@@ -163,7 +174,7 @@ export const getShadows = (colorScheme: ColorSchemeName) => {
       },
       web: {
         boxShadow: isDark
-          ? '0px 2px 3.84px rgba(255, 255, 255, 0.1)'
+          ? '0px 2px 3.84px rgba(255, 255, 255, 0.06)'
           : '0px 2px 3.84px rgba(0, 0, 0, 0.1)',
       },
     }),
@@ -171,7 +182,7 @@ export const getShadows = (colorScheme: ColorSchemeName) => {
       ios: {
         shadowColor: isDark ? '#fff' : '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: isDark ? 0.4 : 0.15,
+        shadowOpacity: isDark ? 0.12 : 0.15,
         shadowRadius: 6,
       },
       android: {
@@ -179,7 +190,7 @@ export const getShadows = (colorScheme: ColorSchemeName) => {
       },
       web: {
         boxShadow: isDark
-          ? '0px 4px 6px rgba(255, 255, 255, 0.15)'
+          ? '0px 4px 6px rgba(255, 255, 255, 0.08)'
           : '0px 4px 6px rgba(0, 0, 0, 0.15)',
       },
     }),

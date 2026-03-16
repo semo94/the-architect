@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function DiscoverScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
+  const { colors, typography, spacing, borderRadius, styles: themeStyles, isDark } = useTheme();
 
   const styles = useMemo(() => StyleSheet.create({
     container: themeStyles.container,
@@ -70,9 +70,11 @@ export default function DiscoverScreen() {
     },
     surpriseIconBg: {
       backgroundColor: colors.primaryLight,
+      ...(isDark && { borderWidth: 1, borderColor: colors.primary + '55' }),
     },
     guideIconBg: {
       backgroundColor: colors.secondaryLight,
+      ...(isDark && { borderWidth: 1, borderColor: colors.secondary + '55' }),
     },
     modeContent: {
       flex: 1,
@@ -100,6 +102,7 @@ export default function DiscoverScreen() {
       padding: spacing.lg,
       backgroundColor: colors.primaryLight,
       borderRadius: borderRadius.md,
+      ...(isDark && { borderWidth: 1, borderColor: colors.primary + '50' }),
     },
     tipTitleRow: {
       flexDirection: 'row',
@@ -117,7 +120,7 @@ export default function DiscoverScreen() {
       color: colors.primaryDark,
       lineHeight: typography.lineHeight.normal,
     },
-  }), [colors, typography, spacing, borderRadius, themeStyles]);
+  }), [colors, typography, spacing, borderRadius, themeStyles, isDark]);
 
   const handleSurpriseMe = () => {
     router.push('/discover-surprise');

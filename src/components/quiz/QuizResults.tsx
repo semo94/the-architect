@@ -77,7 +77,7 @@ export const QuizResults: React.FC<Props> = ({
       backgroundColor: colors.warning,
     },
     statusText: {
-      color: colors.white,
+      color: colors.onPrimary,
       fontSize: typography.fontSize.sm,
       fontWeight: typography.fontWeight.bold,
     },
@@ -191,7 +191,7 @@ export const QuizResults: React.FC<Props> = ({
     },
     pressed: themeStyles.pressed,
     retryButtonText: {
-      color: colors.white,
+      color: colors.onWarning,
       fontSize: typography.fontSize.base,
       fontWeight: typography.fontWeight.bold,
     },
