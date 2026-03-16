@@ -1,6 +1,6 @@
 import { Card } from '@/components/common/Card';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Topic, TopicType } from '@/types';
+import { TopicSummary, TopicType } from '@/types';
 import { getDiscoveryMethodIcon, getRelativeTime } from '@/utils/dateFormatters';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -8,11 +8,11 @@ import React from 'react';
 import { Platform, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-    runOnJS,
-    useAnimatedReaction,
-    useAnimatedStyle,
-    useSharedValue,
-    withSpring,
+  runOnJS,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
 } from 'react-native-reanimated';
 import { useTopicListCardStyles } from './topicsStyles';
 
@@ -34,7 +34,7 @@ const getTopicTypeColor = (topicType: TopicType): string => {
 };
 
 interface TopicListCardProps {
-  topic: Topic;
+  topic: TopicSummary;
   onPress: (topicId: string) => void;
   onTest?: (topicId: string) => void;
   onDelete: (topicId: string) => void;
@@ -162,7 +162,7 @@ export const TopicListCard: React.FC<TopicListCardProps> = ({
   }));
 
   // Truncate preview to ~80 characters
-  const preview = topic.content?.what || '';
+  const preview = topic.contentWhat || '';
   const truncatedPreview =
     preview.length > 80 ? preview.substring(0, 80) + '...' : preview;
 

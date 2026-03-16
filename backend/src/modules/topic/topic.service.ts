@@ -5,11 +5,12 @@ import { quizTopics, topics, userQuizzes, userTopics } from '../shared/database/
 import { AppError } from '../shared/middleware/error-handler.js';
 import { TopicRepository } from './topic.repository.js';
 import {
-    FlatTopicContentSchema,
-    type DiscoverTopicRequest,
-    type FlatTopicContent,
-    type ListTopicsQuery,
-    type TopicResponse,
+  FlatTopicContentSchema,
+  type DiscoverTopicRequest,
+  type FlatTopicContent,
+  type ListTopicsQuery,
+  type TopicListItemResponse,
+  type TopicResponse,
 } from './topic.schemas.js';
 
 interface StreamCallbacks {
@@ -86,11 +87,11 @@ export class TopicService {
   async getTopics(
     userId: string,
     filters: ListTopicsQuery
-  ): Promise<{ topics: TopicResponse[]; total: number; page: number; limit: number }> {
+  ): Promise<{ topics: TopicListItemResponse[]; total: number; page: number; limit: number }> {
     const { topics: rows, total } = await this.topicRepository.findUserTopics(userId, filters);
 
     return {
-      topics: rows.map((row) => this.toTopicResponse(row.topic, row.userTopic)),
+      topics: rows.map((row) => this.toTopicListItemResponse(row.topic, row.userTopic)),
       total,
       page: filters.page,
       limit: filters.limit,
@@ -269,6 +270,21 @@ export class TopicService {
     return JSON.parse(cleaned);
   }
 
+  private toTopicListItemResponse(topic: typeof topics.$inferSelect, userTopic: { status: string; discoveryMethod: string; discoveredAt: Date; learnedAt: Date | null }): TopicListItemResponse {
+    return {
+      id: topic.id,
+      name: topic.name,
+      topicType: topic.topicType as TopicListItemResponse['topicType'],
+      category: topic.category,
+      subcategory: topic.subcategory,
+      contentWhat: topic.contentWhat,
+      status: userTopic.status as TopicListItemResponse['status'],
+      discoveryMethod: userTopic.discoveryMethod as TopicListItemResponse['discoveryMethod'],
+      discoveredAt: userTopic.discoveredAt.toISOString(),
+      learnedAt: userTopic.learnedAt ? userTopic.learnedAt.toISOString() : null,
+    };
+  }
+
   private toTopicResponse(topic: typeof topics.$inferSelect, userTopic: { status: string; discoveryMethod: string; discoveredAt: Date; learnedAt: Date | null }): TopicResponse {
     return {
       id: topic.id,
@@ -276,6 +292,7 @@ export class TopicService {
       topicType: topic.topicType as TopicResponse['topicType'],
       category: topic.category,
       subcategory: topic.subcategory,
+      contentWhat: topic.contentWhat,
       content: {
         what: topic.contentWhat,
         why: topic.contentWhy,

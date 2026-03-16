@@ -24,17 +24,21 @@ export interface TopicContent {
   }[];
 }
 
-export interface Topic {
+export interface TopicSummary {
   id: string;
   name: string;
   topicType: TopicType;
   category: string;
   subcategory: string;
-  content: TopicContent;
+  contentWhat: string;
   status: TopicStatus;
   discoveryMethod: DiscoveryMethod;
   discoveredAt: string;
   learnedAt: string | null;
+}
+
+export interface Topic extends TopicSummary {
+  content: TopicContent;
 }
 
 export interface Quiz {

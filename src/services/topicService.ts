@@ -1,4 +1,4 @@
-import { Topic, TopicType } from '@/types';
+import { Topic, TopicSummary, TopicType } from '@/types';
 import { z } from 'zod';
 import { authService } from './authService';
 import sseClient, { SSEError } from './sseService';
@@ -216,7 +216,7 @@ class TopicService {
     }
   }
 
-  async getTopics(filters?: TopicFilters): Promise<{ topics: Topic[]; total: number; page: number; limit: number }> {
+  async getTopics(filters?: TopicFilters): Promise<{ topics: TopicSummary[]; total: number; page: number; limit: number }> {
     const params = new URLSearchParams();
 
     if (filters?.search) params.set('search', filters.search);
@@ -239,7 +239,7 @@ class TopicService {
 
     const data = await response.json();
     return {
-      topics: data.topics,
+      topics: data.topics as TopicSummary[],
       total: data.total,
       page: data.page,
       limit: data.limit,
