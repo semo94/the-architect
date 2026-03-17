@@ -5,11 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStreamingData } from "../../hooks/useStreamingData";
@@ -359,15 +359,15 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
             {step > 0 && (
               <View style={{ marginTop: spacing.xl }}>
                 <Text style={styles.historyTitle}>Your selections:</Text>
-                {selections.category && (
+                {selections.category ? (
                   <Text style={styles.historyAnswer}><Ionicons name="checkmark-circle" size={14} color={colors.primary} /> {selections.category}</Text>
-                )}
-                {selections.subcategory && (
+                ) : null}
+                {selections.subcategory ? (
                   <Text style={styles.historyAnswer}><Ionicons name="checkmark-circle" size={14} color={colors.primary} /> {selections.subcategory}</Text>
-                )}
-                {selections.topicType && (
+                ) : null}
+                {selections.topicType ? (
                   <Text style={styles.historyAnswer}><Ionicons name="checkmark-circle" size={14} color={colors.primary} /> {selections.topicType}</Text>
-                )}
+                ) : null}
               </View>
             )}
           </View>
