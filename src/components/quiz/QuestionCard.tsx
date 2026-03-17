@@ -14,6 +14,7 @@ import { FadeInItemWrapper, TypewriterText } from '../common/StreamingAnimations
 interface Props {
   question: Partial<QuizQuestion>;
   isComplete: boolean;  // Has all required fields (question, 4 options, correctAnswer, explanation)
+  optionsReady: boolean; // Options have been shuffled and are ready to display
   selectedAnswer?: number;
   showFeedback: boolean;
   onSelectAnswer: (answerIndex: number) => void;
@@ -27,6 +28,7 @@ interface Props {
 export const QuestionCard: React.FC<Props> = ({
   question,
   isComplete,
+  optionsReady,
   selectedAnswer,
   showFeedback,
   onSelectAnswer,
@@ -192,7 +194,16 @@ export const QuestionCard: React.FC<Props> = ({
 
       {/* Options Container - Separated from question */}
       <View style={styles.optionsContainer}>
-        {hasQuestion && options.map((option, index) => {
+        {/* Show skeleton loaders until options are shuffled and ready */}
+        {hasQuestion && !optionsReady &&
+          Array.from({ length: 4 }).map((_, idx) => (
+            <View key={`skeleton-${idx}`} style={{ marginBottom: spacing.md }}>
+              <SkeletonLoader width="100%" height={60} />
+            </View>
+          ))}
+
+        {/* Show actual options once shuffled and ready */}
+        {hasQuestion && optionsReady && options.map((option, index) => {
             const isSelected = selectedAnswer === index;
             const isCorrectOption = index === question.correctAnswer;
 
@@ -252,7 +263,12 @@ export const QuestionCard: React.FC<Props> = ({
                     </View>
                     {/* Option Text and Icon */}
                     <View style={styles.optionTextWrapper}>
-                      <Text style={optionTextStyle}>{option}</Text>
+                      <TypewriterText
+                        text={option}
+                        style={optionTextStyle}
+                        speed={10}
+                        instant={showFeedback || selectedAnswer !== undefined}
+                      />
                       {showIcon ? (
                         <Ionicons
                           name={showIcon === 'correct' ? 'checkmark-circle' : 'close-circle'}
@@ -267,14 +283,6 @@ export const QuestionCard: React.FC<Props> = ({
               </FadeInItemWrapper>
             );
           })}
-
-          {/* Show skeleton loaders for missing options */}
-          {hasQuestion && options.length < 4 &&
-            Array.from({ length: 4 - options.length }).map((_, idx) => (
-              <View key={`skeleton-${idx}`} style={{ marginBottom: spacing.md }}>
-                <SkeletonLoader width="100%" height={60} />
-              </View>
-            ))}
 
           {/* Show all skeletons if no question yet */}
           {!hasQuestion &&
@@ -299,13 +307,11 @@ export const QuestionCard: React.FC<Props> = ({
       )}
 
       {/* Loading status message */}
-      {!isComplete && (
+      {!optionsReady && (
         <Text style={styles.loadingText}>
           {!hasQuestion
             ? 'Generating question...'
-            : options.length < 4
-            ? `Loading option ${options.length + 1} of 4...`
-            : 'Finalizing question...'}
+            : 'Loading options...'}
         </Text>
       )}
     </View>

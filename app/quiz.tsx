@@ -6,8 +6,9 @@ import { useStreamingData } from '@/hooks/useStreamingData';
 import quizService from '@/services/quizService';
 import { useAppStore } from '@/store/useAppStore';
 import { QuizQuestion } from '@/types';
+import { shuffleQuestionOptions, unshuffleAnswerIndex } from '@/utils/quizShuffle';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -24,7 +25,7 @@ export default function QuizScreen() {
   const { topics, topicDetails, updateTopicStatusInCache } = useAppStore();
   const topic = topics.find((t) => t.id === topicId) ?? (topicId ? topicDetails[topicId] : undefined);
 
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]); // Final complete questions (for quiz results)
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]); // Final shuffled questions (for quiz results)
   const [quizId, setQuizId] = useState<string | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<number[]>([]);
@@ -33,6 +34,11 @@ export default function QuizScreen() {
   const [finalScore, setFinalScore] = useState<number>(0); // Store the final score to avoid recalculation
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Per-question shuffle: populated individually as each question's options arrive
+  const [shuffledQuestions, setShuffledQuestions] = useState<(QuizQuestion | null)[]>([]);
+  const [shuffleMaps, setShuffleMaps] = useState<number[][]>([]);
+  const shuffledIndicesRef = useRef<Set<number>>(new Set());
 
   // Streaming state for quiz questions
   const quizStreaming = useStreamingData<{ questions: QuizQuestion[] }>({
@@ -71,8 +77,39 @@ export default function QuizScreen() {
     },
     onComplete: (data) => {
       console.log('[Quiz] onComplete called with', data.questions.length, 'questions');
-      // Store final questions for quiz results
-      setQuestions(data.questions);
+
+      setShuffledQuestions((prev) => {
+        const merged = [...prev];
+        const mergedMaps: number[][] = [];
+
+        data.questions.forEach((q, index) => {
+          if (merged[index]) {
+            // Already shuffled during streaming — keep it
+            return;
+          }
+          // Shuffle any questions that weren't handled during streaming
+          const { question: sq, indexMap } = shuffleQuestionOptions(q);
+          shuffledIndicesRef.current.add(index);
+          merged[index] = sq;
+          mergedMaps[index] = indexMap;
+        });
+
+        // Set final questions for QuizResults
+        setQuestions(merged.filter((q): q is QuizQuestion => q !== null));
+
+        // Merge maps for any newly-shuffled questions
+        if (mergedMaps.length > 0) {
+          setShuffleMaps((prevMaps) => {
+            const updated = [...prevMaps];
+            mergedMaps.forEach((map, i) => {
+              if (map) updated[i] = map;
+            });
+            return updated;
+          });
+        }
+
+        return merged;
+      });
     },
   });
 
@@ -133,6 +170,35 @@ export default function QuizScreen() {
     };
   }, [cancel]);
 
+  // Shuffle each question's options as soon as all 4 arrive during streaming
+  useEffect(() => {
+    const partialQuestions = quizStreaming.partialData.questions;
+    if (!partialQuestions) return;
+
+    partialQuestions.forEach((q, index) => {
+      if (shuffledIndicesRef.current.has(index)) return;
+      // Check that all 4 options, correctAnswer, and explanation are present
+      if (
+        q.options?.length === 4 &&
+        typeof q.correctAnswer === 'number' &&
+        q.explanation
+      ) {
+        const { question: sq, indexMap } = shuffleQuestionOptions(q as QuizQuestion);
+        shuffledIndicesRef.current.add(index);
+        setShuffledQuestions((prev) => {
+          const next = [...prev];
+          next[index] = sq;
+          return next;
+        });
+        setShuffleMaps((prev) => {
+          const next = [...prev];
+          next[index] = indexMap;
+          return next;
+        });
+      }
+    });
+  }, [quizStreaming.partialData]);
+
   // Helper to check if a question is complete (has all required fields for interaction)
   const isQuestionComplete = (q: Partial<QuizQuestion>): boolean => {
     return !!(
@@ -165,21 +231,20 @@ export default function QuizScreen() {
       return;
     }
 
-    // Use the stable questions state (set by onComplete) instead of streaming partialData
-    const quizQuestions = questions.length > 0 ? questions : (quizStreaming.partialData.questions || []);
-
     setIsSubmitting(true);
     try {
-      const result = await quizService.submitQuizAttempt(quizId, userAnswers);
+      // Map shuffled display indices back to original indices for backend
+      const originalAnswers = userAnswers.map((displayIndex, qIndex) => {
+        const map = shuffleMaps[qIndex];
+        return map ? unshuffleAnswerIndex(displayIndex, map) : displayIndex;
+      });
+      const result = await quizService.submitQuizAttempt(quizId, originalAnswers);
 
       if (result.topicStatusUpdated) {
         updateTopicStatusInCache(topic.id, 'learned');
       }
 
       setFinalScore(result.score);
-      if (questions.length === 0) {
-        setQuestions(quizQuestions);
-      }
       setQuizComplete(true);
     } catch (err) {
       console.error('Failed to submit quiz:', err);
@@ -196,6 +261,9 @@ export default function QuizScreen() {
     setQuizComplete(false);
     setFinalScore(0);
     setQuizId(null);
+    setShuffledQuestions([]);
+    setShuffleMaps([]);
+    shuffledIndicesRef.current.clear();
     generateQuiz();
   };
 
@@ -328,15 +396,26 @@ export default function QuizScreen() {
     );
   }
 
-  // Get current question from streaming data or loaded questions
-  const allQuestions = quizStreaming.partialData.questions || questions;
-  const currentQuestion = allQuestions[currentQuestionIndex];
+  // Compose current question for display:
+  // - Question text: from partialData (streaming typewriter) or shuffled question
+  // - Options: ONLY from shuffled question (never raw partial data — avoids visual reordering)
+  const shuffledQ = shuffledQuestions[currentQuestionIndex] ?? null;
+  const partialQuestions = quizStreaming.partialData.questions || [];
+  const partialQ = partialQuestions[currentQuestionIndex];
+  const optionsReady = shuffledQ !== null;
+
+  // Build the question object to display
+  const currentQuestion: Partial<QuizQuestion> | undefined = optionsReady
+    ? shuffledQ // Shuffled — show everything from shuffled data
+    : partialQ
+      ? { question: partialQ.question } // Streaming — only expose question text (options hidden)
+      : undefined;
 
   if (!currentQuestion) {
     return <LoadingSpinner message="Loading question..." />;
   }
 
-  const isCurrentQuestionComplete = isQuestionComplete(currentQuestion);
+  const isCurrentQuestionComplete = optionsReady && isQuestionComplete(shuffledQ);
 
   return (
     <View style={styles.container}>
@@ -366,6 +445,7 @@ export default function QuizScreen() {
         <QuestionCard
           question={currentQuestion}
           isComplete={isCurrentQuestionComplete}
+          optionsReady={optionsReady}
           selectedAnswer={userAnswers[currentQuestionIndex]}
           showFeedback={showFeedback}
           onSelectAnswer={handleAnswer}
