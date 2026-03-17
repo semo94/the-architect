@@ -29,6 +29,15 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     callbackUri: env.GITHUB_CALLBACK_URL,
     scope: ['user:email', 'read:user'],
 
+    // Align the OAuth state cookie with the auth cookie policy so that
+    // browsers which enforce strict SameSite rules (Safari / iOS) still
+    // send the state cookie back on the GitHub → callback redirect.
+    cookie: {
+      secure: env.SECURE_COOKIES,
+      sameSite: env.COOKIE_SAME_SITE,
+      ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
+    },
+
     // Custom state generation: encode platform and redirect URI
     generateStateFunction: (function (this: FastifyInstance, request: FastifyRequest, callback: (err: Error | null, state: string) => void): void {
       try {

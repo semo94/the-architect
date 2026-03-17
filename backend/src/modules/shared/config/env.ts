@@ -25,7 +25,12 @@ const envSchema = z.object({
   // Cookie settings
   COOKIE_DOMAIN: z.string().optional(),
   SECURE_COOKIES: z.string().default('true').transform(val => val === 'true'),
-  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
+  // Default to 'none' because frontend and backend are hosted on different
+  // domains.  SameSite=None allows cross-origin requests (e.g. fetch with
+  // credentials: 'include') to carry cookies — required by Safari / iOS
+  // which strictly enforce SameSite semantics.
+  // Override to 'lax' only for local development over plain HTTP.
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('none'),
 
   // Security
   ALLOWED_ORIGINS: z
@@ -41,7 +46,13 @@ const envSchema = z.object({
   LLM_ANTHROPIC_VERSION: z.string().default('2023-06-01'),
   LLM_MAX_TOKENS: z.string().default('4000').transform(Number),
   LLM_TEMPERATURE: z.string().default('0.7').transform(Number),
-});
+}).refine(
+  data => !(data.COOKIE_SAME_SITE === 'none' && !data.SECURE_COOKIES),
+  {
+    message: 'SECURE_COOKIES must be "true" when COOKIE_SAME_SITE is "none" — browsers reject SameSite=None cookies without the Secure attribute',
+    path: ['SECURE_COOKIES'],
+  },
+);
 
 export type Env = z.infer<typeof envSchema>;
 

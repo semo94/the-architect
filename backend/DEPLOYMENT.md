@@ -129,6 +129,7 @@ JWT_ACCESS_SECRET=<random-32-char-string>
 # Required - Security
 NODE_ENV=production
 SECURE_COOKIES=true
+COOKIE_SAME_SITE=none
 ENABLE_FINGERPRINTING=true
 
 # Optional - Cookie Domain (set if using custom domain)
@@ -294,6 +295,7 @@ If you need to run migrations manually:
 - Add frontend URL to `ALLOWED_ORIGINS`
 - Ensure no trailing slashes in URLs
 - Verify `credentials: true` in frontend fetch requests
+- Set `COOKIE_SAME_SITE=none` and `SECURE_COOKIES=true` — required for cross-origin cookie auth (Safari / iOS enforce this strictly)
 - Check browser console for specific CORS error
 
 ### Migration Failures
@@ -349,6 +351,7 @@ When you need to scale:
 
 - [ ] JWT secrets are random and 32+ characters
 - [ ] `SECURE_COOKIES=true` in production
+- [ ] `COOKIE_SAME_SITE=none` in production (required for cross-origin cookie auth)
 - [ ] All URLs use HTTPS
 - [ ] `ALLOWED_ORIGINS` is restricted to your domains
 - [ ] GitHub OAuth app has correct callback URL
