@@ -21,8 +21,8 @@ export default function QuizScreen() {
   const router = useRouter();
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
 
-  const { topics, updateTopicStatusInCache } = useAppStore();
-  const topic = topics.find((t) => t.id === topicId);
+  const { topics, topicDetails, updateTopicStatusInCache } = useAppStore();
+  const topic = topics.find((t) => t.id === topicId) ?? (topicId ? topicDetails[topicId] : undefined);
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]); // Final complete questions (for quiz results)
   const [quizId, setQuizId] = useState<string | null>(null);
