@@ -14,14 +14,14 @@ export class LLMService {
     callbacks: StreamCallbacks,
     signal?: AbortSignal
   ): Promise<void> {
-    const prompt = promptTemplates.generateTopic(
+    const { system, user } = promptTemplates.generateTopic(
       requestBody.mode,
       requestBody.alreadyDiscovered,
       requestBody.dismissed,
       requestBody.constraints
     );
 
-    await this.streamPrompt(prompt, callbacks, signal);
+    await this.streamPrompt(user, system, callbacks, signal);
   }
 
   async generateQuizStream(
@@ -29,12 +29,12 @@ export class LLMService {
     callbacks: StreamCallbacks,
     signal?: AbortSignal
   ): Promise<void> {
-    const prompt = promptTemplates.generateQuizQuestions(requestBody.topic);
-    await this.streamPrompt(prompt, callbacks, signal);
+    const { system, user } = promptTemplates.generateQuizQuestions(requestBody.topic);
+    await this.streamPrompt(user, system, callbacks, signal);
   }
 
-  private async streamPrompt(prompt: string, callbacks: StreamCallbacks, signal?: AbortSignal): Promise<void> {
-    const upstream = await llmProvider.streamCompletion({ prompt, signal });
+  private async streamPrompt(prompt: string, systemPrompt: string, callbacks: StreamCallbacks, signal?: AbortSignal): Promise<void> {
+    const upstream = await llmProvider.streamCompletion({ prompt, systemPrompt, signal });
 
     if (!upstream.ok) {
       const errorText = await upstream.text();
