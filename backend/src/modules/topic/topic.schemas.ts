@@ -30,12 +30,20 @@ export const ListTopicsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
-export const TopicResponseSchema = z.object({
+export const TopicListItemResponseSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   topicType: TopicTypeSchema,
   category: z.string(),
   subcategory: z.string(),
+  contentWhat: z.string(),
+  status: z.enum(['discovered', 'learned', 'dismissed']),
+  discoveryMethod: z.enum(['surprise', 'guided']),
+  discoveredAt: z.string(),
+  learnedAt: z.string().nullable(),
+});
+
+export const TopicResponseSchema = TopicListItemResponseSchema.extend({
   content: z.object({
     what: z.string(),
     why: z.string(),
@@ -48,10 +56,6 @@ export const TopicResponseSchema = z.object({
       })
     ),
   }),
-  status: z.enum(['discovered', 'learned', 'dismissed']),
-  discoveryMethod: z.enum(['surprise', 'guided']),
-  discoveredAt: z.string(),
-  learnedAt: z.string().nullable(),
 });
 
 export const TopicIdParamSchema = z.object({
@@ -88,6 +92,7 @@ export const FlatTopicContentSchema = z.object({
 
 export type DiscoverTopicRequest = z.infer<typeof DiscoverTopicRequestSchema>;
 export type ListTopicsQuery = z.infer<typeof ListTopicsQuerySchema>;
+export type TopicListItemResponse = z.infer<typeof TopicListItemResponseSchema>;
 export type TopicResponse = z.infer<typeof TopicResponseSchema>;
 export type UpdateTopicStatusRequest = z.infer<typeof UpdateTopicStatusRequestSchema>;
 export type FlatTopicContent = z.infer<typeof FlatTopicContentSchema>;

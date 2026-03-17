@@ -2,6 +2,7 @@ import { env } from '../shared/config/env.js';
 
 interface StreamOptions {
   prompt: string;
+  systemPrompt?: string;
   signal?: AbortSignal;
 }
 
@@ -22,7 +23,7 @@ export class LLMProvider {
     return 'https://api.openai.com/v1/chat/completions';
   }
 
-  async streamCompletion({ prompt, signal }: StreamOptions): Promise<Response> {
+  async streamCompletion({ prompt, systemPrompt, signal }: StreamOptions): Promise<Response> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -37,6 +38,7 @@ export class LLMProvider {
         model: env.LLM_MODEL,
         max_tokens: env.LLM_MAX_TOKENS,
         temperature: env.LLM_TEMPERATURE,
+        ...(systemPrompt ? { system: systemPrompt } : {}),
         messages: [{ role: 'user', content: prompt }],
         stream: true,
       };
@@ -47,7 +49,10 @@ export class LLMProvider {
         model: env.LLM_MODEL,
         max_tokens: env.LLM_MAX_TOKENS,
         temperature: env.LLM_TEMPERATURE,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+          { role: 'user', content: prompt },
+        ],
         stream: true,
       };
     }

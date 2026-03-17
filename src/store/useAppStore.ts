@@ -2,10 +2,11 @@ import { authService, type User } from '@/services/authService';
 import statsService from '@/services/statsService';
 import topicService, { type TopicFilters } from '@/services/topicService';
 import { create } from 'zustand';
-import { Profile, Topic } from '../types';
+import { Profile, Topic, TopicSummary } from '../types';
 
 interface AppState {
-  topics: Topic[];
+  topics: TopicSummary[];
+  topicDetails: Record<string, Topic>;
   profile: Profile;
   isLoading: boolean;
   error: string | null;
@@ -20,7 +21,8 @@ interface AppState {
   setAuthError: (error: string | null) => void;
   globalError: string | null;
   setProfile: (profile: Profile) => void;
-  setTopics: (topics: Topic[]) => void;
+  setTopics: (topics: TopicSummary[]) => void;
+  setTopicDetail: (topic: Topic) => void;
   clearGlobalError: () => void;
   fetchTopics: (filters?: TopicFilters, append?: boolean) => Promise<{ total: number; page: number; limit: number }>;
   fetchStats: () => Promise<void>;
@@ -70,6 +72,7 @@ const initialProfile: Profile = {
 
 export const useAppStore = create<AppState>()((set, get) => ({
   topics: [],
+  topicDetails: {},
   profile: initialProfile,
   isLoading: false,
   error: null,
@@ -85,7 +88,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setAuthLoading: (isAuthLoading: boolean) => set({ isAuthLoading }),
   setAuthError: (authError: string | null) => set({ authError, isAuthLoading: false }),
   setProfile: (profile: Profile) => set({ profile }),
-  setTopics: (topics: Topic[]) => set({ topics }),
+  setTopics: (topics: TopicSummary[]) => set({ topics }),
+  setTopicDetail: (topic: Topic) => set((state) => ({ topicDetails: { ...state.topicDetails, [topic.id]: topic } })),
   clearGlobalError: () => set({ globalError: null }),
 
   fetchTopics: async (filters?: TopicFilters, append = false) => {
@@ -128,17 +132,25 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   updateTopicStatusInCache: (topicId: string, status: 'discovered' | 'learned' | 'dismissed') => {
-    set((state) => ({
-      topics: state.topics.map((topic) =>
+    set((state) => {
+      const learnedAt = status === 'learned' ? new Date().toISOString() : undefined;
+
+      const updatedTopics = state.topics.map((topic) =>
         topic.id === topicId
-          ? {
-              ...topic,
-              status,
-              learnedAt: status === 'learned' ? new Date().toISOString() : topic.learnedAt,
-            }
+          ? { ...topic, status, learnedAt: learnedAt ?? topic.learnedAt }
           : topic
-      ),
-    }));
+      );
+
+      const cachedDetail = state.topicDetails[topicId];
+      const updatedDetails = cachedDetail
+        ? {
+            ...state.topicDetails,
+            [topicId]: { ...cachedDetail, status, learnedAt: learnedAt ?? cachedDetail.learnedAt },
+          }
+        : state.topicDetails;
+
+      return { topics: updatedTopics, topicDetails: updatedDetails };
+    });
   },
 
   checkSession: async () => {

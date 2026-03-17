@@ -127,34 +127,59 @@ export const promptTemplates = {
     alreadyDiscovered: string[],
     dismissed: string[],
     constraints?: GenerateTopicConstraints
-  ): string => {
-    return `
-You are an expert software architecture mentor generating learning content.
+  ): { system: string; user: string } => {
+    const system = `You are a software architecture mentor helping senior engineers expand their breadth of architectural knowledge.
 
-MODE: ${mode.toUpperCase()}
+AUDIENCE:
+Experienced engineers who build and ship software daily. They are technically sharp but growing into architecture roles. They don't need basics explained - they need to quickly grasp new concepts, see how they connect to what they already know, and understand when and why to apply them.
 
-${mode === 'guided'
-  ? `GUIDED CONSTRAINTS:\n- Category: ${constraints?.category}\n- Subcategory: ${constraints?.subcategory}\n- TopicType: ${constraints?.topicType}\n- Learning Goal: ${constraints?.learningGoal}\nDefinition: ${constraints ? TOPIC_TYPE_DEFINITIONS[constraints.topicType].detailed : ''}`
-  : `SURPRISE MODE:\nSelect a meaningful category, subcategory, and topic type from the schema.`}
+WRITING STYLE:
+- Open every explanation with a hook: a relatable scenario, a surprising consequence, or a crisp analogy that makes the reader immediately see why this matters.
+- Write like you're explaining to a smart colleague over a whiteboard, not writing documentation. Be conversational and direct.
+- Ground abstractions in concrete examples - name real systems, real scenarios, real trade-offs.
+- Use analogies from the reader's existing engineering experience to make unfamiliar ideas click instantly.
+- Use short sentences for sharp points. Use longer sentences only when nuance demands it.
+- Never use passive voice when active voice works. Never open with "This involves..." or "It should be noted..."
+- Illuminate non-obvious connections and trade-offs, don't over-explain basics.
+- Make every paragraph earn its place. If a sentence doesn't teach something or change how the reader thinks, cut it.
+
+FORMATTING:
+- Use only standard ASCII characters. Do not use em dashes, en dashes, curly quotes, or other special Unicode punctuation.
+
+CONTENT GUIDELINES:
+- "what" field: 2 paragraphs. Hook first (scenario, analogy, or surprising fact). Then define what it is and how it works with concrete examples. Never open with a dictionary-style definition.
+- "why" field: 2 paragraphs. Start from a real problem (what goes wrong without this, or what decision this unlocks). Then explain why this is the right tool. Make the stakes tangible.
+- Each pro must be one concrete sentence. Be specific about WHEN and WHERE the benefit shows up.
+- Each con must be one honest sentence about a real gotcha engineers actually hit. Not an abstract limitation.
+- Comparisons should help the reader decide between the two, not just describe differences.
 
 TOPIC TYPES:
 ${formatAllTopicTypes()}
 
-AVOIDANCE LIST:
-- Already discovered: ${JSON.stringify(alreadyDiscovered)}
-- Recently dismissed: ${JSON.stringify(dismissed)}
+OUTPUT RULES:
+- Return valid JSON only, no markdown, no wrapping, no commentary.
+- Topic must be architecturally significant.
+- Every pro/con must be one sentence - direct, specific, no hedging.
+${mode === 'guided' ? `- topicType must equal "${constraints?.topicType}".` : ''}`;
+
+    const user = `${mode === 'guided'
+  ? `Generate a topic matching these constraints:\n- Category: ${constraints?.category}\n- Subcategory: ${constraints?.subcategory}\n- TopicType: ${constraints?.topicType}\n- Learning Goal: ${constraints?.learningGoal}\nDefinition: ${constraints ? TOPIC_TYPE_DEFINITIONS[constraints.topicType].detailed : ''}`
+  : `Select a meaningful topic from the category schema. Pick a category, subcategory, and topic type that would be valuable for a senior engineer to learn.`}
+
+Do not repeat any of these already-discovered topics: ${JSON.stringify(alreadyDiscovered)}
+Do not use any of these recently dismissed topics: ${JSON.stringify(dismissed)}
 
 CATEGORY SCHEMA:
 ${JSON.stringify(categorySchema, null, 2)}
 
-OUTPUT FORMAT (RETURN JSON ONLY):
+Respond with this JSON structure:
 {
   "name": "Specific Topic Name",
-  "topicType": "${constraints?.topicType ?? 'select from schema'}",
-  "category": "${constraints?.category ?? 'select from schema'}",
-  "subcategory": "${constraints?.subcategory ?? 'select from schema'}",
-  "what": "2-3 substantial paragraphs",
-  "why": "2-3 substantial paragraphs",
+  "topicType": "${constraints?.topicType ?? '<from schema>'}",
+  "category": "${constraints?.category ?? '<from schema>'}",
+  "subcategory": "${constraints?.subcategory ?? '<from schema>'}",
+  "what": "<see content guidelines>",
+  "why": "<see content guidelines>",
   "pro_0": "...",
   "pro_1": "...",
   "pro_2": "...",
@@ -169,34 +194,43 @@ OUTPUT FORMAT (RETURN JSON ONLY):
   "compare_0_text": "...",
   "compare_1_tech": "...",
   "compare_1_text": "..."
-}
+}`;
 
-Rules:
-- Return valid JSON only, no markdown.
-- Topic must be architecturally significant.
-- Keep comparisons realistic and actionable.
-${mode === 'guided' ? `- topicType must equal "${constraints?.topicType}".` : ''}
-`;
+    return { system, user };
   },
 
-  generateQuizQuestions: (topic: TopicPromptInput): string => {
+  generateQuizQuestions: (topic: TopicPromptInput): { system: string; user: string } => {
     const guidance = QUIZ_QUESTION_GUIDANCE[topic.topicType];
 
-    return `
-You are creating a quiz to test understanding of ${topic.name} (${topic.topicType}).
+    const system = `You are a quiz generator for software architecture topics. Your audience is senior engineers expanding their architectural knowledge.
 
-TOPIC CONTEXT:
-- Category: ${topic.category} > ${topic.subcategory}
-- Content: ${JSON.stringify(topic.content)}
+QUESTION STYLE:
+- Frame questions as realistic scenarios or decisions an architect would face, not textbook trivia or recall-based factoids.
+- Keep questions and options concise - no option should be longer than 2 sentences.
+- Explanations should be brief and reinforce the key insight, not restate the entire topic.
 
-Generate exactly 4 multiple-choice questions that test ${QUIZ_FOCUS_AREAS[topic.topicType]}.
+FORMATTING:
+- Use only standard ASCII characters. Do not use em dashes, en dashes, curly quotes, or other special Unicode punctuation. Use hyphens (-) or commas instead.
 
-Phrasing guidance:
+OUTPUT RULES:
+- Return valid JSON only, no markdown, no wrapping, no commentary.
+- Exactly 4 questions, exactly 4 options per question.
+- One correct answer per question (index 0-3).
+- All questions must be answerable from the provided topic content.`;
+
+    const user = `Generate 4 multiple-choice questions about ${topic.name} (${topic.topicType}).
+
+Category: ${topic.category} > ${topic.subcategory}
+Topic content: ${JSON.stringify(topic.content)}
+
+Focus on testing ${QUIZ_FOCUS_AREAS[topic.topicType]}.
+
+Question focus:
 - Q1-Q2: ${guidance.conceptual}
 - Q3: ${guidance.strengths}
 - Q4: ${guidance.limitations}
 
-OUTPUT FORMAT (RETURN JSON ONLY):
+Respond with this JSON structure:
 {
   "questions": [
     {
@@ -209,14 +243,8 @@ OUTPUT FORMAT (RETURN JSON ONLY):
       "explanation": "..."
     }
   ]
-}
+}`;
 
-Rules:
-- Exactly 4 questions.
-- Exactly 4 options per question.
-- One correct answer (0-3).
-- Questions must be answerable from the provided topic content.
-- No markdown, JSON only.
-`;
+    return { system, user };
   },
 };

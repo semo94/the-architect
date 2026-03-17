@@ -12,28 +12,35 @@ export default function TopicDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { colors } = useTheme();
-  const { topics } = useAppStore();
-  const [topicFromApi, setTopicFromApi] = useState<Topic | null>(null);
+  const { topicDetails, setTopicDetail } = useAppStore();
+  const [topic, setTopic] = useState<Topic | null>(null);
 
   const topicId = params.topicId as string;
-  const topic = topics.find(t => t.id === topicId) ?? topicFromApi;
 
   useEffect(() => {
-    if (!topicId || topic) {
+    if (!topicId) {
       return;
     }
 
-    const loadTopic = async () => {
+    // Serve cached detail immediately if available
+    const cached = topicDetails[topicId];
+    if (cached) {
+      setTopic(cached);
+    }
+
+    // Always refresh from API in background (stale-while-revalidate)
+    const refreshTopic = async () => {
       try {
-        const loaded = await topicService.getTopicDetail(topicId);
-        setTopicFromApi(loaded);
+        const fresh = await topicService.getTopicDetail(topicId);
+        setTopicDetail(fresh);
+        setTopic(fresh);
       } catch {
-        // Keep null to trigger the existing error state.
+        // If refresh fails and there's no cached version, the error state below handles it.
       }
     };
 
-    void loadTopic();
-  }, [topicId, topic]);
+    void refreshTopic();
+  }, [topicId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAcquireNow = () => {
     if (!topic) return;

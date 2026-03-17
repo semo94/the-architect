@@ -1,4 +1,5 @@
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAppStore } from '@/store/useAppStore';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -27,6 +28,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
+  const { setTopicDetail } = useAppStore();
 
 
   // Use streaming hook for state management and cleanup
@@ -88,6 +90,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleAcquireNow = async () => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'surprise');
+      setTopicDetail(topic);
       router.replace({
         pathname: '/quiz',
         params: { topicId }
