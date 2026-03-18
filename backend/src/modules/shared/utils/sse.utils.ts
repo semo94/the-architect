@@ -26,6 +26,10 @@ export function startSseResponse(request: FastifyRequest, reply: FastifyReply): 
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
+    // Vary: Origin ensures caches (and Safari) treat responses for different origins
+    // as distinct, preventing a cached unauthenticated response from being served
+    // to a credentialed request.
+    Vary: 'Origin',
     ...corsHeaders,
   });
 }

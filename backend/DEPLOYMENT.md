@@ -131,6 +131,11 @@ NODE_ENV=production
 SECURE_COOKIES=true
 ENABLE_FINGERPRINTING=true
 
+# Required - Cookie settings for cross-origin frontend
+# SameSite=None is mandatory when the frontend is on a different domain.
+# Safari and other browsers reject cross-origin cookies without this setting.
+COOKIE_SAME_SITE=none
+
 # Optional - Cookie Domain (set if using custom domain)
 COOKIE_DOMAIN=.yourdomain.com
 
@@ -287,13 +292,14 @@ If you need to run migrations manually:
 
 ### CORS Errors
 
-**Problem**: Frontend can't call API
+**Problem**: Frontend can't call API (especially on Safari)
 
 **Solutions**:
 
 - Add frontend URL to `ALLOWED_ORIGINS`
 - Ensure no trailing slashes in URLs
 - Verify `credentials: true` in frontend fetch requests
+- Set `COOKIE_SAME_SITE=none` and `SECURE_COOKIES=true` for cross-origin deployments (required for Safari)
 - Check browser console for specific CORS error
 
 ### Migration Failures
@@ -349,6 +355,7 @@ When you need to scale:
 
 - [ ] JWT secrets are random and 32+ characters
 - [ ] `SECURE_COOKIES=true` in production
+- [ ] `COOKIE_SAME_SITE=none` in production (required for cross-origin frontend)
 - [ ] All URLs use HTTPS
 - [ ] `ALLOWED_ORIGINS` is restricted to your domains
 - [ ] GitHub OAuth app has correct callback URL

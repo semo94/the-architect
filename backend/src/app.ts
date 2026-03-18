@@ -48,6 +48,10 @@ export async function buildApp() {
     origin: env.ALLOWED_ORIGINS,
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    // allowedHeaders is intentionally omitted: @fastify/cors will echo back
+    // the Access-Control-Request-Headers from each preflight, which lets the
+    // browser request exactly the headers it needs without requiring a
+    // hardcoded allowlist on the server.
   });
 
   // Register rate limiting

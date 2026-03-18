@@ -25,7 +25,10 @@ const envSchema = z.object({
   // Cookie settings
   COOKIE_DOMAIN: z.string().optional(),
   SECURE_COOKIES: z.string().default('true').transform(val => val === 'true'),
-  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
+  // Must be 'none' for cross-origin deployments (frontend on a different domain).
+  // Browsers (especially Safari) enforce SameSite=None requires Secure=true.
+  // Use 'lax' only for local development where frontend and backend share the same origin.
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('none'),
 
   // Security
   ALLOWED_ORIGINS: z
@@ -46,4 +49,18 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 // Parse and validate environment variables
-export const env = envSchema.parse(process.env);
+export const env = envSchema
+  .superRefine((data, ctx) => {
+    // SameSite=None requires Secure=true; browsers (especially Safari) silently
+    // drop the cookie otherwise — defeating the entire cross-origin auth flow.
+    if (data.COOKIE_SAME_SITE === 'none' && !data.SECURE_COOKIES) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'SECURE_COOKIES must be true when COOKIE_SAME_SITE is "none". ' +
+          'Browsers reject SameSite=None cookies that lack the Secure flag.',
+        path: ['SECURE_COOKIES'],
+      });
+    }
+  })
+  .parse(process.env);
