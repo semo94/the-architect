@@ -48,6 +48,7 @@ export async function buildApp() {
     origin: env.ALLOWED_ORIGINS,
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Platform'],
   });
 
   // Register rate limiting

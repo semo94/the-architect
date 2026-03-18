@@ -145,9 +145,10 @@ class AuthService {
    */
   async checkSession(): Promise<boolean> {
     try {
-      const headers = new Headers({ 'X-Platform': this.platform });
+      const headers = new Headers();
 
       if (!this.isWeb) {
+        headers.set('X-Platform', this.platform);
         const token = await this.getAccessToken();
         if (!token) {
           return false;
@@ -200,9 +201,11 @@ class AuthService {
       try {
         const refreshToken = await this.getRefreshToken();
 
-        const headers: Record<string, string> = {
-          'X-Platform': this.platform,
-        };
+        const headers: Record<string, string> = {};
+
+        if (!this.isWeb) {
+          headers['X-Platform'] = this.platform;
+        }
 
         let body: string | undefined;
         if (!this.isWeb && refreshToken) {
@@ -243,7 +246,10 @@ class AuthService {
   async authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
     const makeRequest = async (token?: string): Promise<Response> => {
       const headers = new Headers(options.headers);
-      headers.set('X-Platform', this.platform);
+
+      if (!this.isWeb) {
+        headers.set('X-Platform', this.platform);
+      }
 
       if (this.isWeb) {
         return fetch(url, { ...options, headers, credentials: 'include' });
@@ -276,9 +282,11 @@ class AuthService {
       const refreshToken = await this.getRefreshToken();
 
       const body = !this.isWeb && refreshToken ? JSON.stringify({ refreshToken }) : undefined;
-      const headers: Record<string, string> = {
-        'X-Platform': this.platform,
-      };
+      const headers: Record<string, string> = {};
+
+      if (!this.isWeb) {
+        headers['X-Platform'] = this.platform;
+      }
 
       if (body) {
         headers['Content-Type'] = 'application/json';

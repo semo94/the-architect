@@ -25,12 +25,7 @@ const envSchema = z.object({
   // Cookie settings
   COOKIE_DOMAIN: z.string().optional(),
   SECURE_COOKIES: z.string().default('true').transform(val => val === 'true'),
-  // Default to 'none' because frontend and backend are hosted on different
-  // domains.  SameSite=None allows cross-origin requests (e.g. fetch with
-  // credentials: 'include') to carry cookies — required by Safari / iOS
-  // which strictly enforce SameSite semantics.
-  // Override to 'lax' only for local development over plain HTTP.
-  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('none'),
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
 
   // Security
   ALLOWED_ORIGINS: z
