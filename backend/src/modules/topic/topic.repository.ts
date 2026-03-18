@@ -130,6 +130,16 @@ export class TopicRepository {
     await db.delete(userTopics).where(and(eq(userTopics.userId, userId), eq(userTopics.topicId, topicId)));
   }
 
+  async updateLearningResources(topicId: string, resources: { title: string; url: string }[]): Promise<void> {
+    await db
+      .update(topics)
+      .set({
+        learningResources: resources,
+        learningResourcesLastRefreshedAt: new Date(),
+      })
+      .where(eq(topics.id, topicId));
+  }
+
   async getDiscoveredTopicNames(userId: string): Promise<string[]> {
     const rows = await db
       .select({ name: topics.name })

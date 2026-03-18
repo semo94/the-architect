@@ -352,7 +352,7 @@ Add LLM fields to the Zod env schema:
 // LLM
 LLM_PROVIDER: z.enum(['anthropic', 'openai']).default('anthropic'),
 LLM_API_KEY: z.string().min(1),
-LLM_API_URL: z.string().url().optional(),
+LLM_API_URL: z.url().optional(),
 LLM_MODEL: z.string().default('claude-3-5-sonnet-20241022'),
 LLM_ANTHROPIC_VERSION: z.string().default('2023-06-01'),
 LLM_MAX_TOKENS: z.string().default('4000').transform(Number),

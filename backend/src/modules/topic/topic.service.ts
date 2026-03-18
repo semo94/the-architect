@@ -1,8 +1,10 @@
 ﻿import { and, eq, inArray } from 'drizzle-orm';
 import { llmService } from '../llm/llm.service.js';
+import { env } from '../shared/config/env.js';
 import { db } from '../shared/database/client.js';
 import { quizTopics, topics, userQuizzes, userTopics } from '../shared/database/schema.js';
 import { AppError } from '../shared/middleware/error-handler.js';
+import { linkResourceService } from './link-resource.service.js';
 import { TopicRepository } from './topic.repository.js';
 import {
   FlatTopicContentSchema,
@@ -16,6 +18,7 @@ import {
 interface StreamCallbacks {
   onChunk: (text: string) => void;
   onMeta: (meta: { topicId: string; cached: boolean }) => void;
+  onLearningResources: (resources: { title: string; url: string }[]) => void;
   onComplete: () => void;
 }
 
@@ -46,7 +49,18 @@ export class TopicService {
     const cachedTopic = await this.topicRepository.findUnservedTopicForUser(userId, request);
 
     if (cachedTopic) {
-      await this.streamCachedTopic(cachedTopic.id, this.toFlatTopicContent(cachedTopic), callbacks, signal);
+      const existingResources = (cachedTopic.learningResources as { title: string; url: string }[]) ?? [];
+
+      if (existingResources.length > 0) {
+        // Resources exist — stream them immediately; refresh in background if stale
+        await this.streamCachedTopic(cachedTopic.id, this.toFlatTopicContent(cachedTopic), callbacks, signal);
+        this.triggerLearningResourcesRefreshIfNeeded(cachedTopic);
+      } else {
+        // No resources — fetch synchronously so they appear in the SSE response
+        const resources = await this.fetchLearningResources(cachedTopic);
+        const enrichedFlat = this.toFlatTopicContent(cachedTopic, resources);
+        await this.streamCachedTopic(cachedTopic.id, enrichedFlat, callbacks, signal);
+      }
       return;
     }
 
@@ -80,6 +94,13 @@ export class TopicService {
     const validated = FlatTopicContentSchema.parse(parsed);
 
     const topic = await this.getOrCreateTopic(validated);
+
+    // Fetch learning resources synchronously for new/empty topics and deliver via SSE
+    const resources = await this.fetchLearningResources(topic);
+    if (resources.length > 0) {
+      callbacks.onLearningResources(resources);
+    }
+
     callbacks.onMeta({ topicId: topic.id, cached: false });
     callbacks.onComplete();
   }
@@ -108,6 +129,16 @@ export class TopicService {
       throw new AppError('Topic not found', 404, 'TOPIC_NOT_FOUND');
     }
 
+    const existingResources = (topic.learningResources as { title: string; url: string }[]) ?? [];
+
+    if (existingResources.length === 0) {
+      // No resources yet — fetch synchronously so the response includes them
+      const resources = await this.fetchLearningResources(topic);
+      return this.toTopicResponse(topic, userTopic, resources);
+    }
+
+    // Resources exist — serve them and refresh in background if stale
+    this.triggerLearningResourcesRefreshIfNeeded(topic);
     return this.toTopicResponse(topic, userTopic);
   }
 
@@ -285,7 +316,8 @@ export class TopicService {
     };
   }
 
-  private toTopicResponse(topic: typeof topics.$inferSelect, userTopic: { status: string; discoveryMethod: string; discoveredAt: Date; learnedAt: Date | null }): TopicResponse {
+  private toTopicResponse(topic: typeof topics.$inferSelect, userTopic: { status: string; discoveryMethod: string; discoveredAt: Date; learnedAt: Date | null }, resourcesOverride?: { title: string; url: string }[]): TopicResponse {
+    const learningResources = resourcesOverride ?? (topic.learningResources as { title: string; url: string }[]) ?? [];
     return {
       id: topic.id,
       name: topic.name,
@@ -299,6 +331,7 @@ export class TopicService {
         pros: (topic.contentPros as string[]) ?? [],
         cons: (topic.contentCons as string[]) ?? [],
         compareToSimilar: (topic.contentCompareToSimilar as { topic: string; comparison: string }[]) ?? [],
+        learningResources,
       },
       status: userTopic.status as TopicResponse['status'],
       discoveryMethod: userTopic.discoveryMethod as TopicResponse['discoveryMethod'],
@@ -307,10 +340,14 @@ export class TopicService {
     };
   }
 
-  private toFlatTopicContent(topic: typeof topics.$inferSelect): FlatTopicContent {
+  private toFlatTopicContent(
+    topic: typeof topics.$inferSelect,
+    resourcesOverride?: { title: string; url: string }[]
+  ): FlatTopicContent {
     const pros = (topic.contentPros as string[]) ?? [];
     const cons = (topic.contentCons as string[]) ?? [];
     const comparisons = (topic.contentCompareToSimilar as { topic: string; comparison: string }[]) ?? [];
+    const resources = resourcesOverride ?? (topic.learningResources as { title: string; url: string }[]) ?? [];
 
     return {
       name: topic.name,
@@ -333,11 +370,65 @@ export class TopicService {
       compare_0_text: comparisons[0]?.comparison ?? '',
       compare_1_tech: comparisons[1]?.topic ?? '',
       compare_1_text: comparisons[1]?.comparison ?? '',
+      resource_0_title: resources[0]?.title,
+      resource_0_url: resources[0]?.url,
+      resource_1_title: resources[1]?.title,
+      resource_1_url: resources[1]?.url,
+      resource_2_title: resources[2]?.title,
+      resource_2_url: resources[2]?.url,
+      resource_3_title: resources[3]?.title,
+      resource_3_url: resources[3]?.url,
+      resource_4_title: resources[4]?.title,
+      resource_4_url: resources[4]?.url,
     };
   }
 
-  private async streamCachedTopic(
-    topicId: string,
+  /**
+   * Synchronously fetch learning resources for a topic and persist them.
+   * Returns [] on failure — learning resources are non-critical.
+   */
+  private async fetchLearningResources(topic: typeof topics.$inferSelect): Promise<{ title: string; url: string }[]> {
+    if (!env.BRAVE_API_KEY) return [];
+
+    try {
+      linkResourceService.recordRefreshAttempt(topic.id);
+      const resources = await linkResourceService.getLearningResourcesForTopic({
+        name: topic.name,
+        category: topic.category,
+        subcategory: topic.subcategory,
+      });
+      await this.topicRepository.updateLearningResources(topic.id, resources);
+      return resources;
+    } catch {
+      return [];
+    }
+  }
+
+  private triggerLearningResourcesRefreshIfNeeded(topic: typeof topics.$inferSelect): void {
+    if (!env.BRAVE_API_KEY) return;
+    if (linkResourceService.hasCooldown(topic.id)) return;
+
+    const existing = (topic.learningResources as { title: string; url: string }[]) ?? [];
+    const isStale = linkResourceService.isStale(topic.learningResourcesLastRefreshedAt ?? null);
+    if (existing.length > 0 && !isStale) return;
+
+    linkResourceService.recordRefreshAttempt(topic.id);
+
+    void Promise.resolve().then(async () => {
+      try {
+        const resources = await linkResourceService.getLearningResourcesForTopic({
+          name: topic.name,
+          category: topic.category,
+          subcategory: topic.subcategory,
+        });
+        await this.topicRepository.updateLearningResources(topic.id, resources);
+      } catch {
+        // Silently fail — learning resources are non-critical
+      }
+    });
+  }
+
+  private async streamCachedTopic(    topicId: string,
     flatTopic: FlatTopicContent,
     callbacks: StreamCallbacks,
     signal?: AbortSignal

@@ -37,6 +37,16 @@ const FlatTopicContentSchema = z.object({
   compare_0_text: z.string(),
   compare_1_tech: z.string(),
   compare_1_text: z.string(),
+  resource_0_title: z.string().optional(),
+  resource_0_url: z.string().optional(),
+  resource_1_title: z.string().optional(),
+  resource_1_url: z.string().optional(),
+  resource_2_title: z.string().optional(),
+  resource_2_url: z.string().optional(),
+  resource_3_title: z.string().optional(),
+  resource_3_url: z.string().optional(),
+  resource_4_title: z.string().optional(),
+  resource_4_url: z.string().optional(),
 });
 
 export interface TopicConstraints {
@@ -111,6 +121,7 @@ class TopicService {
 
     let accumulatedText = '';
     let topicId: string | null = null;
+    let sseResources: { title: string; url: string }[] = [];
 
     const doRequest = () =>
       new Promise<{ topic: Topic; topicId: string }>((resolve, reject) => {
@@ -121,6 +132,11 @@ class TopicService {
             onMessage: (data) => {
               if (data?.type === 'meta' && typeof data.topicId === 'string') {
                 topicId = data.topicId;
+                return;
+              }
+
+              if (data?.type === 'learningResources' && Array.isArray(data.resources)) {
+                sseResources = data.resources;
                 return;
               }
 
@@ -148,6 +164,7 @@ class TopicService {
                     topicType: parsed.topicType,
                     category: parsed.category,
                     subcategory: parsed.subcategory,
+                    contentWhat: parsed.what,
                     content: {
                       what: parsed.what,
                       why: parsed.why,
@@ -157,6 +174,15 @@ class TopicService {
                         { topic: parsed.compare_0_tech, comparison: parsed.compare_0_text },
                         { topic: parsed.compare_1_tech, comparison: parsed.compare_1_text },
                       ],
+                      learningResources: sseResources.length > 0
+                        ? sseResources
+                        : ([0, 1, 2, 3, 4] as const)
+                            .map((i) => {
+                              const title = parsed[`resource_${i}_title` as keyof typeof parsed] as string | undefined;
+                              const url = parsed[`resource_${i}_url` as keyof typeof parsed] as string | undefined;
+                              return title && url ? { title, url } : null;
+                            })
+                            .filter((link): link is { title: string; url: string } => link !== null),
                     },
                     status: 'discovered',
                     discoveryMethod: mode,

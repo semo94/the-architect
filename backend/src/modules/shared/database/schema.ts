@@ -1,14 +1,15 @@
+import { sql } from 'drizzle-orm';
 import {
-    boolean,
-    index,
-    integer,
-    jsonb,
-    pgTable,
-    text,
-    timestamp,
-    uniqueIndex,
-    uuid,
-    varchar,
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+  varchar,
 } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
@@ -48,6 +49,8 @@ export const topics = pgTable('topics', {
   contentPros: jsonb('content_pros').notNull(),
   contentCons: jsonb('content_cons').notNull(),
   contentCompareToSimilar: jsonb('content_compare_to_similar').notNull(),
+  learningResources: jsonb('learning_resources').notNull().default(sql`'[]'::jsonb`),
+  learningResourcesLastRefreshedAt: timestamp('learning_resources_last_refreshed_at'),
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => ({
   nameIdx: index('idx_topics_name').on(table.name),

@@ -313,6 +313,12 @@ export function hasSectionData(partial: any, section: string): boolean {
         (partial.compare_0_tech && partial.compare_0_text) ||
         (partial.content?.compareToSimilar && partial.content.compareToSimilar.length > 0)
       );
+    case 'learningResources':
+      // Check for at least one resource link (flat format) OR nested array
+      return !!(
+        (partial.resource_0_title && partial.resource_0_url) ||
+        (partial.content?.learningResources && partial.content.learningResources.length > 0)
+      );
     default:
       return false;
   }

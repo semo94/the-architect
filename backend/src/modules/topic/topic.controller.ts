@@ -40,6 +40,9 @@ export class TopicController {
           onMeta: (meta) => {
             reply.raw.write(`data: ${JSON.stringify({ type: 'meta', ...meta })}\n\n`);
           },
+          onLearningResources: (resources) => {
+            reply.raw.write(`data: ${JSON.stringify({ type: 'learningResources', resources })}\n\n`);
+          },
           onComplete: () => {
             streamDone = true;
             reply.raw.write('data: [DONE]\n\n');
