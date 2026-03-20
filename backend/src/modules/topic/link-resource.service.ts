@@ -222,12 +222,13 @@ export class LinkResourceService {
     query: string
   ): Promise<Array<{ title: string; url: string }> | null> {
     const apiUrl = env.BRAVE_API_URL ?? DEFAULT_BRAVE_API_URL;
-    const controller = new AbortController();
-    const timeoutHandle = setTimeout(() => controller.abort(), 5000);
 
     let attempt = 0;
     while (attempt < 2) {
       attempt++;
+      const controller = new AbortController();
+      const timeoutHandle = setTimeout(() => controller.abort(), 5000);
+
       try {
         const url = `${apiUrl}?q=${encodeURIComponent(query)}&count=${MAX_RESULTS}&search_lang=en`;
         const response = await fetch(url, {
@@ -238,8 +239,6 @@ export class LinkResourceService {
             'X-Subscription-Token': env.BRAVE_API_KEY!,
           },
         });
-
-        clearTimeout(timeoutHandle);
 
         if (!response.ok) {
           if (attempt < 2 && response.status >= 500) continue;
@@ -252,9 +251,10 @@ export class LinkResourceService {
 
         return parsed.data.web?.results ?? [];
       } catch {
-        clearTimeout(timeoutHandle);
         if (attempt < 2) continue;
         return null;
+      } finally {
+        clearTimeout(timeoutHandle);
       }
     }
 
