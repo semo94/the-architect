@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const updateUserSchema = z.object({
   displayName: z.string().min(1).max(255).optional(),
-  avatarUrl: z.string().url().optional(),
+  avatarUrl: z.url().optional(),
 });
 
 export type UpdateUserDto = z.infer<typeof updateUserSchema>;

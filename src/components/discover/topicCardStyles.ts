@@ -72,5 +72,39 @@ export const useTopicCardStyles = () => {
       color: colors.textSecondary,
       lineHeight: typography.lineHeight.normal,
     },
+    resourceItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      borderRadius: 10,
+      backgroundColor: isDark ? colors.cardBackground : colors.primaryLight + '18',
+      marginBottom: spacing.sm,
+      borderWidth: 1,
+      borderColor: isDark ? colors.border : colors.primaryLight,
+    } as any,
+    resourceItemPressed: {
+      opacity: 0.7,
+    },
+    resourceIconLeft: {
+      marginRight: spacing.md,
+    },
+    resourceTextContainer: {
+      flex: 1,
+    },
+    resourceTitle: {
+      fontSize: typography.fontSize.md,
+      fontWeight: typography.fontWeight.medium,
+      color: isDark ? colors.primaryDark : colors.primary,
+      lineHeight: typography.lineHeight.normal,
+    },
+    resourceDomain: {
+      fontSize: typography.fontSize.xs,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    resourceIconRight: {
+      marginLeft: spacing.sm,
+    },
   });
 };

@@ -5,12 +5,12 @@ const envSchema = z.object({
   PORT: z.string().default('3000').transform(Number),
 
   // Database
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.url(),
 
   // GitHub OAuth
   GITHUB_CLIENT_ID: z.string().min(1),
   GITHUB_CLIENT_SECRET: z.string().min(1),
-  GITHUB_CALLBACK_URL: z.string().url(),
+  GITHUB_CALLBACK_URL: z.url(),
 
   // OAuth State Security
   OAUTH_STATE_SECRET: z.string().min(32),
@@ -19,7 +19,7 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(32),
 
   // Client URLs
-  WEB_CLIENT_URL: z.string().url(),
+  WEB_CLIENT_URL: z.url(),
   MOBILE_DEEP_LINK_SCHEME: z.string().default('breadthwise://'),
 
   // Cookie settings
@@ -36,11 +36,15 @@ const envSchema = z.object({
   // LLM
   LLM_PROVIDER: z.enum(['anthropic', 'openai']).default('anthropic'),
   LLM_API_KEY: z.string().min(1),
-  LLM_API_URL: z.string().url().optional(),
+  LLM_API_URL: z.url().optional(),
   LLM_MODEL: z.string().default('claude-3-5-sonnet-20241022'),
   LLM_ANTHROPIC_VERSION: z.string().default('2023-06-01'),
   LLM_MAX_TOKENS: z.string().default('4000').transform(Number),
   LLM_TEMPERATURE: z.string().default('0.7').transform(Number),
+
+  // Learn More / Brave Search
+  BRAVE_API_KEY: z.string().optional(),
+  BRAVE_API_URL: z.url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

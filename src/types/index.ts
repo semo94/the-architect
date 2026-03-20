@@ -13,6 +13,11 @@ export type TopicType =
   | 'methodologies'
   | 'architectures';
 
+export interface LearningResource {
+  title: string;
+  url: string;
+}
+
 export interface TopicContent {
   what: string;
   why: string;
@@ -22,6 +27,7 @@ export interface TopicContent {
     topic: string;
     comparison: string;
   }[];
+  learningResources: LearningResource[];
 }
 
 export interface TopicSummary {

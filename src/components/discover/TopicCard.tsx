@@ -5,6 +5,7 @@ import { SafeAreaScrollView } from '../common/SafeAreaScrollView';
 import { FadeInItemWrapper, FadeInView, TypewriterText } from '../common/StreamingAnimations';
 import { ComparisonSection } from './sections/ComparisonSection';
 import { HeaderSection } from './sections/HeaderSection';
+import { LearningResourcesSection } from './sections/LearningResourcesSection';
 import { ListSection } from './sections/ListSection';
 import { TextSection } from './sections/TextSection';
 import { useTopicCardStyles } from './topicCardStyles';
@@ -29,10 +30,25 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete }) => {
   const hasCons = hasSectionData(topic, 'cons');
   const hasCompare = hasSectionData(topic, 'compare');
 
-  // Transform flat format to nested for display
-  // During streaming, topic will have flat fields (pro_0, pro_1, etc.)
-  // We need to collect them into arrays for the UI components
+  // Prefer nested learning resources only when populated; otherwise fall back to flat streaming fields.
   const flatData = topic as any;
+  const flatLearningResources =
+    ([0, 1, 2, 3, 4]
+      .map((i) => {
+        const title = flatData[`resource_${i}_title`];
+        const url = flatData[`resource_${i}_url`];
+        return title && url ? { title, url } : null;
+      })
+      .filter(Boolean) as { title: string; url: string }[]);
+
+  const nestedLearningResources = flatData.content?.learningResources;
+  const learningResources: { title: string; url: string }[] =
+    Array.isArray(nestedLearningResources) && nestedLearningResources.length > 0
+      ? nestedLearningResources
+      : flatLearningResources;
+
+  const hasLearningResources = learningResources.length > 0;
+
   const pros = flatData.content?.pros || [
     flatData.pro_0,
     flatData.pro_1,
@@ -114,6 +130,14 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete }) => {
         isLoading={!isComplete && !hasCompare}
         ItemWrapper={!isComplete ? FadeInComparisonWrapper : undefined}
       />
+
+      {hasLearningResources && learningResources.length > 0 && (
+        <LearningResourcesSection
+          resources={learningResources}
+          isLoading={!isComplete && !hasLearningResources}
+          ItemWrapper={!isComplete ? FadeInItemWrapper : undefined}
+        />
+      )}
     </SafeAreaScrollView>
   );
 };

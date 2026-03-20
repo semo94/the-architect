@@ -1,4 +1,5 @@
-﻿import { ActionButtons } from '@/components/discover/ActionButtons';
+﻿import { ToastNotification } from '@/components/common/ToastNotification';
+import { ActionButtons } from '@/components/discover/ActionButtons';
 import { TopicCard } from '@/components/discover/TopicCard';
 import { useTheme } from '@/contexts/ThemeContext';
 import topicService from '@/services/topicService';
@@ -6,7 +7,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { Topic } from '@/types';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 interface TopicDetailScreenProps {
   topicId: string;
@@ -17,9 +18,12 @@ export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
   const { colors } = useTheme();
   const { topicDetails, setTopicDetail } = useAppStore();
   const [topic, setTopic] = useState<Topic | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorVisible, setErrorVisible] = useState(false);
 
   useEffect(() => {
     if (!topicId) {
+      setLoading(false);
       return;
     }
 
@@ -37,11 +41,19 @@ export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
         setTopic(fresh);
       } catch {
         // If refresh fails and there's no cached version, the error state below handles it.
+      } finally {
+        setLoading(false);
       }
     };
 
     void refreshTopic();
   }, [topicId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!loading && !topic) {
+      setErrorVisible(true);
+    }
+  }, [loading, topic]);  
 
   const handleAcquireNow = () => {
     if (!topic) return;
@@ -61,12 +73,24 @@ export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
     },
   });
 
-  if (!topic) {
-    // Handle case where topic doesn't exist
-    Alert.alert('Error', 'Topic not found', [
-      { text: 'OK', onPress: () => router.back() }
-    ]);
+  if (loading) {
     return null;
+  }
+
+  if (!topic) {
+    return (
+      <View style={styles.container}>
+        <ToastNotification
+          message="Topic not found"
+          visible={errorVisible}
+          onDismiss={() => router.back()}
+          actionLabel="Go back"
+          onAction={() => router.back()}
+          duration={0}
+          bottomOffset={0}
+        />
+      </View>
+    );
   }
 
   return (

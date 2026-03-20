@@ -1,6 +1,11 @@
 ﻿import { z } from 'zod';
 import { TopicTypeSchema } from '../llm/llm.schemas.js';
 
+export const LearningResourceSchema = z.object({
+  title: z.string(),
+  url: z.url(),
+});
+
 export const DiscoverTopicRequestSchema = z
   .object({
     mode: z.enum(['surprise', 'guided']),
@@ -55,6 +60,7 @@ export const TopicResponseSchema = TopicListItemResponseSchema.extend({
         comparison: z.string(),
       })
     ),
+    learningResources: z.array(LearningResourceSchema).default([]),
   }),
 });
 
@@ -88,6 +94,16 @@ export const FlatTopicContentSchema = z.object({
   compare_0_text: z.string(),
   compare_1_tech: z.string(),
   compare_1_text: z.string(),
+  resource_0_title: z.string().optional(),
+  resource_0_url: z.string().optional(),
+  resource_1_title: z.string().optional(),
+  resource_1_url: z.string().optional(),
+  resource_2_title: z.string().optional(),
+  resource_2_url: z.string().optional(),
+  resource_3_title: z.string().optional(),
+  resource_3_url: z.string().optional(),
+  resource_4_title: z.string().optional(),
+  resource_4_url: z.string().optional(),
 });
 
 export type DiscoverTopicRequest = z.infer<typeof DiscoverTopicRequestSchema>;
@@ -96,3 +112,4 @@ export type TopicListItemResponse = z.infer<typeof TopicListItemResponseSchema>;
 export type TopicResponse = z.infer<typeof TopicResponseSchema>;
 export type UpdateTopicStatusRequest = z.infer<typeof UpdateTopicStatusRequestSchema>;
 export type FlatTopicContent = z.infer<typeof FlatTopicContentSchema>;
+export type LearningResource = z.infer<typeof LearningResourceSchema>;
