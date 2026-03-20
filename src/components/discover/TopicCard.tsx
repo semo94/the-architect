@@ -29,12 +29,10 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete }) => {
   const hasPros = hasSectionData(topic, 'pros');
   const hasCons = hasSectionData(topic, 'cons');
   const hasCompare = hasSectionData(topic, 'compare');
-  const hasLearningResources = hasSectionData(topic, 'learningResources');
 
-  // Build learning resource links from flat streaming fields or nested content
+  // Prefer nested learning resources only when populated; otherwise fall back to flat streaming fields.
   const flatData = topic as any;
-  const learningResources: { title: string; url: string }[] =
-    flatData.content?.learningResources ??
+  const flatLearningResources =
     ([0, 1, 2, 3, 4]
       .map((i) => {
         const title = flatData[`resource_${i}_title`];
@@ -42,6 +40,14 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete }) => {
         return title && url ? { title, url } : null;
       })
       .filter(Boolean) as { title: string; url: string }[]);
+
+  const nestedLearningResources = flatData.content?.learningResources;
+  const learningResources: { title: string; url: string }[] =
+    Array.isArray(nestedLearningResources) && nestedLearningResources.length > 0
+      ? nestedLearningResources
+      : flatLearningResources;
+
+  const hasLearningResources = learningResources.length > 0;
 
   const pros = flatData.content?.pros || [
     flatData.pro_0,
