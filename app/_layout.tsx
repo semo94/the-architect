@@ -1,14 +1,14 @@
 import { AuthLoadingOverlay } from "@/components/auth/AuthLoadingOverlay";
 import { ToastNotification } from "@/components/common/ToastNotification";
 import {
-    DarkTheme,
-    DefaultTheme,
-    ThemeProvider as NavigationThemeProvider,
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider as NavigationThemeProvider,
 } from "@react-navigation/native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect } from "react";
-import { View } from "react-native";
+import { useCallback, useEffect, useRef } from "react";
+import { AppState, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -37,6 +37,17 @@ export default function RootLayout() {
 
   useEffect(() => {
     checkSession();
+  }, [checkSession]);
+
+  const appStateRef = useRef(AppState.currentState);
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+        checkSession(true);
+      }
+      appStateRef.current = nextAppState;
+    });
+    return () => subscription.remove();
   }, [checkSession]);
 
   useEffect(() => {

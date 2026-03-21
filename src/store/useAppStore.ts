@@ -27,7 +27,8 @@ interface AppState {
   fetchTopics: (filters?: TopicFilters, append?: boolean) => Promise<{ total: number; page: number; limit: number }>;
   fetchStats: () => Promise<void>;
   updateTopicStatusInCache: (topicId: string, status: 'discovered' | 'learned' | 'dismissed') => void;
-  checkSession: () => Promise<void>;
+  checkSession: (silent?: boolean) => Promise<void>;
+  handleSessionExpired: () => void;
   logout: () => Promise<void>;
 }
 
@@ -153,9 +154,15 @@ export const useAppStore = create<AppState>()((set, get) => ({
     });
   },
 
-  checkSession: async () => {
+  checkSession: async (silent = false) => {
+    if (silent && get().isAuthLoading) {
+      return;
+    }
+
     try {
-      set({ isAuthLoading: true, authError: null });
+      if (!silent) {
+        set({ isAuthLoading: true, authError: null });
+      }
 
       const isValid = await authService.checkSession();
       if (isValid) {
@@ -181,6 +188,17 @@ export const useAppStore = create<AppState>()((set, get) => ({
     }
   },
 
+  handleSessionExpired: () => {
+    set({
+      user: null,
+      isAuthenticated: false,
+      isAuthLoading: false,
+      authError: null,
+      topics: [],
+      profile: initialProfile,
+    });
+  },
+
   logout: async () => {
     try {
       set({ isAuthLoading: true });
@@ -197,3 +215,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
     }
   },
 }));
+
+authService.onSessionExpired(() => {
+  useAppStore.getState().handleSessionExpired();
+});

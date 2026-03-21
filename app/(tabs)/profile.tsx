@@ -50,7 +50,7 @@ export default function ProfileScreen() {
 
       <MilestonesList milestones={profile.milestones} />
 
-      {isAuthenticated && <LogoutButton />}
+      <LogoutButton />
     </ScrollView>
   );
 }

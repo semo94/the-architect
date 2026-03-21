@@ -39,6 +39,11 @@ const STORAGE_KEYS = {
 
 class AuthService {
   private refreshPromise: Promise<string> | null = null;
+  private sessionExpiredHandler: (() => void) | null = null;
+
+  onSessionExpired(handler: () => void): void {
+    this.sessionExpiredHandler = handler;
+  }
 
   private get isWeb(): boolean {
     return Platform.OS === 'web';
@@ -264,6 +269,7 @@ class AuthService {
         const newToken = await this.refreshAccessToken();
         response = await makeRequest(this.isWeb ? undefined : newToken);
       } catch {
+        this.sessionExpiredHandler?.();
         throw new AuthError('Session expired', 401, 'SESSION_EXPIRED');
       }
     }
