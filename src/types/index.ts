@@ -1,5 +1,5 @@
 export type TopicStatus = 'discovered' | 'learned' | 'dismissed';
-export type DiscoveryMethod = 'surprise' | 'guided';
+export type DiscoveryMethod = 'surprise' | 'guided' | 'deep_link';
 
 export type TopicType =
   | 'concepts'
@@ -45,6 +45,34 @@ export interface TopicSummary {
 
 export interface Topic extends TopicSummary {
   content: TopicContent;
+  hyperlinksStatus: 'processing' | 'ready' | 'failed' | null;
+  insightsStatus: 'processing' | 'ready' | 'failed' | null;
+  hyperlinks: HyperlinkItem[];
+}
+
+export interface HyperlinkItem {
+  relationshipId: string;
+  targetName: string;
+  targetTopicId: string | null;
+  owned: boolean;
+}
+
+export interface InsightItem {
+  targetName: string;
+  targetTopicId: string | null;
+  owned: boolean;
+}
+
+export interface InsightGroup {
+  relationKind: string;
+  heading: string;
+  items: InsightItem[];
+}
+
+export interface InsightsResponse {
+  topicId: string;
+  status: 'processing' | 'ready' | 'failed';
+  groups: InsightGroup[];
 }
 
 export interface Quiz {

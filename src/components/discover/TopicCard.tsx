@@ -13,6 +13,8 @@ import { useTopicCardStyles } from './topicCardStyles';
 interface Props {
   topic: Partial<Topic>;
   isComplete: boolean;  // Has all required fields loaded
+  onTopicPress?: (name: string) => void;
+  getLinkVariant?: (name: string) => 'owned' | 'discoverable';
 }
 
 /**
@@ -20,7 +22,7 @@ interface Props {
  * 1. Streaming state - Shows typewriter/fade-in effects for incomplete data
  * 2. Static state - Shows complete data without animations
  */
-export const TopicCard: React.FC<Props> = ({ topic, isComplete }) => {
+export const TopicCard: React.FC<Props> = ({ topic, isComplete, onTopicPress, getLinkVariant }) => {
   const styles = useTopicCardStyles();
 
   const hasHeader = hasSectionData(topic, 'header');
@@ -98,6 +100,8 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete }) => {
         content={flatData.content?.what || flatData.what}
         isLoading={!isComplete && !hasWhat}
         ContentWrapper={!isComplete ? TypewriterText : undefined}
+        getLinkVariant={isComplete ? getLinkVariant : undefined}
+        onTopicPress={isComplete ? onTopicPress : undefined}
       />
 
       <TextSection
@@ -105,6 +109,8 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete }) => {
         content={flatData.content?.why || flatData.why}
         isLoading={!isComplete && !hasWhy}
         ContentWrapper={!isComplete ? TypewriterText : undefined}
+        getLinkVariant={isComplete ? getLinkVariant : undefined}
+        onTopicPress={isComplete ? onTopicPress : undefined}
       />
 
       <ListSection
@@ -114,6 +120,8 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete }) => {
         iconColor="#10B981"
         isLoading={!isComplete && !hasPros}
         ItemWrapper={!isComplete ? FadeInItemWrapper : undefined}
+        getLinkVariant={isComplete ? getLinkVariant : undefined}
+        onTopicPress={isComplete ? onTopicPress : undefined}
       />
 
       <ListSection
@@ -123,12 +131,16 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete }) => {
         iconColor="#F59E0B"
         isLoading={!isComplete && !hasCons}
         ItemWrapper={!isComplete ? FadeInItemWrapper : undefined}
+        getLinkVariant={isComplete ? getLinkVariant : undefined}
+        onTopicPress={isComplete ? onTopicPress : undefined}
       />
 
       <ComparisonSection
         comparisons={comparisons}
         isLoading={!isComplete && !hasCompare}
         ItemWrapper={!isComplete ? FadeInComparisonWrapper : undefined}
+        getLinkVariant={isComplete ? getLinkVariant : undefined}
+        onTopicPress={isComplete ? onTopicPress : undefined}
       />
 
       {hasLearningResources && learningResources.length > 0 && (

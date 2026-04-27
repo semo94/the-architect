@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Animated, Text } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated } from 'react-native';
+import { LinkedText } from './LinkedText';
 
 interface FadeInViewProps {
   children: React.ReactNode;
@@ -105,7 +106,7 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
     };
   }, [currentIndex, text, speed, onComplete]);
 
-  return <Text style={style}>{displayedText}</Text>;
+  return <LinkedText text={displayedText} style={style} />;
 };
 
 interface FadeInItemWrapperProps {
