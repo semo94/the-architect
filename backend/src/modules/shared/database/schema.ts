@@ -51,6 +51,10 @@ export const topics = pgTable('topics', {
   contentCompareToSimilar: jsonb('content_compare_to_similar').notNull(),
   learningResources: jsonb('learning_resources').notNull().default(sql`'[]'::jsonb`),
   learningResourcesLastRefreshedAt: timestamp('learning_resources_last_refreshed_at'),
+  hyperlinksStatus: varchar('hyperlinks_status', { length: 16 }),
+  hyperlinksStartedAt: timestamp('hyperlinks_started_at'),
+  insightsStatus: varchar('insights_status', { length: 16 }),
+  insightsStartedAt: timestamp('insights_started_at'),
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => ({
   nameIdx: index('idx_topics_name').on(table.name),
@@ -100,6 +104,19 @@ export const userQuizzes = pgTable('user_quizzes', {
   quizIdIdx: index('idx_user_quizzes_quiz_id').on(table.quizId),
 }));
 
+export const topicRelationships = pgTable('topic_relationships', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  sourceTopicId: uuid('source_topic_id').notNull().references(() => topics.id, { onDelete: 'cascade' }),
+  targetTopicId: uuid('target_topic_id').references(() => topics.id, { onDelete: 'set null' }),
+  targetName: varchar('target_name', { length: 255 }).notNull(),
+  kind: varchar('kind', { length: 16 }).notNull(),
+  relationKind: varchar('relation_kind', { length: 32 }),
+  createdAt: timestamp('created_at').defaultNow(),
+  resolvedAt: timestamp('resolved_at'),
+}, (table) => ({
+  sourceKindIdx: index('idx_topic_relationships_source_kind').on(table.sourceTopicId, table.kind),
+}));
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -115,3 +132,5 @@ export type QuizTopic = typeof quizTopics.$inferSelect;
 export type NewQuizTopic = typeof quizTopics.$inferInsert;
 export type UserQuiz = typeof userQuizzes.$inferSelect;
 export type NewUserQuiz = typeof userQuizzes.$inferInsert;
+export type TopicRelationship = typeof topicRelationships.$inferSelect;
+export type NewTopicRelationship = typeof topicRelationships.$inferInsert;

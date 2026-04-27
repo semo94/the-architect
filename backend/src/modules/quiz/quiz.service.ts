@@ -3,12 +3,13 @@ import { llmService } from '../llm/llm.service.js';
 import { AppError } from '../shared/middleware/error-handler.js';
 import { TopicRepository } from '../topic/topic.repository.js';
 import { TopicService } from '../topic/topic.service.js';
+import { stripMarkers } from '../topic/topic.utils.js';
 import { QuizRepository } from './quiz.repository.js';
 import {
-  FlatQuizQuestionsSchema,
-  type GenerateQuizRequest,
-  type QuizQuestion,
-  type SubmitQuizAttemptRequest,
+    FlatQuizQuestionsSchema,
+    type GenerateQuizRequest,
+    type QuizQuestion,
+    type SubmitQuizAttemptRequest,
 } from './quiz.schemas.js';
 
 interface StreamCallbacks {
@@ -72,11 +73,13 @@ export class QuizService {
           category: topic.category,
           subcategory: topic.subcategory,
           content: {
-            what: topic.contentWhat,
-            why: topic.contentWhy,
-            pros: (topic.contentPros as string[]) ?? [],
-            cons: (topic.contentCons as string[]) ?? [],
-            compareToSimilar: (topic.contentCompareToSimilar as { topic: string; comparison: string }[]) ?? [],
+            what: stripMarkers(topic.contentWhat),
+            why: stripMarkers(topic.contentWhy),
+            pros: (topic.contentPros as string[]).map(stripMarkers) ?? [],
+            cons: (topic.contentCons as string[]).map(stripMarkers) ?? [],
+            compareToSimilar: ((topic.contentCompareToSimilar as { topic: string; comparison: string }[]) ?? []).map(
+              (c) => ({ topic: c.topic, comparison: stripMarkers(c.comparison) })
+            ),
           },
         },
       },

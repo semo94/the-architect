@@ -1,10 +1,10 @@
 ﻿import { FastifyReply, FastifyRequest } from 'fastify';
 import { startSseResponse } from '../shared/utils/sse.utils.js';
 import {
-    DiscoverTopicRequestSchema,
-    ListTopicsQuerySchema,
-    TopicIdParamSchema,
-    UpdateTopicStatusRequestSchema,
+  DiscoverTopicRequestSchema,
+  ListTopicsQuerySchema,
+  TopicIdParamSchema,
+  UpdateTopicStatusRequestSchema,
 } from './topic.schemas.js';
 import { TopicService } from './topic.service.js';
 
@@ -111,5 +111,78 @@ export class TopicController {
     const { id } = TopicIdParamSchema.parse(request.params);
     await this.topicService.deleteUserTopic(userId, id);
     reply.status(204).send();
+  }
+
+  async triggerHyperlinks(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const { id } = TopicIdParamSchema.parse(request.params);
+    const result = await this.topicService.triggerHyperlinks(id);
+    reply.status(202).send(result);
+  }
+
+  async getInsights(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const userId = request.user.sub;
+    const { id } = TopicIdParamSchema.parse(request.params);
+    const insights = await this.topicService.getInsights(userId, id);
+    reply.send(insights);
+  }
+
+  async triggerInsights(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const { id } = TopicIdParamSchema.parse(request.params);
+    const result = await this.topicService.triggerInsights(id);
+    reply.status(202).send(result);
+  }
+
+  async getTopicEvents(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const userId = request.user.sub;
+    const { id } = TopicIdParamSchema.parse(request.params);
+    startSseResponse(request, reply);
+
+    const POLL_INTERVAL_MS = 3000;
+    const MAX_POLLS = 40; // 2 minutes max
+    let polls = 0;
+
+    const sendEvent = (data: unknown) => {
+      if (!reply.raw.destroyed) {
+        reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+      }
+    };
+
+    reply.raw.on('close', () => {
+      polls = MAX_POLLS + 1; // Stop polling
+    });
+
+    const poll = async (): Promise<void> => {
+      if (polls++ >= MAX_POLLS || reply.raw.destroyed) {
+        reply.raw.end();
+        return;
+      }
+
+      try {
+        const topic = await this.topicService.getTopicDetail(userId, id);
+        const bothReady = topic.hyperlinksStatus === 'ready' && topic.insightsStatus === 'ready';
+        const anyProcessing = topic.hyperlinksStatus === 'processing' || topic.insightsStatus === 'processing';
+
+        sendEvent({
+          type: 'status',
+          hyperlinksStatus: topic.hyperlinksStatus,
+          insightsStatus: topic.insightsStatus,
+          hyperlinks: topic.hyperlinks,
+        });
+
+        if (bothReady || !anyProcessing) {
+          sendEvent({ type: 'done' });
+          reply.raw.end();
+          return;
+        }
+      } catch {
+        sendEvent({ type: 'error' });
+        reply.raw.end();
+        return;
+      }
+
+      setTimeout(() => { void poll(); }, POLL_INTERVAL_MS);
+    };
+
+    void poll();
   }
 }

@@ -22,17 +22,21 @@ export const GenerateTopicConstraintsSchema = z.object({
 
 export const GenerateTopicRequestSchema = z
   .object({
-    mode: z.enum(['surprise', 'guided']),
+    mode: z.enum(['surprise', 'guided', 'deep_link']),
     alreadyDiscovered: z.array(z.string()).default([]),
     dismissed: z.array(z.string()).default([]),
     constraints: GenerateTopicConstraintsSchema.optional(),
+    topicName: z.string().optional(),
   })
   .refine((value) => {
     if (value.mode === 'guided') {
       return !!value.constraints;
     }
+    if (value.mode === 'deep_link') {
+      return !!value.topicName;
+    }
     return true;
-  }, 'constraints are required when mode is guided');
+  }, 'constraints are required when mode is guided; topicName is required when mode is deep_link');
 
 export const TopicPromptInputSchema = z.object({
   name: z.string(),

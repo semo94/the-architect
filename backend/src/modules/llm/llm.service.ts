@@ -1,7 +1,16 @@
 import { AppError } from '../shared/middleware/error-handler.js';
 import { llmProvider } from './llm.provider.js';
-import type { GenerateQuizRequest, GenerateTopicRequest } from './llm.schemas.js';
+import type { GenerateQuizRequest, GenerateTopicRequest, TopicPromptInput } from './llm.schemas.js';
 import { promptTemplates } from './prompts.js';
+
+export interface InsightGenerationItem {
+  targetName: string;
+  relationKind: string;
+}
+
+export interface InsightGenerationResult {
+  groups: InsightGenerationItem[];
+}
 
 interface StreamCallbacks {
   onChunk: (text: string) => void;
@@ -18,7 +27,8 @@ export class LLMService {
       requestBody.mode,
       requestBody.alreadyDiscovered,
       requestBody.dismissed,
-      requestBody.constraints
+      requestBody.constraints,
+      requestBody.topicName
     );
 
     await this.streamPrompt(user, system, callbacks, signal);
@@ -31,6 +41,26 @@ export class LLMService {
   ): Promise<void> {
     const { system, user } = promptTemplates.generateQuizQuestions(requestBody.topic);
     await this.streamPrompt(user, system, callbacks, signal);
+  }
+
+  async generateInsights(topic: TopicPromptInput): Promise<InsightGenerationResult> {
+    const { system, user } = promptTemplates.generateInsights(topic);
+
+    let accumulatedText = '';
+    await this.streamPrompt(user, system, {
+      onChunk: (text) => { accumulatedText += text; },
+      onComplete: () => {},
+    });
+
+    const clean = accumulatedText.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+    const parsed = JSON.parse(clean) as { groups: Array<{ targetName: string; relationKind: string }> };
+
+    return {
+      groups: (parsed.groups ?? []).map((item) => ({
+        targetName: (item.targetName ?? '').trim(),
+        relationKind: (item.relationKind ?? '').trim().toUpperCase(),
+      })).filter((item) => item.targetName.length > 0 && item.relationKind.length > 0),
+    };
   }
 
   private async streamPrompt(prompt: string, systemPrompt: string, callbacks: StreamCallbacks, signal?: AbortSignal): Promise<void> {

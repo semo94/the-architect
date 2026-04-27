@@ -8,7 +8,9 @@ export const LearningResourceSchema = z.object({
 
 export const DiscoverTopicRequestSchema = z
   .object({
-    mode: z.enum(['surprise', 'guided']),
+    mode: z.enum(['surprise', 'guided', 'deep_link']),
+    topicId: z.string().uuid().optional(),
+    topicName: z.string().optional(),
     constraints: z
       .object({
         category: z.string().min(1),
@@ -22,8 +24,17 @@ export const DiscoverTopicRequestSchema = z
     if (value.mode === 'guided') {
       return !!value.constraints;
     }
+    if (value.mode === 'deep_link') {
+      return !!value.topicId || !!value.topicName;
+    }
     return true;
-  }, 'constraints required for guided mode');
+  }, 'constraints required for guided mode; topicId or topicName required for deep_link mode')
+  .refine((value) => {
+    if (value.mode !== 'deep_link') {
+      return !value.topicId && !value.topicName;
+    }
+    return true;
+  }, 'topicId and topicName are only valid for deep_link mode');
 
 export const ListTopicsQuerySchema = z.object({
   status: z.enum(['discovered', 'learned', 'dismissed', 'all']).default('all'),
@@ -43,12 +54,27 @@ export const TopicListItemResponseSchema = z.object({
   subcategory: z.string(),
   contentWhat: z.string(),
   status: z.enum(['discovered', 'learned', 'dismissed']),
-  discoveryMethod: z.enum(['surprise', 'guided']),
+  discoveryMethod: z.enum(['surprise', 'guided', 'deep_link']),
   discoveredAt: z.string(),
   learnedAt: z.string().nullable(),
 });
 
+export const HyperlinkItemSchema = z.object({
+  relationshipId: z.string().uuid(),
+  targetName: z.string(),
+  targetTopicId: z.string().uuid().nullable(),
+  owned: z.boolean(),
+});
+
+export const HyperlinksResponseSchema = z.object({
+  topicId: z.string().uuid(),
+  status: z.enum(['processing', 'ready', 'failed']),
+});
+
 export const TopicResponseSchema = TopicListItemResponseSchema.extend({
+  hyperlinksStatus: z.enum(['processing', 'ready', 'failed']).nullable(),
+  insightsStatus: z.enum(['processing', 'ready', 'failed']).nullable(),
+  hyperlinks: z.array(HyperlinkItemSchema),
   content: z.object({
     what: z.string(),
     why: z.string(),
@@ -64,13 +90,31 @@ export const TopicResponseSchema = TopicListItemResponseSchema.extend({
   }),
 });
 
+export const InsightItemSchema = z.object({
+  targetName: z.string(),
+  targetTopicId: z.string().uuid().nullable(),
+  owned: z.boolean(),
+});
+
+export const InsightGroupSchema = z.object({
+  relationKind: z.string(),
+  heading: z.string(),
+  items: z.array(InsightItemSchema),
+});
+
+export const InsightsResponseSchema = z.object({
+  topicId: z.string().uuid(),
+  status: z.enum(['processing', 'ready', 'failed']),
+  groups: z.array(InsightGroupSchema),
+});
+
 export const TopicIdParamSchema = z.object({
   id: z.string().uuid(),
 });
 
 export const UpdateTopicStatusRequestSchema = z.object({
   status: z.enum(['discovered', 'dismissed']),
-  discoveryMethod: z.enum(['surprise', 'guided']).optional(),
+  discoveryMethod: z.enum(['surprise', 'guided', 'deep_link']).optional(),
 });
 
 export const FlatTopicContentSchema = z.object({
@@ -113,3 +157,8 @@ export type TopicResponse = z.infer<typeof TopicResponseSchema>;
 export type UpdateTopicStatusRequest = z.infer<typeof UpdateTopicStatusRequestSchema>;
 export type FlatTopicContent = z.infer<typeof FlatTopicContentSchema>;
 export type LearningResource = z.infer<typeof LearningResourceSchema>;
+export type HyperlinkItem = z.infer<typeof HyperlinkItemSchema>;
+export type InsightItem = z.infer<typeof InsightItemSchema>;
+export type InsightGroup = z.infer<typeof InsightGroupSchema>;
+export type InsightsResponse = z.infer<typeof InsightsResponseSchema>;
+export type HyperlinksResponse = z.infer<typeof HyperlinksResponseSchema>;

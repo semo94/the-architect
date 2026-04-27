@@ -29,4 +29,20 @@ export async function topicRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.delete('/:id', async (request, reply) => {
     await controller.deleteUserTopic(request, reply);
   });
+
+  fastify.post('/:id/hyperlinks', async (request, reply) => {
+    await controller.triggerHyperlinks(request, reply);
+  });
+
+  fastify.get('/:id/insights', async (request, reply) => {
+    await controller.getInsights(request, reply);
+  });
+
+  fastify.post('/:id/insights', async (request, reply) => {
+    await controller.triggerInsights(request, reply);
+  });
+
+  fastify.get('/:id/events', async (request, reply) => {
+    await controller.getTopicEvents(request, reply);
+  });
 }
