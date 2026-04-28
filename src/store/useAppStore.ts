@@ -14,6 +14,8 @@ interface AppState {
   isAuthenticated: boolean;
   isAuthLoading: boolean;
   authError: string | null;
+  /** Set to true by any flow that adds/updates topics outside the Topics tab (e.g. Discover flows). */
+  topicsNeedRefresh: boolean;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setUser: (user: User | null) => void;
@@ -24,6 +26,8 @@ interface AppState {
   setTopics: (topics: TopicSummary[]) => void;
   setTopicDetail: (topic: Topic) => void;
   clearGlobalError: () => void;
+  setTopicsNeedRefresh: (value: boolean) => void;
+  removeTopicFromCache: (topicId: string) => void;
   fetchTopics: (filters?: TopicFilters, append?: boolean) => Promise<{ total: number; page: number; limit: number }>;
   fetchStats: () => Promise<void>;
   updateTopicStatusInCache: (topicId: string, status: 'discovered' | 'learned' | 'dismissed') => void;
@@ -82,6 +86,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   isAuthLoading: true,
   authError: null,
   globalError: null,
+  topicsNeedRefresh: false,
 
   setLoading: (loading: boolean) => set({ isLoading: loading }),
   setError: (error: string | null) => set({ error }),
@@ -92,6 +97,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setTopics: (topics: TopicSummary[]) => set({ topics }),
   setTopicDetail: (topic: Topic) => set((state) => ({ topicDetails: { ...state.topicDetails, [topic.id]: topic } })),
   clearGlobalError: () => set({ globalError: null }),
+  setTopicsNeedRefresh: (value: boolean) => set({ topicsNeedRefresh: value }),
+  removeTopicFromCache: (topicId: string) =>
+    set((state) => ({ topics: state.topics.filter((t) => t.id !== topicId) })),
 
   fetchTopics: async (filters?: TopicFilters, append = false) => {
     const result = await topicService.getTopics(filters);

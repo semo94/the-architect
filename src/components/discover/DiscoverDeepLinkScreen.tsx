@@ -8,7 +8,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { Topic } from '@/types';
 import { hasMinimumData } from '@/utils/streamingParser';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,7 +21,7 @@ export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targ
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
-  const { setTopicDetail } = useAppStore();
+  const { setTopicDetail, setTopicsNeedRefresh } = useAppStore();
 
   const [resolvedTopicId, setResolvedTopicId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +62,7 @@ export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targ
   const handleDismiss = async () => {
     if (topic && resolvedTopicId) {
       await topicService.updateTopicStatus(resolvedTopicId, 'dismissed', 'deep_link');
+      setTopicsNeedRefresh(true);
     }
     router.back();
   };
@@ -69,6 +70,7 @@ export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targ
   const handleAddToBucket = async () => {
     if (topic && resolvedTopicId) {
       await topicService.updateTopicStatus(resolvedTopicId, 'discovered', 'deep_link');
+      setTopicsNeedRefresh(true);
     }
     router.back();
   };
@@ -76,6 +78,7 @@ export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targ
   const handleAcquireNow = async () => {
     if (topic && resolvedTopicId) {
       await topicService.updateTopicStatus(resolvedTopicId, 'discovered', 'deep_link');
+      setTopicsNeedRefresh(true);
       setTopicDetail(topic);
       router.replace({ pathname: '/quiz', params: { topicId: resolvedTopicId } });
     }

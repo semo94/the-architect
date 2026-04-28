@@ -28,7 +28,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
-  const { setTopicDetail } = useAppStore();
+  const { setTopicDetail, setTopicsNeedRefresh } = useAppStore();
 
 
   // Use streaming hook for state management and cleanup
@@ -76,6 +76,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleDismiss = async () => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'dismissed', 'surprise');
+      setTopicsNeedRefresh(true);
     }
     onComplete();
   };
@@ -83,6 +84,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleAddToBucket = async () => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'surprise');
+      setTopicsNeedRefresh(true);
     }
     onComplete();
   };
@@ -90,6 +92,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const handleAcquireNow = async () => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'surprise');
+      setTopicsNeedRefresh(true);
       setTopicDetail(topic);
       router.replace({
         pathname: '/quiz',
