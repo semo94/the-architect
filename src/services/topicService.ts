@@ -1,4 +1,4 @@
-import { Topic, TopicSummary, TopicType } from '@/types';
+import { InsightsResponse, Topic, TopicSummary, TopicType } from '@/types';
 import { z } from 'zod';
 import { authService } from './authService';
 import sseClient, { SSEError } from './sseService';
@@ -165,14 +165,17 @@ class TopicService {
                     category: parsed.category,
                     subcategory: parsed.subcategory,
                     contentWhat: parsed.what,
+                    hyperlinksStatus: null,
+                    insightsStatus: null,
+                    hyperlinks: [],
                     content: {
                       what: parsed.what,
                       why: parsed.why,
                       pros: [parsed.pro_0, parsed.pro_1, parsed.pro_2, parsed.pro_3, parsed.pro_4],
                       cons: [parsed.con_0, parsed.con_1, parsed.con_2, parsed.con_3, parsed.con_4],
                       compareToSimilar: [
-                        { topic: parsed.compare_0_tech, comparison: parsed.compare_0_text },
-                        { topic: parsed.compare_1_tech, comparison: parsed.compare_1_text },
+                        { topic: parsed.compare_0_tech.replace(/\[\[([^\]]+)\]\]/g, '$1'), comparison: parsed.compare_0_text },
+                        { topic: parsed.compare_1_tech.replace(/\[\[([^\]]+)\]\]/g, '$1'), comparison: parsed.compare_1_text },
                       ],
                       learningResources: sseResources.length > 0
                         ? sseResources
@@ -224,10 +227,108 @@ class TopicService {
     return this.streamDiscoverTopic(mode, constraints, onProgress);
   }
 
+  async discoverDeepLinkTopic(
+    topicId: string | undefined,
+    topicName: string | undefined,
+    onProgress?: (partialText: string) => void
+  ): Promise<{ topic: Topic; topicId: string }> {
+    const headers = await this.getAuthHeaders();
+    const body: Record<string, string> = { mode: 'deep_link' };
+    if (topicId) body.topicId = topicId;
+    if (topicName) body.topicName = topicName;
+
+    let accumulatedText = '';
+    let resolvedTopicId: string | null = null;
+    let sseResources: { title: string; url: string }[] = [];
+
+    const doRequest = () =>
+      new Promise<{ topic: Topic; topicId: string }>((resolve, reject) => {
+        sseClient.connect(
+          `${API_URL}/topics`,
+          body,
+          {
+            onMessage: (data) => {
+              if (data?.type === 'meta' && typeof data.topicId === 'string') {
+                resolvedTopicId = data.topicId;
+                return;
+              }
+              if (data?.type === 'learningResources' && Array.isArray(data.resources)) {
+                sseResources = data.resources;
+                return;
+              }
+              if (!data?.text) return;
+              accumulatedText += data.text;
+              onProgress?.(accumulatedText);
+            },
+            onError: reject,
+            onComplete: () => {
+              try {
+                const parsed = FlatTopicContentSchema.parse(this.extractJSON(accumulatedText));
+                if (!resolvedTopicId) throw new Error('Topic stream did not provide topicId metadata');
+
+                resolve({
+                  topic: {
+                    id: resolvedTopicId,
+                    name: parsed.name,
+                    topicType: parsed.topicType,
+                    category: parsed.category,
+                    subcategory: parsed.subcategory,
+                    contentWhat: parsed.what,
+                    hyperlinksStatus: null,
+                    insightsStatus: null,
+                    hyperlinks: [],
+                    content: {
+                      what: parsed.what,
+                      why: parsed.why,
+                      pros: [parsed.pro_0, parsed.pro_1, parsed.pro_2, parsed.pro_3, parsed.pro_4],
+                      cons: [parsed.con_0, parsed.con_1, parsed.con_2, parsed.con_3, parsed.con_4],
+                      compareToSimilar: [
+                        { topic: parsed.compare_0_tech.replace(/\[\[([^\]]+)\]\]/g, '$1'), comparison: parsed.compare_0_text },
+                        { topic: parsed.compare_1_tech.replace(/\[\[([^\]]+)\]\]/g, '$1'), comparison: parsed.compare_1_text },
+                      ],
+                      learningResources: sseResources.length > 0
+                        ? sseResources
+                        : ([0, 1, 2, 3, 4] as const)
+                            .map((i) => {
+                              const title = parsed[`resource_${i}_title` as keyof typeof parsed] as string | undefined;
+                              const url = parsed[`resource_${i}_url` as keyof typeof parsed] as string | undefined;
+                              return title && url ? { title, url } : null;
+                            })
+                            .filter((link): link is { title: string; url: string } => link !== null),
+                    },
+                    status: 'discovered',
+                    discoveryMethod: 'deep_link',
+                    discoveredAt: new Date().toISOString(),
+                    learnedAt: null,
+                  },
+                  topicId: resolvedTopicId,
+                });
+              } catch (error) {
+                reject(error);
+              }
+            },
+          },
+          { headers, credentials: 'include' }
+        );
+      });
+
+    try {
+      return await doRequest();
+    } catch (error) {
+      if (error instanceof SSEError && (error as SSEError).statusCode === 401) {
+        await authService.refreshAccessToken();
+        const refreshedHeaders = await this.getAuthHeaders();
+        Object.assign(headers, refreshedHeaders);
+        return doRequest();
+      }
+      throw error;
+    }
+  }
+
   async updateTopicStatus(
     topicId: string,
     status: 'discovered' | 'dismissed',
-    discoveryMethod?: 'surprise' | 'guided'
+    discoveryMethod?: 'surprise' | 'guided' | 'deep_link'
   ): Promise<void> {
     const response = await authService.authenticatedFetch(`${API_URL}/topics/${topicId}`, {
       method: 'PATCH',
@@ -294,6 +395,50 @@ class TopicService {
     }
 
     return (await response.json()) as Topic;
+  }
+
+  getTopicEventsUrl(topicId: string): string {
+    return `${API_URL}/topics/${topicId}/events`;
+  }
+
+  async getAuthHeader(): Promise<Record<string, string>> {
+    const token = await authService.getAccessToken();
+    if (!token) return {};
+    return { Authorization: `Bearer ${token}` };
+  }
+
+  async getInsights(topicId: string): Promise<InsightsResponse> {
+    const response = await authService.authenticatedFetch(`${API_URL}/topics/${topicId}/insights`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch insights');
+    }
+
+    return (await response.json()) as InsightsResponse;
+  }
+
+  async triggerInsights(topicId: string): Promise<InsightsResponse> {
+    const response = await authService.authenticatedFetch(`${API_URL}/topics/${topicId}/insights`, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to trigger insights generation');
+    }
+
+    return (await response.json()) as InsightsResponse;
+  }
+
+  async triggerHyperlinks(topicId: string): Promise<void> {
+    const response = await authService.authenticatedFetch(`${API_URL}/topics/${topicId}/hyperlinks`, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to trigger hyperlink extraction');
+    }
   }
 
   async deleteTopic(topicId: string): Promise<void> {

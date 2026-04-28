@@ -21,13 +21,16 @@ import { SearchBar } from './SearchBar';
 import { TopicListCard } from './TopicListCard';
 
 export const TopicsScreen: React.FC = () => {
-  const { topics, fetchTopics } = useAppStore();
+  const { topics, fetchTopics, topicsNeedRefresh, setTopicsNeedRefresh, removeTopicFromCache, updateTopicStatusInCache } = useAppStore();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
-  const [isFetching, setIsFetching] = useState(false);
+  // useRef so the guard is checked synchronously — React state updates are batched
+  // and arrive too late to block rapid onEndReached calls.
+  const isFetchingRef = useRef(false);
+  const flatListRef = useRef<FlatList>(null);
 
   const [toast, setToast] = useState<{
     message: string;
@@ -73,7 +76,7 @@ export const TopicsScreen: React.FC = () => {
 
   const loadTopics = useCallback(
     async (nextPage: number, append: boolean) => {
-      setIsFetching(true);
+      isFetchingRef.current = true;
       try {
         const result = await fetchTopics(
           {
@@ -89,7 +92,7 @@ export const TopicsScreen: React.FC = () => {
         );
         setTotalCount(result.total);
       } finally {
-        setIsFetching(false);
+        isFetchingRef.current = false;
       }
     },
     [categoryFilter, debouncedSearchQuery, fetchTopics, statusFilter, subcategoryFilter, typeFilter]
@@ -122,8 +125,10 @@ export const TopicsScreen: React.FC = () => {
     }
   }, [categoryFilter, subcategoryFilter]);
 
-  // Reload when filters change.
+  // Reload when filters change. Scroll to top so the preserved scroll offset from
+  // the previous result set doesn't immediately trigger onEndReached on the new one.
   useEffect(() => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
     setPage(1);
     void loadTopics(1, false);
   }, [loadTopics]);
@@ -132,12 +137,17 @@ export const TopicsScreen: React.FC = () => {
   const loadTopicsRef = useRef(loadTopics);
   loadTopicsRef.current = loadTopics;
 
-  // Always reload page 1 when the tab gains focus (e.g. returning from Discover/Quiz).
+  // On focus: only reset + reload when the discover flow has flagged a change, or on
+  // the very first render (topics list is empty). Skipping the reload when returning
+  // from topic-detail prevents the onEndReached cascade that re-fetches every page.
   useFocusEffect(
     useCallback(() => {
-      setPage(1);
-      void loadTopicsRef.current(1, false);
-    }, [])
+      if (topicsNeedRefresh || topics.length === 0) {
+        setTopicsNeedRefresh(false);
+        setPage(1);
+        void loadTopicsRef.current(1, false);
+      }
+    }, [topicsNeedRefresh, topics.length, setTopicsNeedRefresh])
   );
 
   useEffect(() => {
@@ -208,20 +218,29 @@ export const TopicsScreen: React.FC = () => {
         topicName: '',
         isLoading: false,
       });
-      setPage(1);
-      await loadTopics(1, false);
-      await loadTopicFacets();
+      // Optimistically remove from cache — no page reset, no cascade.
+      removeTopicFromCache(deleteDialog.topicId);
+      setTotalCount((prev) => Math.max(0, prev - 1));
+      void loadTopicFacets();
     } catch {
       setDeleteDialog((prev) => ({ ...prev, isLoading: false }));
     }
   };
 
   const handleDismiss = async (topicId: string) => {
-    await topicService.updateTopicStatus(topicId, 'dismissed');
-    setPage(1);
-    await Promise.all([loadTopics(1, false), loadTopicFacets()]);
-
     const topic = topics.find((item) => item.id === topicId);
+    await topicService.updateTopicStatus(topicId, 'dismissed');
+
+    // If the current filter only shows 'discovered' topics, this topic is now excluded;
+    // remove it from the cache so the list updates without a full re-fetch cascade.
+    if (statusFilter === 'discovered') {
+      removeTopicFromCache(topicId);
+      setTotalCount((prev) => Math.max(0, prev - 1));
+    } else {
+      updateTopicStatusInCache(topicId, 'dismissed');
+    }
+    void loadTopicFacets();
+
     setToast({
       message: `"${topic?.name ?? 'Topic'}" dismissed`,
       topicId,
@@ -230,11 +249,18 @@ export const TopicsScreen: React.FC = () => {
   };
 
   const handleRestore = async (topicId: string) => {
-    await topicService.updateTopicStatus(topicId, 'discovered');
-    setPage(1);
-    await Promise.all([loadTopics(1, false), loadTopicFacets()]);
-
     const topic = topics.find((item) => item.id === topicId);
+    await topicService.updateTopicStatus(topicId, 'discovered');
+
+    // If the current filter only shows 'dismissed' topics, this topic is now excluded.
+    if (statusFilter === 'dismissed') {
+      removeTopicFromCache(topicId);
+      setTotalCount((prev) => Math.max(0, prev - 1));
+    } else {
+      updateTopicStatusInCache(topicId, 'discovered');
+    }
+    void loadTopicFacets();
+
     setToast({
       message: `"${topic?.name ?? 'Topic'}" restored to bucket list`,
       topicId,
@@ -249,8 +275,18 @@ export const TopicsScreen: React.FC = () => {
 
     await topicService.updateTopicStatus(toast.topicId, toast.undoStatus);
     setToast(null);
-    setPage(1);
-    await Promise.all([loadTopics(1, false), loadTopicFacets()]);
+
+    const isInCache = topics.some((t) => t.id === toast.topicId);
+    if (isInCache) {
+      // Topic is still in the rendered list — update in place, no cascade.
+      updateTopicStatusInCache(toast.topicId, toast.undoStatus);
+      void loadTopicFacets();
+    } else {
+      // Topic was removed from the cache due to the status filter.
+      // Reload from page 1 to show it again (this is an explicit user action).
+      setPage(1);
+      await Promise.all([loadTopics(1, false), loadTopicFacets()]);
+    }
   };
 
   const handleClearAllFilters = () => {
@@ -344,9 +380,10 @@ export const TopicsScreen: React.FC = () => {
           )}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingVertical: 10 }}
+          ref={flatListRef}
           onEndReachedThreshold={0.4}
           onEndReached={() => {
-            if (isFetching) return;
+            if (isFetchingRef.current) return;
             const hasMore = topics.length < totalCount;
             if (!hasMore) return;
             const nextPage = page + 1;
@@ -383,6 +420,7 @@ export const TopicsScreen: React.FC = () => {
         actionLabel="Undo"
         onAction={() => void handleUndoToast()}
         onDismiss={() => setToast(null)}
+        bottomOffset={0}
       />
 
       <ConfirmDialog

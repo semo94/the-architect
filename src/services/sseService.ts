@@ -30,7 +30,7 @@ interface SSERequestOptions {
   credentials?: RequestCredentials;
 }
 
-class SSEClient {
+export class SSEClient {
   private abortController: AbortController | null = null;
   /**
    * Connect to SSE stream and handle messages
@@ -172,6 +172,105 @@ class SSEClient {
   }
 
   /**
+   * Connect to a GET-based SSE stream (e.g. topic events endpoint).
+   * Must only be called on a dedicated SSEClient instance, never on the singleton.
+   */
+  connectGet(
+    url: string,
+    callbacks: SSECallbacks,
+    options: SSERequestOptions = {}
+  ): () => void {
+    this.abortController = new AbortController();
+    const signal = this.abortController.signal;
+
+    const headers: Record<string, string> = {
+      Accept: 'text/event-stream',
+      ...(options.headers || {}),
+    };
+
+    const fetchFn = expoFetch || fetch;
+
+    fetchFn(url, {
+      method: 'GET',
+      headers,
+      signal,
+      credentials: options.credentials,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new SSEError(`SSE connection failed: ${response.statusText}`, response.status);
+        }
+
+        if (!response.body) {
+          throw new Error('Response body is null');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+              this.abortController = null;
+              callbacks.onComplete?.();
+              break;
+            }
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              if (line.trim() === '') continue;
+
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6);
+
+                if (data === '[DONE]') {
+                  this.abortController = null;
+                  callbacks.onComplete?.();
+                  return;
+                }
+
+                try {
+                  const parsed = JSON.parse(data);
+
+                  if (parsed.error) {
+                    this.abortController = null;
+                    callbacks.onError?.(new Error(parsed.error));
+                    return;
+                  }
+
+                  callbacks.onMessage(parsed);
+                } catch {
+                  this.abortController = null;
+                  callbacks.onError?.(new Error(`Malformed SSE frame: ${data}`));
+                  return;
+                }
+              }
+            }
+          }
+        } catch (error) {
+          if (signal.aborted) return;
+          this.abortController = null;
+          callbacks.onError?.(error instanceof Error ? error : new Error(String(error)));
+        }
+      })
+      .catch((error) => {
+        if (signal.aborted) return;
+        this.abortController = null;
+        callbacks.onError?.(error instanceof Error ? error : new Error(String(error)));
+      });
+
+    return () => {
+      this.abortController?.abort();
+    };
+  }
+
+  /**
    * Check if there's an active stream
    */
   isActive(): boolean {
@@ -179,4 +278,8 @@ class SSEClient {
   }
 }
 
-export default new SSEClient();
+// Singleton for POST streaming (topic discovery). connectGet intentionally
+// excluded from the export type to prevent accidental singleton reuse for
+// the events endpoint, which requires an isolated SSEClient instance.
+const sseClient: Omit<InstanceType<typeof SSEClient>, 'connectGet'> = new SSEClient();
+export default sseClient;

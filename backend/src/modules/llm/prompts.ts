@@ -212,10 +212,11 @@ function formatAllContentGuidance(): string {
 
 export const promptTemplates = {
   generateTopic: (
-    mode: 'surprise' | 'guided',
+    mode: 'surprise' | 'guided' | 'deep_link',
     alreadyDiscovered: string[],
     dismissed: string[],
-    constraints?: GenerateTopicConstraints
+    constraints?: GenerateTopicConstraints,
+    topicName?: string
   ): { system: string; user: string } => {
     const typeSpecificGuidance = mode === 'guided' && constraints
       ? formatContentGuidanceForType(constraints.topicType)
@@ -238,6 +239,7 @@ WRITING STYLE:
 
 FORMATTING:
 - Use only standard ASCII characters. Do not use em dashes, en dashes, curly quotes, or other special Unicode punctuation.
+- When your content naturally references other architecturally significant topics, wrap the full canonical name in double brackets: [[Canonical Topic Name]]. Only annotate genuine references - do not alter your writing to insert mentions. Use the full standard name, not abbreviations ([[Command Query Responsibility Segregation]], not [[CQRS]]). Markers are allowed in "what", "why", "pro_0"-"pro_4", "con_0"-"con_4", and "compare_0_tech"/"compare_1_tech" (the comparison heading names). Never place markers in name, category, subcategory, topicType, compare_0_text, compare_1_text, or resource fields. For comparisons, always wrap the compared topic name in double brackets: [[Topic Name]] — it becomes a tappable navigation link.
 
 STRUCTURAL RULES:
 - "what" and "why" must cover distinct ground. "what" defines what the topic IS and HOW it works. "why" argues for its importance, when to use it, and what problems it solves. Do not repeat the same points across both fields.
@@ -266,6 +268,8 @@ ${mode === 'guided' ? `- topicType must equal "${constraints?.topicType}".` : ''
 
     const user = `${mode === 'guided'
   ? `Generate a topic matching these constraints:\n- Category: ${constraints?.category}\n- Subcategory: ${constraints?.subcategory}\n- TopicType: ${constraints?.topicType}\n- Learning Goal: ${constraints?.learningGoal}\nDefinition: ${constraints ? TOPIC_TYPE_DEFINITIONS[constraints.topicType].detailed : ''}`
+  : mode === 'deep_link'
+  ? `Generate comprehensive content for this specific topic: "${topicName ?? ''}"\nChoose the most appropriate category, subcategory, and topicType from the schema for this topic.`
   : `Select a meaningful topic from the category schema. Pick a category, subcategory, and topic type that would be valuable for a senior engineer to learn.`}
 
 Do not repeat any of these already-discovered topics: ${JSON.stringify(alreadyDiscovered)}
@@ -296,6 +300,64 @@ Respond with this JSON structure:
   "compare_0_text": "...",
   "compare_1_tech": "...",
   "compare_1_text": "..."
+}`;
+
+    return { system, user };
+  },
+
+  generateInsights: (topic: TopicPromptInput): { system: string; user: string } => {
+    const VALID_RELATION_KINDS = [
+      'PREREQUISITE_OF',
+      'BUILDS_ON',
+      'PART_OF',
+      'TYPE_OF',
+      'EXAMPLE_OF',
+      'IMPLEMENTS',
+      'CAUSES',
+      'USED_WITH',
+      'ALTERNATIVE_TO',
+      'SIMILAR_TO',
+      'TRADEOFF_WITH',
+    ];
+
+    const system = `You are a software architecture knowledge graph builder. Your task is to identify genuine semantic learning relationships between software architecture topics.
+
+RULES:
+- Maximum 10 total items across all groups. No minimum - never fabricate a relationship to meet a count.
+- Maximum 3 items per group. Omit a group entirely if you have no confident items for it.
+- targetName must be a canonical full name a software architect would immediately recognize.
+- Must NOT include the source topic itself in any group.
+- relationKind must be exactly one of: ${VALID_RELATION_KINDS.join(', ')}.
+- Quality over quantity: two strong, confident relationships are better than five weak ones.
+- Return valid JSON only, no markdown, no wrapping, no commentary.
+
+RELATIONSHIP MEANINGS:
+- PREREQUISITE_OF: what must be understood before this topic
+- BUILDS_ON: helpful to know before this topic
+- PART_OF: this topic is a component of
+- TYPE_OF: this topic is a kind of
+- EXAMPLE_OF: this topic is a concrete example of
+- IMPLEMENTS: this topic concretely realizes
+- CAUSES: understanding this topic leads to
+- USED_WITH: commonly used alongside (symmetric)
+- ALTERNATIVE_TO: can be used instead of (symmetric)
+- SIMILAR_TO: conceptually related to (symmetric)
+- TRADEOFF_WITH: choosing this topic trades off against (symmetric)`;
+
+    const user = `Identify semantic learning relationships for the topic: "${topic.name}" (${topic.topicType}).
+
+Topic context:
+- Category: ${topic.category} > ${topic.subcategory}
+- What it is: ${topic.content.what.slice(0, 300)}
+
+Return JSON with this structure:
+{
+  "groups": [
+    {
+      "targetName": "Exact Canonical Topic Name",
+      "relationKind": "RELATION_KIND"
+    }
+  ]
 }`;
 
     return { system, user };

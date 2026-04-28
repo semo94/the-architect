@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { Card } from '../../common/Card';
+import { LinkedText } from '../../common/LinkedText';
 import { SkeletonText } from '../../common/SkeletonLoader';
 import { useTopicCardStyles } from '../topicCardStyles';
 
@@ -9,6 +10,8 @@ interface Props {
   content?: string;
   isLoading?: boolean;
   ContentWrapper?: React.FC<{ text: string; style: any }>;
+  getLinkVariant?: (name: string) => 'owned' | 'discoverable';
+  onTopicPress?: (name: string) => void;
 }
 
 export const TextSection: React.FC<Props> = ({
@@ -16,6 +19,8 @@ export const TextSection: React.FC<Props> = ({
   content,
   isLoading = false,
   ContentWrapper,
+  getLinkVariant,
+  onTopicPress,
 }) => {
   const styles = useTopicCardStyles();
 
@@ -27,7 +32,12 @@ export const TextSection: React.FC<Props> = ({
       ) : ContentWrapper && content ? (
         <ContentWrapper text={content} style={styles.contentText} />
       ) : (
-        <Text style={styles.contentText}>{content}</Text>
+        <LinkedText
+          text={content ?? ''}
+          style={styles.contentText}
+          getLinkVariant={getLinkVariant}
+          onTopicPress={onTopicPress}
+        />
       )}
     </Card>
   );

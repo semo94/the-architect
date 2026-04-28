@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Text, View } from 'react-native';
 import { Card } from '../../common/Card';
+import { LinkedText } from '../../common/LinkedText';
 import { SkeletonBullet } from '../../common/SkeletonLoader';
 import { useTopicCardStyles } from '../topicCardStyles';
 
@@ -12,6 +13,8 @@ interface Props {
   iconColor?: string;
   isLoading?: boolean;
   ItemWrapper?: React.FC<{ children: React.ReactNode; index: number }>;
+  getLinkVariant?: (name: string) => 'owned' | 'discoverable';
+  onTopicPress?: (name: string) => void;
 }
 
 export const ListSection: React.FC<Props> = ({
@@ -21,6 +24,8 @@ export const ListSection: React.FC<Props> = ({
   iconColor,
   isLoading = false,
   ItemWrapper,
+  getLinkVariant,
+  onTopicPress,
 }) => {
   const styles = useTopicCardStyles();
 
@@ -37,7 +42,12 @@ export const ListSection: React.FC<Props> = ({
                 <View style={styles.bulletPoint}>
                   <Ionicons name={iconName} size={16} color={iconColor} />
                 </View>
-                <Text style={styles.listText}>{item}</Text>
+                <LinkedText
+                  text={item}
+                  style={styles.listText}
+                  getLinkVariant={getLinkVariant}
+                  onTopicPress={onTopicPress}
+                />
               </View>
             );
 

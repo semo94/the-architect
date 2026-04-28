@@ -1,4 +1,4 @@
-﻿import { Card } from '@/components/common/Card';
+import { Card } from '@/components/common/Card';
 import { AppBrandHeader } from '@/components/layout/AppBrandHeader';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
