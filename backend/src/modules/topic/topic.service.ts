@@ -126,8 +126,8 @@ export class TopicService {
         validated.con_4,
       ],
       contentCompareToSimilar: [
-        { topic: stripMarkers(validated.compare_0_tech), comparison: validated.compare_0_text },
-        { topic: stripMarkers(validated.compare_1_tech), comparison: validated.compare_1_text },
+        { topic: validated.compare_0_tech, comparison: validated.compare_0_text },
+        { topic: validated.compare_1_tech, comparison: validated.compare_1_text },
       ],
     });
 
@@ -352,10 +352,7 @@ export class TopicService {
         why: topic.contentWhy,
         pros: (topic.contentPros as string[]) ?? [],
         cons: (topic.contentCons as string[]) ?? [],
-        compareToSimilar: ((topic.contentCompareToSimilar as { topic: string; comparison: string }[]) ?? []).map((c) => ({
-          topic: stripMarkers(c.topic),
-          comparison: c.comparison,
-        })),
+        compareToSimilar: (topic.contentCompareToSimilar as { topic: string; comparison: string }[]) ?? [],
         learningResources,
       },
       status: userTopic.status as TopicResponse['status'],
@@ -582,8 +579,8 @@ export class TopicService {
         validated.con_0, validated.con_1, validated.con_2, validated.con_3, validated.con_4,
       ],
       contentCompareToSimilar: [
-        { topic: stripMarkers(validated.compare_0_tech), comparison: validated.compare_0_text },
-        { topic: stripMarkers(validated.compare_1_tech), comparison: validated.compare_1_text },
+        { topic: validated.compare_0_tech, comparison: validated.compare_0_text },
+        { topic: validated.compare_1_tech, comparison: validated.compare_1_text },
       ],
     });
 
