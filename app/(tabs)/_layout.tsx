@@ -1,11 +1,22 @@
 import { HapticTab } from '@/components/layout/haptic-tab';
 import { IconSymbol } from '@/components/layout/icon-symbol';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Tabs } from 'expo-router';
+import { useAppStore } from '@/store/useAppStore';
+import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
 
 export default function TabLayout() {
+  const isAuthenticated = useAppStore((state) => state.isAuthenticated);
+  const isAuthLoading = useAppStore((state) => state.isAuthLoading);
   const { colors } = useTheme();
+
+  if (isAuthLoading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect href="/(auth)/login" />;
+  }
 
   return (
     <Tabs

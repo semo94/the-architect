@@ -72,11 +72,7 @@ export default function RootLayout() {
           <NavigationThemeProvider
             value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
           >
-            {isAuthLoading && !inAuthGroup ? (
-              <View style={{ flex: 1 }}>
-                <AuthLoadingOverlay message="Checking session..." />
-              </View>
-            ) : (
+            <View style={{ flex: 1 }}>
               <Stack>
                 <Stack.Screen
                   name="(auth)"
@@ -132,7 +128,12 @@ export default function RootLayout() {
                   }}
                 />
               </Stack>
-            )}
+              {isAuthLoading && !inAuthGroup && (
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+                  <AuthLoadingOverlay message="Checking session..." />
+                </View>
+              )}
+            </View>
             <ToastNotification
               message={globalError ?? ''}
               visible={!!globalError}
