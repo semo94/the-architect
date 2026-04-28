@@ -21,12 +21,14 @@ export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
   const { colors, isDark } = useTheme();
   const { topicDetails, setTopicDetail } = useAppStore();
   const [topic, setTopic] = useState<Topic | null>(null);
+  useEffect(() => { topicRef.current = topic; }, [topic]);
   const [loading, setLoading] = useState(true);
   const [errorVisible, setErrorVisible] = useState(false);
   const [insightGroups, setInsightGroups] = useState<InsightGroup[]>([]);
   const [insightsPanelVisible, setInsightsPanelVisible] = useState(false);
   const [insightsPanelStatus, setInsightsPanelStatus] = useState<'processing' | 'ready' | 'failed'>('processing');
   const eventsClientRef = useRef<SSEClient>(new SSEClient());
+  const topicRef = useRef<Topic | null>(null);
 
   const refreshTopic = useCallback(async () => {
     if (!topicId) {
@@ -95,17 +97,16 @@ export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
       {
         onMessage: (data) => {
           if (data.type === 'status') {
-            setTopic((prev) => {
-              if (!prev) return prev;
-              const updated = {
-                ...prev,
-                hyperlinksStatus: data.hyperlinksStatus ?? prev.hyperlinksStatus,
-                insightsStatus: data.insightsStatus ?? prev.insightsStatus,
-                hyperlinks: data.hyperlinks ?? prev.hyperlinks,
-              };
-              setTopicDetail(updated);
-              return updated;
-            });
+            const prev = topicRef.current;
+            if (!prev) return;
+            const updated = {
+              ...prev,
+              hyperlinksStatus: data.hyperlinksStatus ?? prev.hyperlinksStatus,
+              insightsStatus: data.insightsStatus ?? prev.insightsStatus,
+              hyperlinks: data.hyperlinks ?? prev.hyperlinks,
+            };
+            setTopic(updated);
+            setTopicDetail(updated);
           }
           if (data.type === 'done') {
             eventsClientRef.current.cancel();
@@ -118,7 +119,7 @@ export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
           eventsClientRef.current.cancel();
         },
       },
-      { headers: authHeader }
+      { headers: authHeader, credentials: 'include' }
     );
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -254,11 +255,7 @@ export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
     },
   });
 
-  if (loading) {
-    return null;
-  }
-
-  if (!topic) {
+  if (!loading && !topic) {
     return (
       <View style={styles.container}>
         <ToastNotification
@@ -274,13 +271,14 @@ export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
     );
   }
 
-  const showHyperlinks = topic.hyperlinksStatus === 'ready';
+  const showHyperlinks = !loading && topic?.hyperlinksStatus === 'ready';
 
   return (
     <View style={styles.container}>
       <Stack.Screen
         options={{
           headerRight: () => {
+            if (!topic) return null;
             const isProcessing = topic.insightsStatus === 'processing';
             const activeColor = isDark ? colors.warning : colors.white;
             const processingColor = isDark ? colors.textSecondary : 'rgba(255,255,255,0.5)';
@@ -301,13 +299,13 @@ export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
         }}
       />
       <TopicCard
-        topic={topic}
-        isComplete={true}
+        topic={topic ?? {}}
+        isComplete={!loading}
         onTopicPress={showHyperlinks ? handleTopicPress : undefined}
         getLinkVariant={showHyperlinks ? getLinkVariant : undefined}
       />
 
-      {topic.status === 'discovered' && (
+      {!loading && topic?.status === 'discovered' && (
         <ActionButtons onAcquireNow={handleAcquireNow} />
       )}
 
