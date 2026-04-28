@@ -420,6 +420,7 @@ export const TopicsScreen: React.FC = () => {
         actionLabel="Undo"
         onAction={() => void handleUndoToast()}
         onDismiss={() => setToast(null)}
+        bottomOffset={0}
       />
 
       <ConfirmDialog

@@ -285,14 +285,15 @@ export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
             return (
               <TouchableOpacity
                 onPress={handleBulbPress}
-                style={{ marginRight: 16, padding: 4 }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons
-                  name={isProcessing ? 'bulb-outline' : 'bulb'}
-                  size={22}
-                  color={isProcessing ? processingColor : activeColor}
-                />
+                <View style={{ width: 34, height: 34, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons
+                    name={isProcessing ? 'bulb-outline' : 'bulb'}
+                    size={22}
+                    color={isProcessing ? processingColor : activeColor}
+                  />
+                </View>
               </TouchableOpacity>
             );
           },
