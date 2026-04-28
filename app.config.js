@@ -39,6 +39,9 @@ export default {
     },
     plugins: [
       "expo-router",
+      "expo-image",
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     experiments: {
       typedRoutes: true,
