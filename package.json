@@ -24,7 +24,7 @@
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
-    "expo": "^55.0.17",
+    "expo": "~55.0.18",
     "expo-constants": "~55.0.8",
     "expo-dev-client": "~55.0.28",
     "expo-font": "~55.0.4",
