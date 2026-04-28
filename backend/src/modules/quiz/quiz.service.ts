@@ -6,10 +6,10 @@ import { TopicService } from '../topic/topic.service.js';
 import { stripMarkers } from '../topic/topic.utils.js';
 import { QuizRepository } from './quiz.repository.js';
 import {
-    FlatQuizQuestionsSchema,
-    type GenerateQuizRequest,
-    type QuizQuestion,
-    type SubmitQuizAttemptRequest,
+  FlatQuizQuestionsSchema,
+  type GenerateQuizRequest,
+  type QuizQuestion,
+  type SubmitQuizAttemptRequest,
 } from './quiz.schemas.js';
 
 interface StreamCallbacks {
@@ -78,7 +78,7 @@ export class QuizService {
             pros: (topic.contentPros as string[]).map(stripMarkers) ?? [],
             cons: (topic.contentCons as string[]).map(stripMarkers) ?? [],
             compareToSimilar: ((topic.contentCompareToSimilar as { topic: string; comparison: string }[]) ?? []).map(
-              (c) => ({ topic: c.topic, comparison: stripMarkers(c.comparison) })
+              (c) => ({ topic: stripMarkers(c.topic), comparison: stripMarkers(c.comparison) })
             ),
           },
         },

@@ -1,14 +1,14 @@
 ﻿import { and, count, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import { db } from '../shared/database/client.js';
 import {
-  type NewTopic,
-  type NewTopicRelationship,
-  type NewUserTopic,
-  type Topic,
-  topicRelationships,
-  topics,
-  type UserTopic,
-  userTopics,
+    type NewTopic,
+    type NewTopicRelationship,
+    type NewUserTopic,
+    type Topic,
+    topicRelationships,
+    topics,
+    type UserTopic,
+    userTopics,
 } from '../shared/database/schema.js';
 import type { DiscoverTopicRequest, ListTopicsQuery } from './topic.schemas.js';
 
@@ -390,15 +390,17 @@ export class TopicRepository {
    */
   async reverseResolve(topicName: string, topicId: string): Promise<void> {
     // Tier 1 — exact case-insensitive
-    const exact = await db.execute(sql`
+    const exactRows = await db.execute(sql`
       UPDATE topic_relationships
       SET target_topic_id = ${topicId},
           resolved_at = now()
       WHERE target_topic_id IS NULL
         AND LOWER(target_name) = LOWER(${topicName})
+      RETURNING id
     `);
 
-    if ((Array.isArray(exact) ? exact.length : ((exact as unknown as { rowCount?: number }).rowCount ?? 0)) > 0) return;
+    const exactCount = Array.isArray(exactRows) ? exactRows.length : ((exactRows as unknown as { rows?: unknown[] }).rows?.length ?? 0);
+    if (exactCount > 0) return;
 
     // Tier 2 — trigram fallback
     await db.execute(sql`

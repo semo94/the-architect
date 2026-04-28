@@ -90,6 +90,7 @@ export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
 
   const startEventsStream = useCallback(async (currentTopic: Topic) => {
     eventsClientRef.current.cancel();
+    topicRef.current = currentTopic;
 
     const authHeader = await topicService.getAuthHeader();
     eventsClientRef.current.connectGet(

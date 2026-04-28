@@ -103,7 +103,7 @@ export class LLMService {
           continue;
         }
 
-        let parsed: any;
+        let parsed: { type?: string; delta?: { text?: string }; choices?: { delta?: { content?: string } }[] };
         try {
           parsed = JSON.parse(payload);
         } catch {
