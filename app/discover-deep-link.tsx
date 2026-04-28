@@ -1,4 +1,4 @@
-﻿import { DiscoverDeepLinkScreen } from '@/components/discover/DiscoverDeepLinkScreen';
+import { DiscoverDeepLinkScreen } from '@/components/discover/DiscoverDeepLinkScreen';
 import { useLocalSearchParams } from 'expo-router';
 
 export default function DiscoverDeepLinkRoute() {

@@ -1,4 +1,4 @@
-﻿import { QuizQuestion } from '@/types';
+import { QuizQuestion } from '@/types';
 
 export interface ShuffleResult {
   question: QuizQuestion;

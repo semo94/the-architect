@@ -1,4 +1,4 @@
-﻿import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
@@ -44,7 +44,7 @@ export const InsightsPanel: React.FC<Props> = ({
   onInsightPress,
   onRetry,
 }) => {
-  const { colors, spacing, typography } = useTheme();
+  const { colors, spacing } = useTheme();
 
   const sortedGroups = [...groups].sort((a, b) => {
     const aIdx = GROUP_ORDER.indexOf(a.relationKind);
@@ -95,7 +95,7 @@ export const InsightsPanel: React.FC<Props> = ({
           <View style={styles.centeredContent}>
             <Ionicons name="alert-circle-outline" size={40} color={colors.error ?? '#EF4444'} />
             <Text style={[styles.statusText, { color: colors.textSecondary, marginTop: spacing.md }]}>
-              Couldn't load learning connections.
+              Couldn&apos;t load learning connections.
             </Text>
             {onRetry && (
               <TouchableOpacity
