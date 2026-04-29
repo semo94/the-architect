@@ -78,7 +78,7 @@ export class UserStatsService {
       db
         .select({
           category: topics.category,
-          discovered: count(),
+          discovered: sql<number>`count(*) filter (where ${userTopics.status} = 'discovered')`,
           learned: sql<number>`count(*) filter (where ${userTopics.status} = 'learned')`,
         })
         .from(userTopics)
@@ -99,10 +99,11 @@ export class UserStatsService {
     const categoryBreakdown = categoryRows.reduce((acc, row) => {
       const discovered = Number(row.discovered ?? 0);
       const learned = Number(row.learned ?? 0);
+      const inBucket = discovered + learned;
       acc[row.category] = {
         discovered,
         learned,
-        learningRate: discovered > 0 ? Math.round((learned / discovered) * 100) : 0,
+        learningRate: inBucket > 0 ? Math.round((learned / inBucket) * 100) : 0,
       };
       return acc;
     }, {} as Record<string, { discovered: number; learned: number; learningRate: number }>);
