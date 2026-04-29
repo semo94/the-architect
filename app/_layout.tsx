@@ -19,7 +19,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { DarkColors, LightColors } from "@/styles/globalStyles";
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme();
   const colors = colorScheme === "dark" ? DarkColors : LightColors;
   const router = useRouter();
   const segments = useSegments();
