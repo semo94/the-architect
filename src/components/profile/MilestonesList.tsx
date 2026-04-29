@@ -43,17 +43,26 @@ export const MilestonesList: React.FC<MilestonesListProps> = ({ milestones }) =>
       fontSize: typography.fontSize.sm,
       color: colors.textSecondary,
     },
+    emptyText: {
+      fontSize: typography.fontSize.sm,
+      color: colors.textSecondary,
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.md,
+    },
   }), [colors, typography, spacing]);
 
   return (
     <View style={sectionStyles.section}>
       <Text style={sectionStyles.sectionTitle}>Milestones</Text>
-      {milestones.map((milestone, index) => {
-        const cardStyle: any = milestone.achievedAt
-          ? [styles.milestoneCard, styles.milestoneAchieved]
-          : styles.milestoneCard;
-        return (
-          <Card key={index} style={cardStyle}>
+      {milestones.length === 0 ? (
+        <Text style={styles.emptyText}>Keep exploring — your milestones will appear here.</Text>
+      ) : (
+        milestones.map((milestone) => {
+          const cardStyle: any = milestone.achievedAt
+            ? [styles.milestoneCard, styles.milestoneAchieved]
+            : styles.milestoneCard;
+          return (
+            <Card key={`${milestone.type}-${milestone.threshold}`} style={cardStyle}>
             <Ionicons
               name={milestone.icon as any}
               size={32}
@@ -70,9 +79,10 @@ export const MilestonesList: React.FC<MilestonesListProps> = ({ milestones }) =>
                 )}
               </Text>
             </View>
-          </Card>
-        );
-      })}
+            </Card>
+          );
+        })
+      )}
     </View>
   );
 };

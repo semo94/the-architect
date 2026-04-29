@@ -29,6 +29,7 @@ interface AppState {
   setTopicsNeedRefresh: (value: boolean) => void;
   removeTopicFromCache: (topicId: string) => void;
   fetchTopics: (filters?: TopicFilters, append?: boolean) => Promise<{ total: number; page: number; limit: number }>;
+  isStatsLoading: boolean;
   fetchStats: () => Promise<void>;
   updateTopicStatusInCache: (topicId: string, status: 'discovered' | 'learned' | 'dismissed') => void;
   checkSession: (silent?: boolean) => Promise<void>;
@@ -39,7 +40,7 @@ interface AppState {
 const initialProfile: Profile = {
   statistics: {
     breadthExpansion: {
-      totalDiscovered: 0,
+      totalTopics: 0,
       totalLearned: 0,
       inBucketList: 0,
       learningRate: 0,
@@ -87,6 +88,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   authError: null,
   globalError: null,
   topicsNeedRefresh: false,
+  isStatsLoading: false,
 
   setLoading: (loading: boolean) => set({ isLoading: loading }),
   setError: (error: string | null) => set({ error }),
@@ -125,9 +127,11 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   fetchStats: async () => {
+    set({ isStatsLoading: true });
     try {
       const stats = await statsService.getStats();
       set((state) => ({
+        isStatsLoading: false,
         profile: {
           ...state.profile,
           statistics: stats.statistics,
@@ -136,7 +140,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
         },
       }));
     } catch {
-      set({ globalError: 'Failed to load stats. Pull down to refresh.' });
+      set({ isStatsLoading: false });
     }
   },
 

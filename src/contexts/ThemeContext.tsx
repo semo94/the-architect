@@ -1,15 +1,15 @@
-import React, { createContext, useContext, ReactNode } from 'react';
-import { ColorSchemeName } from 'react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useColorScheme, type ThemePreference } from '@/hooks/use-color-scheme';
 import {
-  getColors,
-  getShadows,
-  getCommonStyles,
-  LightColors,
-  Spacing,
-  Typography,
-  BorderRadius,
+    BorderRadius,
+    getColors,
+    getCommonStyles,
+    getShadows,
+    LightColors,
+    Spacing,
+    Typography,
 } from '@/styles/globalStyles';
+import React, { createContext, ReactNode, useContext } from 'react';
+import { ColorSchemeName } from 'react-native';
 
 type ThemeColors = typeof LightColors;
 type ThemeShadows = ReturnType<typeof getShadows>;
@@ -17,6 +17,8 @@ type ThemeCommonStyles = ReturnType<typeof getCommonStyles>;
 
 interface ThemeContextType {
   colorScheme: ColorSchemeName;
+  themePreference: ThemePreference;
+  setThemePreference: (pref: ThemePreference) => void;
   colors: ThemeColors;
   shadows: ThemeShadows;
   styles: ThemeCommonStyles;
@@ -33,7 +35,7 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const colorScheme = useColorScheme();
+  const { colorScheme, themePreference, setThemePreference } = useColorScheme();
   const colors = getColors(colorScheme);
   const shadows = getShadows(colorScheme);
   const styles = getCommonStyles(colorScheme);
@@ -41,6 +43,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const value: ThemeContextType = {
     colorScheme,
+    themePreference,
+    setThemePreference,
     colors,
     shadows,
     styles,

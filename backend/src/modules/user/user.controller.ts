@@ -37,14 +37,9 @@ export class UserController {
 
   async getCurrentUserStats(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const userId = request.user.sub;
-    const [statistics, milestones] = await Promise.all([
-      this.userStatsService.getUserStats(userId),
-      this.userStatsService.getMilestones(userId),
-    ]);
+    const statistics = await this.userStatsService.getUserStats(userId);
+    const milestones = this.userStatsService.getMilestones(statistics);
 
-    reply.send({
-      statistics,
-      milestones,
-    });
+    reply.send({ statistics, milestones });
   }
 }

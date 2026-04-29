@@ -1,9 +1,9 @@
+import { Card } from '@/components/common/Card';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useProgressBarStyles, useSectionStyles } from '@/hooks/useComponentStyles';
+import { ProfileStatistics } from '@/types';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Card } from '@/components/common/Card';
-import { ProfileStatistics } from '@/types';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useSectionStyles, useProgressBarStyles } from '@/hooks/useComponentStyles';
 
 interface CategoryBreakdownListProps {
   categoryBreakdown: ProfileStatistics['categoryBreakdown'];
@@ -35,24 +35,36 @@ export const CategoryBreakdownList: React.FC<CategoryBreakdownListProps> = ({
       fontSize: typography.fontSize.sm,
       color: colors.textSecondary,
     },
+    emptyText: {
+      fontSize: typography.fontSize.sm,
+      color: colors.textSecondary,
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.md,
+    },
   }), [colors, typography, spacing]);
+
+  const entries = Object.entries(categoryBreakdown);
 
   return (
     <View style={sectionStyles.section}>
       <Text style={sectionStyles.sectionTitle}>Category Breakdown</Text>
-      {Object.entries(categoryBreakdown).map(([category, stats]) => (
-        <Card key={category} style={styles.categoryCard}>
-          <Text style={styles.categoryName}>{category}</Text>
-          <View style={styles.categoryStats}>
-            <Text style={styles.categoryText}>
-              {stats.learned} learned / {stats.discovered} discovered ({stats.learningRate}%)
-            </Text>
-          </View>
-          <View style={progressBarStyles.progressBar}>
-            <View style={[progressBarStyles.progressFill, { width: `${stats.learningRate}%` }]} />
-          </View>
-        </Card>
-      ))}
+      {entries.length === 0 ? (
+        <Text style={styles.emptyText}>Start discovering topics to see your category breakdown.</Text>
+      ) : (
+        entries.map(([category, stats]) => (
+          <Card key={category} style={styles.categoryCard}>
+            <Text style={styles.categoryName}>{category}</Text>
+            <View style={styles.categoryStats}>
+              <Text style={styles.categoryText}>
+                {stats.learned} learned / {stats.discovered} discovered ({stats.learningRate}%)
+              </Text>
+            </View>
+            <View style={progressBarStyles.progressBar}>
+              <View style={[progressBarStyles.progressFill, { width: `${stats.learningRate}%` }]} />
+            </View>
+          </Card>
+        ))
+      )}
     </View>
   );
 };

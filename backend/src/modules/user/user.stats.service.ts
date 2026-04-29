@@ -4,7 +4,7 @@ import { topics, userQuizzes, userTopics } from '../shared/database/schema.js';
 
 interface ProfileStatistics {
   breadthExpansion: {
-    totalDiscovered: number;
+    totalTopics: number;
     totalLearned: number;
     inBucketList: number;
     learningRate: number;
@@ -58,7 +58,7 @@ export class UserStatsService {
           discovered: sql<number>`count(*) filter (where ${userTopics.status} = 'discovered')`,
         })
         .from(userTopics)
-        .where(and(eq(userTopics.userId, userId), sql`${userTopics.status} <> 'dismissed'`)),
+        .where(eq(userTopics.userId, userId)),
       db
         .select({
           surprise: sql<number>`count(*) filter (where ${userTopics.discoveryMethod} = 'surprise')`,
@@ -87,9 +87,10 @@ export class UserStatsService {
         .groupBy(topics.category),
     ]);
 
-    const totalDiscovered = Number(topicCounts[0]?.total ?? 0);
+    const totalTopics = Number(topicCounts[0]?.total ?? 0);
     const totalLearned = Number(topicCounts[0]?.learned ?? 0);
-    const inBucketList = Number(topicCounts[0]?.discovered ?? 0);
+    const discoveredCount = Number(topicCounts[0]?.discovered ?? 0);
+    const inBucketList = discoveredCount + totalLearned;
 
     const totalQuizzesTaken = Number(quizAgg[0]?.total ?? 0);
     const passedCount = Number(quizAgg[0]?.passedCount ?? 0);
@@ -108,10 +109,10 @@ export class UserStatsService {
 
     return {
       breadthExpansion: {
-        totalDiscovered,
+        totalTopics,
         totalLearned,
         inBucketList,
-        learningRate: totalDiscovered > 0 ? Math.round((totalLearned / totalDiscovered) * 100) : 0,
+        learningRate: inBucketList > 0 ? Math.round((totalLearned / inBucketList) * 100) : 0,
       },
       growthMetrics: {
         // Phase 1 placeholder fields; date-window growth metrics are intentionally deferred.
@@ -144,9 +145,7 @@ export class UserStatsService {
     };
   }
 
-  async getMilestones(userId: string): Promise<Milestone[]> {
-    const stats = await this.getUserStats(userId);
-
+  getMilestones(stats: ProfileStatistics): Milestone[] {
     const milestoneDefinitions: Array<Omit<Milestone, 'achievedAt'>> = [
       { type: 'discovered', threshold: 10, title: 'First 10 Discovered', icon: 'locate-outline' },
       { type: 'discovered', threshold: 25, title: 'Quarter Century', icon: 'medal-outline' },
@@ -157,13 +156,13 @@ export class UserStatsService {
     ];
 
     return milestoneDefinitions.map((definition) => {
-      const count = definition.type === 'discovered'
-        ? stats.breadthExpansion.totalDiscovered
+      const milestoneCount = definition.type === 'discovered'
+        ? stats.breadthExpansion.inBucketList
         : stats.breadthExpansion.totalLearned;
 
       return {
         ...definition,
-        achievedAt: count >= definition.threshold ? new Date().toISOString() : null,
+        achievedAt: milestoneCount >= definition.threshold ? new Date().toISOString() : null,
       };
     });
   }

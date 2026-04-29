@@ -1,15 +1,15 @@
 import { Card } from '@/components/common/Card';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSectionStyles, useStatCardStyles } from '@/hooks/useComponentStyles';
+import { getCardWidth } from '@/styles/globalStyles';
 import { ProfileStatistics } from '@/types';
 import React, { useMemo } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import { useSectionStyles, useStatCardStyles } from '@/hooks/useComponentStyles';
-import { getCardWidth } from '@/styles/globalStyles';
 
 type BreadthExpansionStatsProps = ProfileStatistics['breadthExpansion'];
 
 export const BreadthExpansionStats: React.FC<BreadthExpansionStatsProps> = ({
-  totalDiscovered,
+  totalTopics,
   totalLearned,
   inBucketList,
   learningRate,
@@ -46,8 +46,8 @@ export const BreadthExpansionStats: React.FC<BreadthExpansionStatsProps> = ({
       <Text style={sectionStyles.sectionTitle}>Breadth Expansion</Text>
       <View style={styles.statsGrid}>
         <Card style={styles.statCard}>
-          <Text style={statStyles.statNumber}>{totalDiscovered}</Text>
-          <Text style={statStyles.statLabel}>Discovered</Text>
+          <Text style={statStyles.statNumber}>{totalTopics}</Text>
+          <Text style={statStyles.statLabel}>Total</Text>
         </Card>
         <Card style={styles.statCard}>
           <Text style={statStyles.statNumber}>{totalLearned}</Text>

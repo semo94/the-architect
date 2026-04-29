@@ -122,7 +122,7 @@ export interface QuizQuestion {
 
 export interface ProfileStatistics {
   breadthExpansion: {
-    totalDiscovered: number;
+    totalTopics: number;
     totalLearned: number;
     inBucketList: number;
     learningRate: number;
