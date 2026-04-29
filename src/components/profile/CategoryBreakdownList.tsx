@@ -56,7 +56,7 @@ export const CategoryBreakdownList: React.FC<CategoryBreakdownListProps> = ({
             <Text style={styles.categoryName}>{category}</Text>
             <View style={styles.categoryStats}>
               <Text style={styles.categoryText}>
-                {stats.learned} learned / {stats.discovered} discovered ({stats.learningRate}%)
+                {stats.learned} learned / {stats.learned + stats.discovered} in bucket ({stats.learningRate}%)
               </Text>
             </View>
             <View style={progressBarStyles.progressBar}>
