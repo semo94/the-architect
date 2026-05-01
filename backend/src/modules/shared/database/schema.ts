@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  customType,
   index,
   integer,
   jsonb,
@@ -11,6 +12,24 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+
+// Custom type for pgvector: serialises number[] ↔ Postgres '[x,y,z]' string
+const vector = customType<{ data: number[]; driverData: string; config: { dimensions: number } }>(
+  {
+    dataType(config) {
+      return `vector(${config?.dimensions ?? 1536})`;
+    },
+    toDriver(value: number[]): string {
+      return `[${value.join(',')}]`;
+    },
+    fromDriver(value: string): number[] {
+      return value
+        .replace(/^\[|\]$/g, '')
+        .split(',')
+        .map((s) => parseFloat(s.trim()));
+    },
+  }
+);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -113,8 +132,31 @@ export const topicRelationships = pgTable('topic_relationships', {
   relationKind: varchar('relation_kind', { length: 32 }),
   createdAt: timestamp('created_at').defaultNow(),
   resolvedAt: timestamp('resolved_at'),
+  targetNameEmbedding: vector('target_name_embedding', { dimensions: 1536 }),
 }, (table) => ({
   sourceKindIdx: index('idx_topic_relationships_source_kind').on(table.sourceTopicId, table.kind),
+}));
+
+/**
+ * Surface forms (aliases) associated with a topic. Every name a generator
+ * (LLM) or user input has emitted for a topic is recorded here, with its own
+ * embedding. The resolver searches this table — not topics.name_embedding —
+ * so the alias set grows monotonically and previously-seen variants become
+ * permanent match keys.
+ */
+export const topicAliases = pgTable('topic_aliases', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  topicId: uuid('topic_id').notNull().references(() => topics.id, { onDelete: 'cascade' }),
+  aliasText: varchar('alias_text', { length: 255 }).notNull(),
+  aliasTextLower: varchar('alias_text_lower', { length: 255 }).notNull(),
+  aliasEmbedding: vector('alias_embedding', { dimensions: 1536 }),
+  // 'name' | 'hyperlink_marker' | 'insight_target' | 'user_query'
+  source: varchar('source', { length: 24 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  aliasUnique: uniqueIndex('idx_topic_aliases_topic_lower_unique').on(table.topicId, table.aliasTextLower),
+  aliasLowerIdx: index('idx_topic_aliases_lower').on(table.aliasTextLower),
+  topicIdx: index('idx_topic_aliases_topic').on(table.topicId),
 }));
 
 // Type exports
@@ -134,3 +176,5 @@ export type UserQuiz = typeof userQuizzes.$inferSelect;
 export type NewUserQuiz = typeof userQuizzes.$inferInsert;
 export type TopicRelationship = typeof topicRelationships.$inferSelect;
 export type NewTopicRelationship = typeof topicRelationships.$inferInsert;
+export type TopicAlias = typeof topicAliases.$inferSelect;
+export type NewTopicAlias = typeof topicAliases.$inferInsert;

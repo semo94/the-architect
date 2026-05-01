@@ -135,39 +135,38 @@ export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
     [topic?.hyperlinks]
   );
 
+  const navigateToLinkedTopic = useCallback(
+    (targetName: string, targetTopicId: string | null, owned: boolean) => {
+      if (owned && targetTopicId) {
+        router.push({ pathname: '/topic-detail', params: { topicId: targetTopicId } });
+        return;
+      }
+
+      router.push({
+        pathname: '/discover-deep-link' as any,
+        params: targetTopicId ? { topicId: targetTopicId } : { topicName: targetName },
+      });
+    },
+    [router]
+  );
+
   const handleTopicPress = useCallback(
     (name: string) => {
       if (!topic?.hyperlinks) return;
       const match = topic.hyperlinks.find(
         (h) => h.targetName.toLowerCase() === name.toLowerCase()
       );
-      if (match?.targetTopicId) {
-        router.push({ pathname: '/topic-detail', params: { topicId: match.targetTopicId } });
-      } else {
-        router.push({
-           
-          pathname: '/discover-deep-link' as any,
-          params: { topicName: name },
-        });
-      }
+      navigateToLinkedTopic(name, match?.targetTopicId ?? null, match?.owned ?? false);
     },
-    [topic?.hyperlinks, router]
+    [navigateToLinkedTopic, topic?.hyperlinks]
   );
 
   const handleInsightPress = useCallback(
     (item: InsightItem) => {
       setInsightsPanelVisible(false);
-      if (item.targetTopicId) {
-        router.push({ pathname: '/topic-detail', params: { topicId: item.targetTopicId } });
-      } else {
-        router.push({
-           
-          pathname: '/discover-deep-link' as any,
-          params: { topicName: item.targetName },
-        });
-      }
+      navigateToLinkedTopic(item.targetName, item.targetTopicId, item.owned);
     },
-    [router]
+    [navigateToLinkedTopic]
   );
 
   /**

@@ -12,6 +12,14 @@ export interface InsightGenerationResult {
   groups: InsightGenerationItem[];
 }
 
+export interface JudgeResolutionItem {
+  candidateName: string;
+  contextHint?: { sourceName: string; sourceCategory?: string } | null;
+  candidates: Array<{ topicId: string; primaryName: string; aliases: string[] }>;
+}
+
+export type JudgeResolutionResult = { match: string }; // topicId or 'NEW'
+
 interface StreamCallbacks {
   onChunk: (text: string) => void;
   onComplete: () => void;
@@ -61,6 +69,45 @@ export class LLMService {
         relationKind: (item.relationKind ?? '').trim().toUpperCase(),
       })).filter((item) => item.targetName.length > 0 && item.relationKind.length > 0),
     };
+  }
+
+  /**
+   * Resolve each candidate to one of the provided existing-topic candidates or
+   * to 'NEW'. Returns one result per input item, in the same order. On any
+   * parse / shape mismatch, falls back to 'NEW' for safety (a missed match
+   * costs a duplicate, a wrong match corrupts the graph).
+   */
+  async judgeEntityResolution(items: JudgeResolutionItem[]): Promise<JudgeResolutionResult[]> {
+    if (items.length === 0) return [];
+
+    const { system, user } = promptTemplates.judgeEntityResolution(items);
+
+    let accumulatedText = '';
+    await this.streamPrompt(user, system, {
+      onChunk: (text) => { accumulatedText += text; },
+      onComplete: () => {},
+    });
+
+    const fallback: JudgeResolutionResult[] = items.map(() => ({ match: 'NEW' }));
+
+    const clean = accumulatedText.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+    let parsed: { results?: Array<{ match?: unknown }> };
+    try {
+      parsed = JSON.parse(clean);
+    } catch {
+      return fallback;
+    }
+
+    const results = Array.isArray(parsed.results) ? parsed.results : null;
+    if (!results || results.length !== items.length) {
+      return fallback;
+    }
+
+    return results.map((row) => {
+      const m = typeof row?.match === 'string' ? row.match.trim() : '';
+      if (!m || m.toUpperCase() === 'NEW') return { match: 'NEW' };
+      return { match: m };
+    });
   }
 
   private async streamPrompt(prompt: string, systemPrompt: string, callbacks: StreamCallbacks, signal?: AbortSignal): Promise<void> {

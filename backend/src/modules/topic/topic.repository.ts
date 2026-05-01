@@ -1,16 +1,29 @@
-﻿import { and, count, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+﻿import { and, count, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import { db } from '../shared/database/client.js';
 import {
-    type NewTopic,
-    type NewTopicRelationship,
-    type NewUserTopic,
-    type Topic,
-    topicRelationships,
-    topics,
-    type UserTopic,
-    userTopics,
+  type NewTopic,
+  type NewTopicAlias,
+  type NewTopicRelationship,
+  type NewUserTopic,
+  type Topic,
+  topicAliases,
+  topicRelationships,
+  topics,
+  type UserTopic,
+  userTopics,
 } from '../shared/database/schema.js';
 import type { DiscoverTopicRequest, ListTopicsQuery } from './topic.schemas.js';
+
+/** Surface form types used as `topic_aliases.source`. */
+export type TopicAliasSource = 'name' | 'hyperlink_marker' | 'insight_target' | 'user_query';
+
+/** A neighbor row returned by alias-vector ANN search. */
+export interface AliasNeighborRow {
+  topicId: string;
+  primaryName: string;
+  aliasText: string;
+  score: number;
+}
 
 export interface TopicWithUserState {
   topic: Topic;
@@ -30,7 +43,11 @@ export class TopicRepository {
   }
 
   async findByName(name: string): Promise<Topic | undefined> {
-    const result = await db.select().from(topics).where(eq(topics.name, name));
+    const result = await db
+      .select()
+      .from(topics)
+      .where(sql`LOWER(${topics.name}) = LOWER(${name})`)
+      .limit(1);
     return result[0];
   }
 
@@ -239,33 +256,173 @@ export class TopicRepository {
     return existing[0];
   }
 
+  // ---------------------------------------------------------------------------
+  // topic_aliases — entity resolution surface form table
+  // ---------------------------------------------------------------------------
+
   /**
-   * Two-tier fuzzy name lookup.
-   * Tier 1: exact case-insensitive match.
-   * Tier 2: trigram similarity >= FUZZY_MATCH_THRESHOLD.
-   * Input is normalised (trim + collapse internal whitespace) before matching.
+   * Tier-0 alias lookup: case-insensitive exact match against any recorded
+   * alias of any topic. Returns the matched topic id (and its primary name)
+   * or undefined.
    */
-  async findByNameFuzzy(name: string): Promise<Topic | undefined> {
-    const normalised = name.trim().replace(/\s+/g, ' ');
+  async findAliasExact(name: string): Promise<{ topicId: string; primaryName: string } | undefined> {
+    const lower = name.trim().toLowerCase();
+    if (lower.length === 0) return undefined;
 
-    // Tier 1 — exact case-insensitive
-    const exact = await db
-      .select()
-      .from(topics)
-      .where(sql`LOWER(${topics.name}) = LOWER(${normalised})`)
+    const rows = await db
+      .select({ topicId: topicAliases.topicId, primaryName: topics.name })
+      .from(topicAliases)
+      .innerJoin(topics, eq(topics.id, topicAliases.topicId))
+      .where(eq(topicAliases.aliasTextLower, lower))
       .limit(1);
 
-    if (exact.length > 0) return exact[0];
+    return rows[0];
+  }
 
-    // Tier 2 — trigram similarity
-    const fuzzy = await db
-      .select()
-      .from(topics)
-      .where(sql`similarity(LOWER(${topics.name}), LOWER(${normalised})) >= ${FUZZY_MATCH_THRESHOLD}`)
-      .orderBy(sql`similarity(LOWER(${topics.name}), LOWER(${normalised})) DESC`)
-      .limit(1);
+  /**
+   * Tier-1 alias-vector ANN: cosine search over alias_embedding. Returns up
+   * to `k` nearest aliases with their parent topic id, primary name, and
+   * cosine similarity score (1 - distance).
+   */
+  async findAliasNeighbors(embedding: number[], k = 5): Promise<AliasNeighborRow[]> {
+    const vecLiteral = `[${embedding.join(',')}]`;
+    const raw = await db.execute<{
+      topic_id: string;
+      primary_name: string;
+      alias_text: string;
+      score: number;
+    }>(sql`
+      SELECT
+        ta.topic_id        AS topic_id,
+        t.name             AS primary_name,
+        ta.alias_text      AS alias_text,
+        1 - (ta.alias_embedding <=> ${vecLiteral}::vector) AS score
+      FROM topic_aliases ta
+      INNER JOIN topics t ON t.id = ta.topic_id
+      WHERE ta.alias_embedding IS NOT NULL
+      ORDER BY ta.alias_embedding <=> ${vecLiteral}::vector
+      LIMIT ${k}
+    `);
 
-    return fuzzy[0];
+    type Row = { topic_id: string; primary_name: string; alias_text: string; score: number };
+    const rows: Row[] = Array.isArray(raw) ? raw : (raw as unknown as { rows: Row[] }).rows;
+    return rows.map((r) => ({
+      topicId: r.topic_id,
+      primaryName: r.primary_name,
+      aliasText: r.alias_text,
+      score: Number(r.score),
+    }));
+  }
+
+  /**
+   * Returns up to `limit` aliases for the given topic ids, grouped by topic.
+   * Used by the resolver to feed the LLM judge with each candidate's known
+   * surface forms.
+   */
+  async getAliasesForTopics(topicIds: string[], limit = 8): Promise<Map<string, string[]>> {
+    const result = new Map<string, string[]>();
+    if (topicIds.length === 0) return result;
+
+    const rows = await db
+      .select({ topicId: topicAliases.topicId, aliasText: topicAliases.aliasText })
+      .from(topicAliases)
+      .where(inArray(topicAliases.topicId, topicIds));
+
+    for (const row of rows) {
+      const list = result.get(row.topicId) ?? [];
+      if (list.length < limit) list.push(row.aliasText);
+      result.set(row.topicId, list);
+    }
+    return result;
+  }
+
+  /**
+   * Inserts a new alias row. Idempotent — duplicates (same topic + same
+   * lowercased text) are silently skipped via the unique index.
+   */
+  async upsertAlias(data: NewTopicAlias): Promise<void> {
+    await db.insert(topicAliases).values(data).onConflictDoNothing();
+  }
+
+  /**
+   * Returns unresolved relationship rows (`target_topic_id IS NULL`) whose
+   * `target_name_embedding` is within `>= threshold` cosine of the supplied
+   * embedding. Used by the post-create reverse-resolution pass to scope the
+   * judge call to plausible candidates only.
+   */
+  async findUnresolvedRelationshipsNear(
+    embedding: number[],
+    threshold: number,
+    limit = 50
+  ): Promise<Array<{ relationshipId: string; targetName: string; targetNameEmbedding: number[] | null; score: number }>> {
+    const vecLiteral = `[${embedding.join(',')}]`;
+    const raw = await db.execute<{
+      id: string;
+      target_name: string;
+      target_name_embedding: string | null;
+      score: number;
+    }>(sql`
+      SELECT
+        tr.id                   AS id,
+        tr.target_name          AS target_name,
+        tr.target_name_embedding::text AS target_name_embedding,
+        1 - (tr.target_name_embedding <=> ${vecLiteral}::vector) AS score
+      FROM topic_relationships tr
+      WHERE tr.target_topic_id IS NULL
+        AND tr.target_name_embedding IS NOT NULL
+        AND 1 - (tr.target_name_embedding <=> ${vecLiteral}::vector) >= ${threshold}
+      ORDER BY tr.target_name_embedding <=> ${vecLiteral}::vector
+      LIMIT ${limit}
+    `);
+
+    type Row = { id: string; target_name: string; target_name_embedding: string | null; score: number };
+    const rows: Row[] = Array.isArray(raw) ? raw : (raw as unknown as { rows: Row[] }).rows;
+
+    const parseVec = (s: string | null): number[] | null => {
+      if (!s) return null;
+      return s.replace(/^\[|\]$/g, '').split(',').map((v) => parseFloat(v.trim()));
+    };
+
+    return rows.map((r) => ({
+      relationshipId: r.id,
+      targetName: r.target_name,
+      targetNameEmbedding: parseVec(r.target_name_embedding),
+      score: Number(r.score),
+    }));
+  }
+
+  /**
+   * Returns IDs of unresolved relationship rows whose `target_name`
+   * case-insensitively matches the given name. No embedding required.
+   * Used by the Tier-0 reverse-resolution pass.
+   */
+  async findUnresolvedRelationshipsByExactName(name: string): Promise<string[]> {
+    const lower = name.trim().toLowerCase();
+    if (lower.length === 0) return [];
+    const rows = await db
+      .select({ id: topicRelationships.id })
+      .from(topicRelationships)
+      .where(and(
+        isNull(topicRelationships.targetTopicId),
+        sql`lower(${topicRelationships.targetName}) = ${lower}`
+      ));
+    return rows.map((r) => r.id);
+  }
+
+  /**
+   * Bulk-resolves a set of relationship rows to a single topic id. Sets
+   * `target_topic_id` and `resolved_at`. Idempotent — only updates rows that
+   * are still unresolved.
+   */
+  async resolveRelationships(relationshipIds: string[], topicId: string): Promise<void> {
+    if (relationshipIds.length === 0) return;
+    await db
+      .update(topicRelationships)
+      .set({ targetTopicId: topicId, resolvedAt: new Date() })
+      .where(and(
+        isNull(topicRelationships.targetTopicId),
+        inArray(topicRelationships.id, relationshipIds)
+      ));
   }
 
   /**
@@ -383,34 +540,4 @@ export class TopicRepository {
     }));
   }
 
-  /**
-   * Resolves previously unresolved topic_relationships rows that reference the
-   * given topic name. Runs exact case-insensitive first, trigram fallback if
-   * no rows were updated. Idempotent — the IS NULL guard prevents double-writes.
-   */
-  async reverseResolve(topicName: string, topicId: string): Promise<void> {
-    // Tier 1 — exact case-insensitive
-    const exactRows = await db.execute(sql`
-      UPDATE topic_relationships
-      SET target_topic_id = ${topicId},
-          resolved_at = now()
-      WHERE target_topic_id IS NULL
-        AND LOWER(target_name) = LOWER(${topicName})
-      RETURNING id
-    `);
-
-    const exactCount = Array.isArray(exactRows) ? exactRows.length : ((exactRows as unknown as { rows?: unknown[] }).rows?.length ?? 0);
-    if (exactCount > 0) return;
-
-    // Tier 2 — trigram fallback
-    await db.execute(sql`
-      UPDATE topic_relationships
-      SET target_topic_id = ${topicId},
-          resolved_at = now()
-      WHERE target_topic_id IS NULL
-        AND similarity(LOWER(target_name), LOWER(${topicName})) >= ${FUZZY_MATCH_THRESHOLD}
-    `);
-  }
 }
-
-const FUZZY_MATCH_THRESHOLD = 0.45;
