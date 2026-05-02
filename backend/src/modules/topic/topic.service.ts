@@ -3,9 +3,11 @@ import { llmService } from '../llm/llm.service.js';
 import { env } from '../shared/config/env.js';
 import { db } from '../shared/database/client.js';
 import { quizTopics, topics, userQuizzes, userTopics } from '../shared/database/schema.js';
+import { embeddingService } from '../shared/embedding/embedding.service.js';
 import { AppError } from '../shared/middleware/error-handler.js';
 import { linkResourceService } from './link-resource.service.js';
 import { TopicRepository } from './topic.repository.js';
+import { LOW_CONFIDENCE_THRESHOLD, TopicResolver, type ResolveInput } from './topic.resolver.js';
 import {
   FlatTopicContentSchema,
   type DiscoverTopicRequest,
@@ -40,9 +42,11 @@ interface TopicFacetsResponse {
 
 export class TopicService {
   private topicRepository: TopicRepository;
+  private resolver: TopicResolver;
 
   constructor() {
     this.topicRepository = new TopicRepository();
+    this.resolver = new TopicResolver(this.topicRepository);
   }
 
   async discoverTopic(
@@ -103,46 +107,7 @@ export class TopicService {
     const parsed = this.extractJson(accumulatedText);
     const validated = FlatTopicContentSchema.parse(parsed);
 
-    const isNewTopic = !(await this.topicRepository.findByName(validated.name));
-    const topic = await this.topicRepository.upsertTopic({
-      name: validated.name,
-      topicType: validated.topicType,
-      category: validated.category,
-      subcategory: validated.subcategory,
-      contentWhat: validated.what,
-      contentWhy: validated.why,
-      contentPros: [
-        validated.pro_0,
-        validated.pro_1,
-        validated.pro_2,
-        validated.pro_3,
-        validated.pro_4,
-      ],
-      contentCons: [
-        validated.con_0,
-        validated.con_1,
-        validated.con_2,
-        validated.con_3,
-        validated.con_4,
-      ],
-      contentCompareToSimilar: [
-        { topic: validated.compare_0_tech, comparison: validated.compare_0_text },
-        { topic: validated.compare_1_tech, comparison: validated.compare_1_text },
-      ],
-    });
-
-    if (isNewTopic) {
-      await this.topicRepository.setProcessingStatus(topic.id, {
-        hyperlinksStatus: 'processing',
-        hyperlinksStartedAt: new Date(),
-        insightsStatus: 'processing',
-        insightsStartedAt: new Date(),
-      });
-      void this.runHyperlinkExtractionAsync(topic.id, validated);
-      void this.runInsightGenerationAsync(topic);
-    }
-
-    // Fetch learning resources synchronously for new/empty topics and deliver via SSE
+    const topic = await this.persistGeneratedTopic(validated);
     const resources = await this.fetchLearningResources(topic);
     if (resources.length > 0) {
       callbacks.onLearningResources(resources);
@@ -474,14 +439,192 @@ export class TopicService {
     await new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  /**
+   * Persists an LLM-generated topic. Centralises the post-LLM dedup-and-create
+   * pipeline used by all generation paths (surprise / guided / deep_link):
+   *
+   *   1. Run the entity resolver against `validated.name`. If it matches an
+   *      existing topic, abandon the insert and return that topic
+   *      (the LLM picked a synonym of an entity we already track).
+   *   2. Otherwise, upsert the topic, record its primary alias, mark
+   *      hyperlink+insight extraction as processing, and kick off the async
+   *      jobs. The async jobs run a post-create reverse-resolution pass that
+   *      flips any prior unresolved relationships pointing to this entity.
+   *
+   * Returns the persisted (or rescued) topic row.
+   */
+  private async persistGeneratedTopic(
+    validated: FlatTopicContent,
+    requestedName?: string
+  ): Promise<typeof topics.$inferSelect> {
+    let candidateEmbedding: number[] | null = null;
+    try {
+      candidateEmbedding = await embeddingService.embedText(validated.name);
+    } catch {
+      // proceed with Tier-0-only resolution
+    }
+
+    const outcome = await this.resolver.resolve({
+      candidateName: validated.name,
+      candidateEmbedding,
+      aliasSource: 'name',
+      contextHint: requestedName ? { sourceName: requestedName } : null,
+    });
+
+    if (!outcome.isNew) {
+      const existing = await this.topicRepository.findById(outcome.topicId);
+      if (existing) {
+        console.log(JSON.stringify({
+          tag: 'entity_resolution',
+          event: 'dedup_rescued',
+          candidate: validated.name,
+          rescuedTopicId: existing.id,
+          confidence: outcome.confidence,
+        }));
+        return existing;
+      }
+      // Defensive: alias pointed to a deleted topic — fall through to insert
+    }
+
+    const { topic, inserted } = await this.topicRepository.upsertTopic({
+      name: validated.name,
+      topicType: validated.topicType,
+      category: validated.category,
+      subcategory: validated.subcategory,
+      contentWhat: validated.what,
+      contentWhy: validated.why,
+      contentPros: [
+        validated.pro_0, validated.pro_1, validated.pro_2, validated.pro_3, validated.pro_4,
+      ],
+      contentCons: [
+        validated.con_0, validated.con_1, validated.con_2, validated.con_3, validated.con_4,
+      ],
+      contentCompareToSimilar: [
+        { topic: validated.compare_0_tech, comparison: validated.compare_0_text },
+        { topic: validated.compare_1_tech, comparison: validated.compare_1_text },
+      ],
+    });
+
+    if (!inserted) {
+      // A concurrent request already created this topic — return it as-is
+      // without resetting its statuses or re-firing async jobs.
+      return topic;
+    }
+
+    // Record the topic's primary name as its first alias. Idempotent.
+    await this.resolver.recordPrimaryAlias(topic.id, topic.name, candidateEmbedding);
+
+    await this.topicRepository.setProcessingStatus(topic.id, {
+      hyperlinksStatus: 'processing',
+      hyperlinksStartedAt: new Date(),
+      insightsStatus: 'processing',
+      insightsStartedAt: new Date(),
+    });
+
+    void this.runHyperlinkExtractionAsync(topic.id, validated);
+    void this.runInsightGenerationAsync(topic);
+    void this.reverseResolveUnresolvedRelationships(topic.id, candidateEmbedding);
+
+    return topic;
+  }
+
+  /**
+   * After a new topic is created, re-evaluate any previously unresolved
+   * relationship rows that may now refer to this newly-created entity.
+   *
+   * Strategy:
+   *   1. Cheap exact-name pass — resolves rows whose `target_name` literally
+   *      matches the new topic's primary name (case-insensitive). No LLM cost.
+   *   2. Vector pre-filter — fetch unresolved rows whose
+   *      `target_name_embedding` is within LOW_CONFIDENCE_THRESHOLD cosine of
+   *      the new topic's embedding.
+   *   3. Batched judge — feed pre-filtered rows through the resolver in a
+   *      single judge LLM call. Only rows the judge confirms (or that fall in
+   *      the high-confidence band) are flipped.
+   *
+   * Fire-and-forget; failures are logged but don't fail the parent request.
+   */
+  private async reverseResolveUnresolvedRelationships(
+    topicId: string,
+    topicEmbedding: number[] | null
+  ): Promise<void> {
+    try {
+      const topic = await this.topicRepository.findById(topicId);
+      if (!topic) return;
+
+      // Tier 0 — cheap exact-name reverse pass via SQL.
+      // Catches unresolved rows whose target_name_embedding is NULL (stored
+      // when the embedding service was unavailable at extraction time) and
+      // would therefore be invisible to the vector pre-filter below.
+      const exactIds = await this.topicRepository.findUnresolvedRelationshipsByExactName(topic.name);
+      if (exactIds.length > 0) {
+        await this.topicRepository.resolveRelationships(exactIds, topicId);
+        console.log(JSON.stringify({
+          tag: 'entity_resolution',
+          event: 'reverse_resolve_exact',
+          topicId,
+          flippedCount: exactIds.length,
+        }));
+      }
+
+      if (!topicEmbedding) return;
+
+      const exactIdSet = new Set(exactIds);
+      const candidates = (await this.topicRepository.findUnresolvedRelationshipsNear(
+        topicEmbedding,
+        LOW_CONFIDENCE_THRESHOLD,
+        50
+      // Skip rows already resolved by the exact-name pass above.
+      )).filter((c) => !exactIdSet.has(c.relationshipId));
+      if (candidates.length === 0) return;
+
+      // Build resolver inputs. The candidate embedding is the relationship's
+      // own target_name_embedding (already in DB); no extra LLM cost.
+      const inputs: ResolveInput[] = candidates.map((c) => ({
+        candidateName: c.targetName,
+        candidateEmbedding: c.targetNameEmbedding,
+        aliasSource: 'hyperlink_marker', // any relationship; alias source is informational
+        contextHint: { sourceName: topic.name, sourceCategory: topic.category },
+      }));
+
+      const outcomes = await this.resolver.resolveBatch(inputs);
+
+      const toFlip: string[] = [];
+      for (let i = 0; i < outcomes.length; i++) {
+        const outcome = outcomes[i];
+        if (!outcome.isNew && outcome.topicId === topicId) {
+          toFlip.push(candidates[i].relationshipId);
+        }
+      }
+
+      if (toFlip.length > 0) {
+        await this.topicRepository.resolveRelationships(toFlip, topicId);
+        console.log(JSON.stringify({
+          tag: 'entity_resolution',
+          event: 'reverse_resolve',
+          topicId,
+          flippedCount: toFlip.length,
+          consideredCount: candidates.length,
+        }));
+      }
+    } catch (err) {
+      console.log(JSON.stringify({
+        tag: 'entity_resolution',
+        event: 'reverse_resolve_error',
+        topicId,
+        error: err instanceof Error ? err.message : String(err),
+      }));
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Smart Navigation methods
   // ---------------------------------------------------------------------------
 
   /**
-   * deep_link mode: find or fuzzy-resolve an existing topic and stream it back.
+   * deep_link mode: find an existing topic by exact match or embedding similarity and stream it back.
    * If the topic doesn't exist yet (unresolved hyperlink), generates it via LLM.
-   * Creates a userTopic row if not yet owned.
+   * Ownership is created only when the user explicitly acts on the preview.
    */
   private async discoverDeepLinkTopic(
     userId: string,
@@ -493,7 +636,22 @@ export class TopicService {
     if (request.topicId) {
       topic = await this.topicRepository.findById(request.topicId) ?? undefined;
     } else if (request.topicName) {
-      topic = await this.topicRepository.findByNameFuzzy(request.topicName);
+      let candidateEmbedding: number[] | null = null;
+      try {
+        candidateEmbedding = await embeddingService.embedText(request.topicName);
+      } catch {
+        // fall through to Tier-0-only resolution
+      }
+
+      const outcome = await this.resolver.resolve({
+        candidateName: request.topicName,
+        candidateEmbedding,
+        aliasSource: 'user_query',
+      });
+
+      if (!outcome.isNew) {
+        topic = await this.topicRepository.findById(outcome.topicId) ?? undefined;
+      }
     }
 
     if (!topic) {
@@ -502,18 +660,6 @@ export class TopicService {
         throw new AppError('Topic not found', 404, 'TOPIC_NOT_FOUND');
       }
       return this.generateDeepLinkTopic(userId, request.topicName, callbacks);
-    }
-
-    // Ensure userTopic row exists (idempotent — createUserTopic handles uniqueness)
-    const existingUT = await this.topicRepository.findUserTopic(userId, topic.id);
-    if (!existingUT) {
-      await this.topicRepository.createUserTopic({
-        userId,
-        topicId: topic.id,
-        status: 'discovered',
-        discoveryMethod: 'deep_link',
-        discoveredAt: new Date(),
-      });
     }
 
     // Ensure learning resources are present
@@ -532,6 +678,7 @@ export class TopicService {
   /**
    * Generates a new topic via LLM for a specific named topic (unresolved deep link).
    * Mirrors the surprise/guided generation flow but instructs the LLM on which topic to write.
+   * Ownership is still deferred until an explicit preview action.
    */
   private async generateDeepLinkTopic(
     userId: string,
@@ -564,46 +711,7 @@ export class TopicService {
     const parsed = this.extractJson(accumulatedText);
     const validated = FlatTopicContentSchema.parse(parsed);
 
-    const isNewTopic = !(await this.topicRepository.findByName(validated.name));
-    const topic = await this.topicRepository.upsertTopic({
-      name: validated.name,
-      topicType: validated.topicType,
-      category: validated.category,
-      subcategory: validated.subcategory,
-      contentWhat: validated.what,
-      contentWhy: validated.why,
-      contentPros: [
-        validated.pro_0, validated.pro_1, validated.pro_2, validated.pro_3, validated.pro_4,
-      ],
-      contentCons: [
-        validated.con_0, validated.con_1, validated.con_2, validated.con_3, validated.con_4,
-      ],
-      contentCompareToSimilar: [
-        { topic: validated.compare_0_tech, comparison: validated.compare_0_text },
-        { topic: validated.compare_1_tech, comparison: validated.compare_1_text },
-      ],
-    });
-
-    if (isNewTopic) {
-      await this.topicRepository.setProcessingStatus(topic.id, {
-        hyperlinksStatus: 'processing',
-        hyperlinksStartedAt: new Date(),
-        insightsStatus: 'processing',
-        insightsStartedAt: new Date(),
-      });
-      void this.runHyperlinkExtractionAsync(topic.id, validated);
-      void this.runInsightGenerationAsync(topic);
-    }
-
-    await this.topicRepository.createUserTopic({
-      userId,
-      topicId: topic.id,
-      status: 'discovered',
-      discoveryMethod: 'deep_link',
-      discoveredAt: new Date(),
-    }).catch(() => {
-      // Ignore duplicate — user may have already discovered this topic
-    });
+    const topic = await this.persistGeneratedTopic(validated, topicName);
 
     const resources = await this.fetchLearningResources(topic);
     if (resources.length > 0) {
@@ -712,8 +820,10 @@ export class TopicService {
 
   /**
    * Fire-and-forget: extract [[marker]] references from LLM content and persist
-   * as hyperlink relationships. Sets hyperlinksStatus = 'ready' on completion,
-   * silently updates to 'failed' state internally (never stored to DB per spec).
+   * as hyperlink relationships. Each target name is run through the entity
+   * resolver in a single batch, with one judge LLM call covering all
+   * borderline candidates. Sets hyperlinksStatus = 'ready' on completion,
+   * 'failed' on any unhandled error.
    */
   private async runHyperlinkExtractionAsync(
     topicId: string,
@@ -722,27 +832,43 @@ export class TopicService {
     try {
       const mentionedNames = extractMentionedTopics(content, content.name);
 
-      const rows = mentionedNames.map((name) => ({
-        sourceTopicId: topicId,
-        targetTopicId: null as string | null,
-        targetName: name,
-        kind: 'hyperlink' as const,
-        relationKind: null as string | null,
-        createdAt: new Date(),
-        resolvedAt: null as Date | null,
-      }));
-
-      // Attempt to resolve each target by fuzzy name lookup
-      for (const row of rows) {
-        const resolved = await this.topicRepository.findByNameFuzzy(row.targetName);
-        if (resolved) {
-          row.targetTopicId = resolved.id;
-          row.resolvedAt = new Date();
-        }
+      // Batch-embed all target names in a single API call (used both as the
+      // relationship's `target_name_embedding` and as the resolver's candidate
+      // embedding, so embedding cost is amortized).
+      let targetEmbeddings: number[][] | null = null;
+      try {
+        targetEmbeddings = mentionedNames.length > 0
+          ? await embeddingService.embedTexts(mentionedNames)
+          : [];
+      } catch {
+        // Proceed without embeddings — resolver degrades to Tier 0 only
       }
 
+      const inputs: ResolveInput[] = mentionedNames.map((name, i) => ({
+        candidateName: name,
+        candidateEmbedding: targetEmbeddings?.[i] ?? null,
+        aliasSource: 'hyperlink_marker',
+        contextHint: { sourceName: content.name, sourceCategory: content.category },
+      }));
+
+      const outcomes = await this.resolver.resolveBatch(inputs);
+
+      const rows = mentionedNames.map((name, i) => {
+        const outcome = outcomes[i];
+        const resolved = outcome && !outcome.isNew;
+        return {
+          sourceTopicId: topicId,
+          targetTopicId: resolved ? outcome.topicId : null,
+          targetName: name,
+          targetNameEmbedding: targetEmbeddings?.[i] ?? null,
+          kind: 'hyperlink' as const,
+          relationKind: null as string | null,
+          createdAt: new Date(),
+          resolvedAt: resolved ? new Date() : null,
+        };
+      });
+
       await this.topicRepository.insertRelationships(rows);
-      await this.topicRepository.reverseResolve(content.name, topicId);
       await this.topicRepository.setProcessingStatus(topicId, { hyperlinksStatus: 'ready' });
     } catch {
       await this.topicRepository.setProcessingStatus(topicId, { hyperlinksStatus: 'failed' });
@@ -797,26 +923,43 @@ export class TopicService {
       },
     });
 
-    const rows = result.groups.map((item) => ({
-      sourceTopicId: topic.id,
-      targetTopicId: null as string | null,
-      targetName: item.targetName,
-      kind: 'insight' as const,
-      relationKind: item.relationKind,
-      createdAt: new Date(),
-      resolvedAt: null as Date | null,
-    }));
+    const targetNames = result.groups.map((item) => item.targetName);
 
-    for (const row of rows) {
-      const resolved = await this.topicRepository.findByNameFuzzy(row.targetName);
-      if (resolved) {
-        row.targetTopicId = resolved.id;
-        row.resolvedAt = new Date();
-      }
+    // Batch-embed all target names (reused as resolver embedding + relationship column)
+    let targetEmbeddings: number[][] | null = null;
+    try {
+      targetEmbeddings = targetNames.length > 0
+        ? await embeddingService.embedTexts(targetNames)
+        : [];
+    } catch {
+      // Proceed without embeddings — resolver degrades to Tier 0 only
     }
 
+    const inputs: ResolveInput[] = targetNames.map((name, i) => ({
+      candidateName: name,
+      candidateEmbedding: targetEmbeddings?.[i] ?? null,
+      aliasSource: 'insight_target',
+      contextHint: { sourceName: topic.name, sourceCategory: topic.category },
+    }));
+
+    const outcomes = await this.resolver.resolveBatch(inputs);
+
+    const rows = result.groups.map((item, i) => {
+      const outcome = outcomes[i];
+      const resolved = outcome && !outcome.isNew;
+      return {
+        sourceTopicId: topic.id,
+        targetTopicId: resolved ? outcome.topicId : null,
+        targetName: item.targetName,
+        targetNameEmbedding: targetEmbeddings?.[i] ?? null,
+        kind: 'insight' as const,
+        relationKind: item.relationKind,
+        createdAt: new Date(),
+        resolvedAt: resolved ? new Date() : null,
+      };
+    });
+
     await this.topicRepository.insertRelationships(rows);
-    await this.topicRepository.reverseResolve(topic.name, topic.id);
     await this.topicRepository.setProcessingStatus(topic.id, { insightsStatus: 'ready' });
   }
 

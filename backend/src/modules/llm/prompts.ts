@@ -239,8 +239,7 @@ WRITING STYLE:
 
 FORMATTING:
 - Use only standard ASCII characters. Do not use em dashes, en dashes, curly quotes, or other special Unicode punctuation.
-- When your content naturally references other architecturally significant topics, wrap the full canonical name in double brackets: [[Canonical Topic Name]]. Only annotate genuine references - do not alter your writing to insert mentions. Use the full standard name, not abbreviations ([[Command Query Responsibility Segregation]], not [[CQRS]]). Markers are allowed in "what", "why", "pro_0"-"pro_4", "con_0"-"con_4", and "compare_0_tech"/"compare_1_tech" (the comparison heading names). Never place markers in name, category, subcategory, topicType, compare_0_text, compare_1_text, or resource fields. For comparisons, always wrap the compared topic name in double brackets: [[Topic Name]] — it becomes a tappable navigation link.
-
+- When your content naturally references other architecturally significant topics, wrap the name in double brackets: [[Topic Name]]. Only annotate genuine references - do not alter your writing to insert mentions. Use the most recognizable form - abbreviations are fine for well-known tech ([[Kafka]], [[Redis]], [[gRPC]]), full names for concepts ([[Command Query Responsibility Segregation]]). Avoid mixed styles like "AWS EBS" - use either [[Elastic Block Store]] or [[EBS]], not a blend. Markers are allowed in "what", "why", "pro_0"-"pro_4", "con_0"-"con_4", and "compare_0_tech"/"compare_1_tech" (the comparison heading names). Never place markers in name, category, subcategory, topicType, compare_0_text, compare_1_text, or resource fields. For comparisons, always wrap the compared topic name in double brackets: [[Topic Name]] - it becomes a tappable navigation link.
 STRUCTURAL RULES:
 - "what" and "why" must cover distinct ground. "what" defines what the topic IS and HOW it works. "why" argues for its importance, when to use it, and what problems it solves. Do not repeat the same points across both fields.
 - When a topic has implementation variants (e.g., a pattern with choreography vs orchestration, a strategy with eager vs lazy approaches), briefly name the variants in "what" but keep all other fields (pros, cons, comparisons) at the topic level, not variant level.
@@ -406,6 +405,56 @@ Respond with this JSON structure:
       "correctAnswer": 0,
       "explanation": "..."
     }
+  ]
+}`;
+
+    return { system, user };
+  },
+
+  judgeEntityResolution: (
+    items: Array<{
+      candidateName: string;
+      contextHint?: { sourceName: string; sourceCategory?: string } | null;
+      candidates: Array<{ topicId: string; primaryName: string; aliases: string[] }>;
+    }>
+  ): { system: string; user: string } => {
+    const system = `You are an entity resolver for a knowledge graph. For each item, decide whether the candidate name refers to the same real-world entity as one of the listed existing topics.
+
+RULES:
+- Match only when the candidate and an existing topic refer to the SAME real-world entity. Different surface forms of the same entity should match (e.g. "Amazon CloudFront" and "CloudFront", "Stoicism" and "Stoic Philosophy", "Transmission Control Protocol" and "TCP").
+- DO NOT match when names are merely related, similar, or in the same domain. "Java the language" and "Java the island" are NOT the same entity. "Microservices" and "Service-Oriented Architecture" are related but NOT the same entity.
+- When in doubt, return "NEW". Wrong matches corrupt the knowledge graph; missing a match only creates a separate entry that can be merged later.
+- The contextHint (if provided) is the source topic from which the candidate was emitted -- use it ONLY to disambiguate domain (e.g. a candidate emitted from a software topic is likely the software entity).
+
+OUTPUT:
+- Return valid JSON only. No markdown, no commentary.
+- One result per input item, in the same order.
+- For each item, "match" is either the topicId of the matched candidate OR the literal string "NEW".`;
+
+    const formattedItems = items.map((item, idx) => {
+      const candidateBlock = item.candidates.length === 0
+        ? '  (no candidates)'
+        : item.candidates.map((c) => {
+            const aliasList = c.aliases.length > 0 ? ` [aliases: ${c.aliases.join(', ')}]` : '';
+            return `  - topicId=${c.topicId} primaryName="${c.primaryName}"${aliasList}`;
+          }).join('\n');
+      const hint = item.contextHint
+        ? `\n  context: emitted from source topic "${item.contextHint.sourceName}"${item.contextHint.sourceCategory ? ` (category: ${item.contextHint.sourceCategory})` : ''}`
+        : '';
+      return `Item ${idx}:
+  candidate: "${item.candidateName}"${hint}
+  candidates:
+${candidateBlock}`;
+    }).join('\n\n');
+
+    const user = `Resolve each candidate to one of its listed candidates or to NEW.
+
+${formattedItems}
+
+Respond with this JSON structure:
+{
+  "results": [
+    { "match": "<topicId or NEW>" }
   ]
 }`;
 

@@ -42,6 +42,12 @@ const envSchema = z.object({
   LLM_MAX_TOKENS: z.string().default('4000').transform(Number),
   LLM_TEMPERATURE: z.string().default('0.7').transform(Number),
 
+  // Embeddings (always OpenAI, regardless of LLM_PROVIDER)
+  OPENAI_EMBEDDING_KEY: z.string().min(1),
+  OPENAI_EMBEDDING_API_URL: z.url().default('https://api.openai.com/v1/embeddings'),
+  OPENAI_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
+  OPENAI_EMBEDDING_DIMENSIONS: z.string().default('1536').transform(Number),
+
   // Learn More / Brave Search
   BRAVE_API_KEY: z.string().optional(),
   BRAVE_API_URL: z.url().optional(),
