@@ -240,20 +240,20 @@ export class TopicRepository {
    * SELECT to handle the race where two concurrent LLM completions attempt to
    * create the same topic simultaneously.
    */
-  async upsertTopic(data: NewTopic): Promise<Topic> {
-    const inserted = await db
+  async upsertTopic(data: NewTopic): Promise<{ topic: Topic; inserted: boolean }> {
+    const rows = await db
       .insert(topics)
       .values(data)
       .onConflictDoNothing()
       .returning();
 
-    if (inserted.length > 0) {
-      return inserted[0];
+    if (rows.length > 0) {
+      return { topic: rows[0], inserted: true };
     }
 
     // Another concurrent request won the insert race — fetch the existing row.
     const existing = await db.select().from(topics).where(eq(topics.name, data.name));
-    return existing[0];
+    return { topic: existing[0], inserted: false };
   }
 
   // ---------------------------------------------------------------------------
@@ -277,6 +277,37 @@ export class TopicRepository {
       .limit(1);
 
     return rows[0];
+  }
+
+  /**
+   * Tier-0 batch alias lookup: case-insensitive exact match for multiple
+   * candidates in a single IN query. Returns a map keyed by the lowercased
+   * alias text so the caller can look up each candidate in O(1).
+   */
+  async findAliasExactBatch(
+    names: string[],
+  ): Promise<Map<string, { topicId: string; primaryName: string }>> {
+    if (names.length === 0) return new Map();
+    const lowerNames = [...new Set(names.map((n) => n.trim().toLowerCase()).filter((n) => n.length > 0))];
+    if (lowerNames.length === 0) return new Map();
+
+    const rows = await db
+      .select({
+        aliasTextLower: topicAliases.aliasTextLower,
+        topicId: topicAliases.topicId,
+        primaryName: topics.name,
+      })
+      .from(topicAliases)
+      .innerJoin(topics, eq(topics.id, topicAliases.topicId))
+      .where(inArray(topicAliases.aliasTextLower, lowerNames));
+
+    const map = new Map<string, { topicId: string; primaryName: string }>();
+    for (const row of rows) {
+      if (!map.has(row.aliasTextLower)) {
+        map.set(row.aliasTextLower, { topicId: row.topicId, primaryName: row.primaryName });
+      }
+    }
+    return map;
   }
 
   /**

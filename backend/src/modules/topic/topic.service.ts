@@ -486,7 +486,7 @@ export class TopicService {
       // Defensive: alias pointed to a deleted topic — fall through to insert
     }
 
-    const topic = await this.topicRepository.upsertTopic({
+    const { topic, inserted } = await this.topicRepository.upsertTopic({
       name: validated.name,
       topicType: validated.topicType,
       category: validated.category,
@@ -504,6 +504,12 @@ export class TopicService {
         { topic: validated.compare_1_tech, comparison: validated.compare_1_text },
       ],
     });
+
+    if (!inserted) {
+      // A concurrent request already created this topic — return it as-is
+      // without resetting its statuses or re-firing async jobs.
+      return topic;
+    }
 
     // Record the topic's primary name as its first alias. Idempotent.
     await this.resolver.recordPrimaryAlias(topic.id, topic.name, candidateEmbedding);
@@ -705,7 +711,7 @@ export class TopicService {
     const parsed = this.extractJson(accumulatedText);
     const validated = FlatTopicContentSchema.parse(parsed);
 
-    const topic = await this.persistGeneratedTopic(validated, validated.name);
+    const topic = await this.persistGeneratedTopic(validated, topicName);
 
     const resources = await this.fetchLearningResources(topic);
     if (resources.length > 0) {

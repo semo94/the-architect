@@ -1,9 +1,9 @@
 ﻿import { llmService, type JudgeResolutionItem } from '../llm/llm.service.js';
 import { embeddingService } from '../shared/embedding/embedding.service.js';
 import type {
-    AliasNeighborRow,
-    TopicAliasSource,
-    TopicRepository,
+  AliasNeighborRow,
+  TopicAliasSource,
+  TopicRepository,
 } from './topic.repository.js';
 
 /**
@@ -76,16 +76,27 @@ export class TopicResolver {
     const outcomes: ResolveOutcome[] = new Array(inputs.length);
     const judgePending: { idx: number; input: ResolveInput; neighbors: AliasNeighborRow[] }[] = [];
 
-    // First pass: handle Tier 0/1/3 inline; defer Tier 2 to a single batched call
+    // Pre-compute trimmed names for all inputs
+    const trimmedNames = inputs.map((input) => input.candidateName.trim());
+
+    // Tier 0: single IN query for all non-empty candidates (replaces N sequential lookups)
+    const namesToLookup = trimmedNames.filter((n) => n.length > 0);
+    const exactMap = namesToLookup.length > 0
+      ? await this.topicRepository.findAliasExactBatch(namesToLookup)
+      : new Map<string, { topicId: string; primaryName: string }>();
+
+    // Resolve Tier-0 hits and collect candidates that need ANN search
+    const annPending: { idx: number; input: ResolveInput; trimmed: string }[] = [];
     for (let i = 0; i < inputs.length; i++) {
+      const trimmed = trimmedNames[i];
       const input = inputs[i];
-      const trimmed = input.candidateName.trim();
+
       if (trimmed.length === 0) {
         outcomes[i] = { isNew: true, reason: 'tier3_no_neighbors' };
         continue;
       }
 
-      const exact = await this.topicRepository.findAliasExact(trimmed);
+      const exact = exactMap.get(trimmed.toLowerCase());
       if (exact) {
         this.logResolution('tier0_hit', { candidate: trimmed, topicId: exact.topicId });
         outcomes[i] = { isNew: false, topicId: exact.topicId, primaryName: exact.primaryName, confidence: 'exact' };
@@ -98,38 +109,51 @@ export class TopicResolver {
         continue;
       }
 
-      const neighbors = await this.topicRepository.findAliasNeighbors(input.candidateEmbedding, NEIGHBOR_K);
-      if (neighbors.length === 0) {
-        this.logResolution('tier3_new', { candidate: trimmed, reason: 'no_neighbors' });
-        outcomes[i] = { isNew: true, reason: 'tier3_no_neighbors' };
-        continue;
+      annPending.push({ idx: i, input, trimmed });
+    }
+
+    // Tier 1+: run ANN searches concurrently for all Tier-0 misses (pure reads, safe to parallelize)
+    if (annPending.length > 0) {
+      const neighborResults = await Promise.all(
+        annPending.map((p) => this.topicRepository.findAliasNeighbors(p.input.candidateEmbedding!, NEIGHBOR_K)),
+      );
+
+      for (let j = 0; j < annPending.length; j++) {
+        const { idx, input, trimmed } = annPending[j];
+        const neighbors = neighborResults[j];
+
+        if (neighbors.length === 0) {
+          this.logResolution('tier3_new', { candidate: trimmed, reason: 'no_neighbors' });
+          outcomes[idx] = { isNew: true, reason: 'tier3_no_neighbors' };
+          continue;
+        }
+
+        const top = neighbors[0];
+        const second = neighbors[1];
+        const topicConsistent = neighbors
+          .filter((n) => n.score >= HIGH_CONFIDENCE_THRESHOLD)
+          .every((n) => n.topicId === top.topicId);
+
+        if (
+          top.score >= HIGH_CONFIDENCE_THRESHOLD &&
+          topicConsistent &&
+          (!second || second.score < HIGH_CONFIDENCE_THRESHOLD || (top.score - second.score) >= MARGIN_GUARD || second.topicId === top.topicId)
+        ) {
+          await this.recordAlias(top.topicId, trimmed, input.candidateEmbedding, input.aliasSource);
+          this.logResolution('tier1_hit', { candidate: trimmed, topicId: top.topicId, topScore: top.score, secondScore: second?.score ?? null });
+          outcomes[idx] = { isNew: false, topicId: top.topicId, primaryName: top.primaryName, confidence: 'high_vector' };
+          continue;
+        }
+
+        if (top.score < LOW_CONFIDENCE_THRESHOLD) {
+          this.logResolution('tier3_new', { candidate: trimmed, reason: 'below_low_threshold', topScore: top.score });
+          outcomes[idx] = { isNew: true, reason: 'tier3_no_neighbors' };
+          continue;
+        }
+
+        // Defer to judge batch
+        judgePending.push({ idx, input, neighbors });
       }
-
-      const top = neighbors[0];
-      const second = neighbors[1];
-      const topicConsistent = neighbors
-        .filter((n) => n.score >= HIGH_CONFIDENCE_THRESHOLD)
-        .every((n) => n.topicId === top.topicId);
-
-      if (
-        top.score >= HIGH_CONFIDENCE_THRESHOLD &&
-        topicConsistent &&
-        (!second || second.score < HIGH_CONFIDENCE_THRESHOLD || (top.score - second.score) >= MARGIN_GUARD || second.topicId === top.topicId)
-      ) {
-        await this.recordAlias(top.topicId, trimmed, input.candidateEmbedding, input.aliasSource);
-        this.logResolution('tier1_hit', { candidate: trimmed, topicId: top.topicId, topScore: top.score, secondScore: second?.score ?? null });
-        outcomes[i] = { isNew: false, topicId: top.topicId, primaryName: top.primaryName, confidence: 'high_vector' };
-        continue;
-      }
-
-      if (top.score < LOW_CONFIDENCE_THRESHOLD) {
-        this.logResolution('tier3_new', { candidate: trimmed, reason: 'below_low_threshold', topScore: top.score });
-        outcomes[i] = { isNew: true, reason: 'tier3_no_neighbors' };
-        continue;
-      }
-
-      // Defer to judge batch
-      judgePending.push({ idx: i, input, neighbors });
     }
 
     if (judgePending.length === 0) return outcomes;
@@ -327,10 +351,11 @@ export class TopicResolver {
     embedding: number[] | null,
     source: TopicAliasSource
   ): Promise<void> {
+    const normalizedText = aliasText.trim();
     await this.topicRepository.upsertAlias({
       topicId,
-      aliasText,
-      aliasTextLower: aliasText.toLowerCase(),
+      aliasText: normalizedText,
+      aliasTextLower: normalizedText.toLowerCase(),
       aliasEmbedding: embedding ?? null,
       source,
     });

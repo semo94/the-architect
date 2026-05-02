@@ -8,18 +8,27 @@ class EmbeddingService {
   async embedTexts(texts: string[]): Promise<number[][]> {
     if (texts.length === 0) return [];
 
-    const response = await fetch(env.OPENAI_EMBEDDING_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${env.OPENAI_EMBEDDING_KEY}`,
-      },
-      body: JSON.stringify({
-        model: env.OPENAI_EMBEDDING_MODEL,
-        input: texts,
-        dimensions: env.OPENAI_EMBEDDING_DIMENSIONS,
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
+    let response: Response;
+    try {
+      response = await fetch(env.OPENAI_EMBEDDING_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${env.OPENAI_EMBEDDING_KEY}`,
+        },
+        body: JSON.stringify({
+          model: env.OPENAI_EMBEDDING_MODEL,
+          input: texts,
+          dimensions: env.OPENAI_EMBEDDING_DIMENSIONS,
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       const body = await response.text().catch(() => '');
