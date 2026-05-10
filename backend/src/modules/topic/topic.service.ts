@@ -481,6 +481,10 @@ export class TopicService {
           rescuedTopicId: existing.id,
           confidence: outcome.confidence,
         }));
+        // A new alias was just registered for this existing topic. Retroactively
+        // fix any topic_relationships rows that had target_topic_id = NULL for
+        // this same concept (e.g. insight chips from other topics).
+        void this.reverseResolveUnresolvedRelationships(existing.id, candidateEmbedding);
         return existing;
       }
       // Defensive: alias pointed to a deleted topic — fall through to insert
@@ -651,6 +655,15 @@ export class TopicService {
 
       if (!outcome.isNew) {
         topic = await this.topicRepository.findById(outcome.topicId) ?? undefined;
+        // When a new alias was just registered (tier-1 or tier-2 hit), any
+        // existing topic_relationships rows with target_topic_id = NULL that
+        // refer to this same concept (e.g. insight chips from other topics)
+        // won't know about the match yet. Trigger a reverse-resolve pass so
+        // those rows get their target_topic_id filled in — making the chips
+        // show as "owned" on the next GET /insights call.
+        if (outcome.confidence !== 'exact') {
+          void this.reverseResolveUnresolvedRelationships(outcome.topicId, candidateEmbedding);
+        }
       }
     }
 

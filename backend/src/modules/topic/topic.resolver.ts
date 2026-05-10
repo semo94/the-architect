@@ -9,15 +9,30 @@ import type {
 /**
  * Three-tier entity resolution thresholds.
  *
- * High-confidence: ANN result alone is enough to merge. Conservative.
+ * Calibrated for text-embedding-3-small at 1536 dimensions, where cosine
+ * similarity is compressed: same-entity pairs with different surface forms
+ * typically score 0.85–0.91, and clearly distinct topics in the same domain
+ * score 0.82–0.88.
+ *
+ * High-confidence: ANN result alone is enough to merge without a judge call.
+ *   Set to 0.88 — below this, same-entity pairs from this model reliably
+ *   fall, so the judge would be called far too often at 0.92.
+ *
  * Low-confidence:  below this, no candidate is plausible — declare NEW.
- * Margin guard:    when the top two candidates are within this score gap
- *                  AND map to different topics, fall through to the judge
- *                  even if the top score is high (ambiguity protection).
+ *   0.50 is appropriate for text-embedding-3-small. Same-concept pairs
+ *   like "REST" vs "REST Architectural Style" score as low as 0.54 with
+ *   this model due to embedding compression on short vs long surface forms.
+ *   0.75 caused these to be declared NEW without ever reaching the judge.
+ *
+ * Margin guard:    when the best competitor from a DIFFERENT topic is within
+ *   this gap of the top score, fall through to the judge even if top score
+ *   is above HIGH_CONFIDENCE_THRESHOLD (ambiguity protection).
+ *   0.02 matches the tight score clustering of this model — a 0.04 guard
+ *   was sending clearly-winning candidates to the judge unnecessarily.
  */
-export const HIGH_CONFIDENCE_THRESHOLD = 0.92;
-export const LOW_CONFIDENCE_THRESHOLD = 0.75;
-export const MARGIN_GUARD = 0.04;
+export const HIGH_CONFIDENCE_THRESHOLD = 0.88;
+export const LOW_CONFIDENCE_THRESHOLD = 0.50;
+export const MARGIN_GUARD = 0.02;
 
 /** Number of nearest aliases pulled from pgvector per resolution call. */
 const NEIGHBOR_K = 5;
@@ -129,18 +144,18 @@ export class TopicResolver {
         }
 
         const top = neighbors[0];
-        const second = neighbors[1];
-        const topicConsistent = neighbors
-          .filter((n) => n.score >= HIGH_CONFIDENCE_THRESHOLD)
-          .every((n) => n.topicId === top.topicId);
+        // Find the best-scoring alias that belongs to a DIFFERENT topic.
+        // Using neighbors[1] is wrong when topics have multiple aliases in the
+        // top-k: the second slot could be another alias of the same topic,
+        // hiding a genuine competitor at slot 2 or 3.
+        const bestCompetitor = neighbors.find((n) => n.topicId !== top.topicId);
 
         if (
           top.score >= HIGH_CONFIDENCE_THRESHOLD &&
-          topicConsistent &&
-          (!second || second.score < HIGH_CONFIDENCE_THRESHOLD || (top.score - second.score) >= MARGIN_GUARD || second.topicId === top.topicId)
+          (!bestCompetitor || bestCompetitor.score < HIGH_CONFIDENCE_THRESHOLD || (top.score - bestCompetitor.score) >= MARGIN_GUARD)
         ) {
           await this.recordAlias(top.topicId, trimmed, input.candidateEmbedding, input.aliasSource);
-          this.logResolution('tier1_hit', { candidate: trimmed, topicId: top.topicId, topScore: top.score, secondScore: second?.score ?? null });
+          this.logResolution('tier1_hit', { candidate: trimmed, topicId: top.topicId, topScore: top.score, competitorScore: bestCompetitor?.score ?? null });
           outcomes[idx] = { isNew: false, topicId: top.topicId, primaryName: top.primaryName, confidence: 'high_vector' };
           continue;
         }
@@ -249,22 +264,22 @@ export class TopicResolver {
     }
 
     const top = neighbors[0];
-    const second = neighbors[1];
-    const topicConsistent = neighbors
-      .filter((n) => n.score >= HIGH_CONFIDENCE_THRESHOLD)
-      .every((n) => n.topicId === top.topicId);
+    // Find the best-scoring alias that belongs to a DIFFERENT topic.
+    // Using neighbors[1] is wrong when topics have multiple aliases in the
+    // top-k: the second slot could be another alias of the same topic,
+    // hiding a genuine competitor at slot 2 or 3.
+    const bestCompetitor = neighbors.find((n) => n.topicId !== top.topicId);
 
     if (
       top.score >= HIGH_CONFIDENCE_THRESHOLD &&
-      topicConsistent &&
-      (!second || second.score < HIGH_CONFIDENCE_THRESHOLD || (top.score - second.score) >= MARGIN_GUARD || second.topicId === top.topicId)
+      (!bestCompetitor || bestCompetitor.score < HIGH_CONFIDENCE_THRESHOLD || (top.score - bestCompetitor.score) >= MARGIN_GUARD)
     ) {
       await this.recordAlias(top.topicId, trimmed, input.candidateEmbedding, input.aliasSource);
       this.logResolution('tier1_hit', {
         candidate: trimmed,
         topicId: top.topicId,
         topScore: top.score,
-        secondScore: second?.score ?? null,
+        competitorScore: bestCompetitor?.score ?? null,
       });
       return {
         isNew: false,
