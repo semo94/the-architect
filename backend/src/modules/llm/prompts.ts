@@ -423,7 +423,7 @@ Respond with this JSON structure:
 RULES:
 - Match only when the candidate and an existing topic refer to the SAME real-world entity. Different surface forms of the same entity should match (e.g. "Amazon CloudFront" and "CloudFront", "Stoicism" and "Stoic Philosophy", "Transmission Control Protocol" and "TCP").
 - DO NOT match when names are merely related, similar, or in the same domain. "Java the language" and "Java the island" are NOT the same entity. "Microservices" and "Service-Oriented Architecture" are related but NOT the same entity.
-- When in doubt, return "NEW". Wrong matches corrupt the knowledge graph; missing a match only creates a separate entry that can be merged later.
+- Only return "NEW" when NONE of the candidates plausibly refers to the same real-world entity. If one candidate is clearly the best match (abbreviation, acronym expansion, parenthetical full name, or alternative phrasing of the same entity), choose it — do not return "NEW" just because multiple candidates are presented or phrasing differs. A missed match creates a harmless duplicate; choosing the clearly correct candidate is not a wrong match.
 - The contextHint (if provided) is the source topic from which the candidate was emitted -- use it ONLY to disambiguate domain (e.g. a candidate emitted from a software topic is likely the software entity).
 
 OUTPUT:
