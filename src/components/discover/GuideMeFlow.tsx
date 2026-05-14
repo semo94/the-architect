@@ -1,4 +1,4 @@
-import { useTheme } from '@/contexts/ThemeContext';
+﻿import { useTheme } from '@/contexts/ThemeContext';
 import topicService from '@/services/topicService';
 import { useAppStore } from '@/store/useAppStore';
 import { Ionicons } from '@expo/vector-icons';
@@ -234,7 +234,16 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
       await topicService.updateTopicStatus(topicId, 'discovered', 'guided');
       setTopicsNeedRefresh(true);
       setTopicDetail(topic);
+      // Rewrite the stack to [..., topic-detail, quiz] so Back from Quiz lands
+      // on the canonical owned-topic view (with the correct retake-only action
+      // button) instead of the now-stale preview. The two router calls collapse
+      // into one navigation state diff; only the top change (preview → quiz)
+      // animates, so topic-detail is never visually flashed.
       router.replace({
+        pathname: "/topic-detail",
+        params: { topicId },
+      });
+      router.push({
         pathname: "/quiz",
         params: { topicId },
       });

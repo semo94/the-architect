@@ -1,8 +1,9 @@
-import { ToastNotification } from '@/components/common/ToastNotification';
+﻿import { ToastNotification } from '@/components/common/ToastNotification';
 import { ActionButtons } from '@/components/discover/ActionButtons';
 import { TopicCard } from '@/components/discover/TopicCard';
 import { InsightsPanel } from '@/components/topics/InsightsPanel';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSafeBack } from '@/hooks/useSafeBack';
 import { SSEClient } from '@/services/sseService';
 import topicService from '@/services/topicService';
 import { useAppStore } from '@/store/useAppStore';
@@ -18,6 +19,7 @@ interface TopicDetailScreenProps {
 
 export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
   const router = useRouter();
+  const safeBack = useSafeBack();
   const { colors, isDark } = useTheme();
   const { topicDetails, setTopicDetail } = useAppStore();
   const [topic, setTopic] = useState<Topic | null>(null);
@@ -261,9 +263,9 @@ export function TopicDetailScreen({ topicId }: TopicDetailScreenProps) {
         <ToastNotification
           message="Topic not found"
           visible={errorVisible}
-          onDismiss={() => router.back()}
+          onDismiss={safeBack}
           actionLabel="Go back"
-          onAction={() => router.back()}
+          onAction={safeBack}
           duration={0}
           bottomOffset={0}
         />

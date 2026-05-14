@@ -1,13 +1,13 @@
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+﻿import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { QuestionCard } from '@/components/quiz/QuestionCard';
 import { QuizResults } from '@/components/quiz/QuizResults';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSafeBack } from '@/hooks/useSafeBack';
 import { useStreamingData } from '@/hooks/useStreamingData';
 import quizService from '@/services/quizService';
 import { useAppStore } from '@/store/useAppStore';
 import { QuizQuestion } from '@/types';
 import { shuffleQuestionOptions, unshuffleAnswerIndex } from '@/utils/quizShuffle';
-import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Pressable,
@@ -22,7 +22,7 @@ interface QuizScreenProps {
 }
 
 export function QuizScreen({ topicId }: QuizScreenProps) {
-  const router = useRouter();
+  const safeBack = useSafeBack();
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
 
   const { topics, topicDetails, updateTopicStatusInCache } = useAppStore();
@@ -349,7 +349,7 @@ export function QuizScreen({ topicId }: QuizScreenProps) {
             styles.button,
             pressed && styles.pressed
           ]}
-          onPress={() => router.back()}
+          onPress={safeBack}
         >
           <Text style={styles.buttonText}>Go Back</Text>
         </Pressable>
@@ -380,7 +380,7 @@ export function QuizScreen({ topicId }: QuizScreenProps) {
             styles.cancelButton,
             pressed && styles.pressed
           ]}
-          onPress={() => router.back()}
+          onPress={safeBack}
         >
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </Pressable>

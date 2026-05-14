@@ -1,7 +1,8 @@
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+﻿import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ActionButtons } from '@/components/discover/ActionButtons';
 import { TopicCard } from '@/components/discover/TopicCard';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSafeBack } from '@/hooks/useSafeBack';
 import { useStreamingData } from '@/hooks/useStreamingData';
 import topicService from '@/services/topicService';
 import { useAppStore } from '@/store/useAppStore';
@@ -19,6 +20,7 @@ interface DiscoverDeepLinkScreenProps {
 
 export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targetTopicName }: DiscoverDeepLinkScreenProps) {
   const router = useRouter();
+  const safeBack = useSafeBack();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
   const { setTopicDetail, setTopicsNeedRefresh } = useAppStore();
@@ -64,7 +66,7 @@ export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targ
       await topicService.updateTopicStatus(resolvedTopicId, 'dismissed', 'deep_link');
       setTopicsNeedRefresh(true);
     }
-    router.back();
+    safeBack();
   };
 
   const handleAddToBucket = async () => {
@@ -72,7 +74,7 @@ export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targ
       await topicService.updateTopicStatus(resolvedTopicId, 'discovered', 'deep_link');
       setTopicsNeedRefresh(true);
     }
-    router.back();
+    safeBack();
   };
 
   const handleAcquireNow = async () => {
@@ -80,7 +82,13 @@ export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targ
       await topicService.updateTopicStatus(resolvedTopicId, 'discovered', 'deep_link');
       setTopicsNeedRefresh(true);
       setTopicDetail(topic);
-      router.replace({ pathname: '/quiz', params: { topicId: resolvedTopicId } });
+      // Rewrite the stack to [..., topic-detail, quiz] so Back from Quiz lands
+      // on the canonical owned-topic view (with the correct retake-only action
+      // button) instead of the now-stale preview. The two router calls collapse
+      // into one navigation state diff; only the top change (preview → quiz)
+      // animates, so topic-detail is never visually flashed.
+      router.replace({ pathname: '/topic-detail', params: { topicId: resolvedTopicId } });
+      router.push({ pathname: '/quiz', params: { topicId: resolvedTopicId } });
     }
   };
 
@@ -103,7 +111,7 @@ export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targ
         <Text style={styles.errorText}>{error}</Text>
         <Pressable
           style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
-          onPress={() => router.back()}
+          onPress={safeBack}
         >
           <Text style={styles.retryButtonText}>Go Back</Text>
         </Pressable>

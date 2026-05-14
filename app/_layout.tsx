@@ -1,4 +1,4 @@
-import { AuthLoadingOverlay } from "@/components/auth/AuthLoadingOverlay";
+﻿import { AuthLoadingOverlay } from "@/components/auth/AuthLoadingOverlay";
 import { ToastNotification } from "@/components/common/ToastNotification";
 import {
   DarkTheme,
@@ -17,6 +17,14 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAppStore } from "@/store/useAppStore";
 import { DarkColors, LightColors } from "@/styles/globalStyles";
+
+// Tells expo-router to keep (tabs) underneath any deep-linked secondary
+// screen (topic-detail, discover-*, quiz). Without this, a cold-start deep
+// link mounts the target screen with no parent and the user has no path back
+// into the app — pressing Back exits.
+export const unstable_settings = {
+  initialRouteName: "(tabs)",
+};
 
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
