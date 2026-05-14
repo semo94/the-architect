@@ -1,4 +1,4 @@
-﻿import { DiscoverDeepLinkScreen } from '@/components/discover/DiscoverDeepLinkScreen';
+import { DiscoverDeepLinkScreen } from '@/components/discover/DiscoverDeepLinkScreen';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 

@@ -1,4 +1,4 @@
-﻿import { useRouter, type Href } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useCallback } from 'react';
 
 /**

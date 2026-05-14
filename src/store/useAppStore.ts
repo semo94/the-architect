@@ -1,4 +1,4 @@
-﻿import { authService, type User } from '@/services/authService';
+import { authService, type User } from '@/services/authService';
 import statsService from '@/services/statsService';
 import topicService, { type TopicFilters } from '@/services/topicService';
 import { create } from 'zustand';

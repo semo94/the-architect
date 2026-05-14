@@ -1,4 +1,4 @@
-﻿import { AuthLoadingOverlay } from "@/components/auth/AuthLoadingOverlay";
+import { AuthLoadingOverlay } from "@/components/auth/AuthLoadingOverlay";
 import { ToastNotification } from "@/components/common/ToastNotification";
 import {
   DarkTheme,

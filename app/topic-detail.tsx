@@ -1,4 +1,4 @@
-﻿import { TopicDetailScreen } from '@/components/discover/TopicDetailScreen';
+import { TopicDetailScreen } from '@/components/discover/TopicDetailScreen';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 

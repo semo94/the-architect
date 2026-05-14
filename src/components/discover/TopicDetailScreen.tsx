@@ -1,4 +1,4 @@
-﻿import { ToastNotification } from '@/components/common/ToastNotification';
+import { ToastNotification } from '@/components/common/ToastNotification';
 import { ActionButtons } from '@/components/discover/ActionButtons';
 import { TopicCard } from '@/components/discover/TopicCard';
 import { InsightsPanel } from '@/components/topics/InsightsPanel';

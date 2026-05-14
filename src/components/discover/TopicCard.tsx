@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Topic } from '../../types';
 import { hasSectionData } from '../../utils/streamingParser';
 import { SafeAreaScrollView } from '../common/SafeAreaScrollView';

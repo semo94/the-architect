@@ -1,4 +1,4 @@
-﻿import { QuizScreen } from '@/components/quiz/QuizScreen';
+import { QuizScreen } from '@/components/quiz/QuizScreen';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 
