@@ -2,6 +2,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ActionButtons } from '@/components/discover/ActionButtons';
 import { TopicCard } from '@/components/discover/TopicCard';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSafeBack } from '@/hooks/useSafeBack';
 import { useStreamingData } from '@/hooks/useStreamingData';
 import topicService from '@/services/topicService';
 import { useAppStore } from '@/store/useAppStore';
@@ -19,9 +20,10 @@ interface DiscoverDeepLinkScreenProps {
 
 export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targetTopicName }: DiscoverDeepLinkScreenProps) {
   const router = useRouter();
+  const safeBack = useSafeBack();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
-  const { setTopicDetail, setTopicsNeedRefresh } = useAppStore();
+  const { setTopicDetail, setTopicsNeedRefresh, setGlobalToast } = useAppStore();
 
   const [resolvedTopicId, setResolvedTopicId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,16 +65,22 @@ export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targ
     if (topic && resolvedTopicId) {
       await topicService.updateTopicStatus(resolvedTopicId, 'dismissed', 'deep_link');
       setTopicsNeedRefresh(true);
+      setGlobalToast(`"${topic.name}" dismissed`);
     }
-    router.back();
+    safeBack();
   };
 
   const handleAddToBucket = async () => {
     if (topic && resolvedTopicId) {
       await topicService.updateTopicStatus(resolvedTopicId, 'discovered', 'deep_link');
       setTopicsNeedRefresh(true);
+      setTopicDetail(topic);
+      setGlobalToast(`"${topic.name}" saved to your bucket list`);
+      // Replace (not push) the preview with the canonical topic detail. The
+      // topic is now owned, so the preview is conceptually gone: backing out
+      // of /topic-detail must NOT return the user to a stale preview view.
+      router.replace({ pathname: '/topic-detail', params: { topicId: resolvedTopicId } });
     }
-    router.back();
   };
 
   const handleAcquireNow = async () => {
@@ -80,7 +88,13 @@ export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targ
       await topicService.updateTopicStatus(resolvedTopicId, 'discovered', 'deep_link');
       setTopicsNeedRefresh(true);
       setTopicDetail(topic);
-      router.replace({ pathname: '/quiz', params: { topicId: resolvedTopicId } });
+      // Rewrite the stack to [..., topic-detail, quiz] so Back from Quiz lands
+      // on the canonical owned-topic view (with the correct retake-only action
+      // button) instead of the now-stale preview. The two router calls collapse
+      // into one navigation state diff; only the top change (preview → quiz)
+      // animates, so topic-detail is never visually flashed.
+      router.replace({ pathname: '/topic-detail', params: { topicId: resolvedTopicId } });
+      router.push({ pathname: '/quiz', params: { topicId: resolvedTopicId } });
     }
   };
 
@@ -103,7 +117,7 @@ export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targ
         <Text style={styles.errorText}>{error}</Text>
         <Pressable
           style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
-          onPress={() => router.back()}
+          onPress={safeBack}
         >
           <Text style={styles.retryButtonText}>Go Back</Text>
         </Pressable>
@@ -120,6 +134,7 @@ export function DiscoverDeepLinkScreen({ topicId: targetTopicId, topicName: targ
       <TopicCard
         topic={topic || topicStreaming.partialData}
         isComplete={!!topic}
+        isPreview
       />
       {topic && (
         <ActionButtons

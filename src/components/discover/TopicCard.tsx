@@ -15,6 +15,15 @@ interface Props {
   isComplete: boolean;  // Has all required fields loaded
   onTopicPress?: (name: string) => void;
   getLinkVariant?: (name: string) => 'owned' | 'discoverable';
+  /**
+   * Marks the card as a transient discovery preview (no hyperlinks, no
+   * insights). Renders a non-interactive "PREVIEW" pill in the header.
+   *
+   * Ownership transitions are owned exclusively by the parent's action
+   * buttons (Add to Bucket / Acquire Now) — the pill itself is a visual
+   * indicator only and cannot navigate.
+   */
+  isPreview?: boolean;
 }
 
 /**
@@ -22,7 +31,13 @@ interface Props {
  * 1. Streaming state - Shows typewriter/fade-in effects for incomplete data
  * 2. Static state - Shows complete data without animations
  */
-export const TopicCard: React.FC<Props> = ({ topic, isComplete, onTopicPress, getLinkVariant }) => {
+export const TopicCard: React.FC<Props> = ({
+  topic,
+  isComplete,
+  onTopicPress,
+  getLinkVariant,
+  isPreview = false,
+}) => {
   const styles = useTopicCardStyles();
 
   const hasHeader = hasSectionData(topic, 'header');
@@ -93,6 +108,7 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete, onTopicPress, ge
         topicType={topic.topicType}
         isLoading={!isComplete && !hasHeader}
         LoadingWrapper={!isComplete ? FadeInView : undefined}
+        isPreview={isPreview}
       />
 
       <TextSection

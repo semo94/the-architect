@@ -28,7 +28,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
-  const { setTopicDetail, setTopicsNeedRefresh } = useAppStore();
+  const { setTopicDetail, setTopicsNeedRefresh, setGlobalToast } = useAppStore();
 
 
   // Use streaming hook for state management and cleanup
@@ -77,6 +77,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'dismissed', 'surprise');
       setTopicsNeedRefresh(true);
+      setGlobalToast(`"${topic.name}" dismissed`);
     }
     onComplete();
   };
@@ -85,8 +86,16 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'surprise');
       setTopicsNeedRefresh(true);
+      setTopicDetail(topic);
+      setGlobalToast(`"${topic.name}" saved to your bucket list`);
+      // Replace (not push) the preview with the canonical topic detail. The
+      // topic is now owned, so the preview is conceptually gone: backing out
+      // of /topic-detail must NOT return the user to a stale preview view.
+      router.replace({
+        pathname: '/topic-detail',
+        params: { topicId }
+      });
     }
-    onComplete();
   };
 
   const handleAcquireNow = async () => {
@@ -94,7 +103,16 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
       await topicService.updateTopicStatus(topicId, 'discovered', 'surprise');
       setTopicsNeedRefresh(true);
       setTopicDetail(topic);
+      // Rewrite the stack to [..., topic-detail, quiz] so Back from Quiz lands
+      // on the canonical owned-topic view (with the correct retake-only action
+      // button) instead of the now-stale preview. The two router calls collapse
+      // into one navigation state diff; only the top change (preview → quiz)
+      // animates, so topic-detail is never visually flashed.
       router.replace({
+        pathname: '/topic-detail',
+        params: { topicId }
+      });
+      router.push({
         pathname: '/quiz',
         params: { topicId }
       });
@@ -145,6 +163,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
       <TopicCard
         topic={topic || topicStreaming.partialData}
         isComplete={!!topic}
+        isPreview
       />
       {topic && (
         <ActionButtons

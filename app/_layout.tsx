@@ -18,6 +18,14 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAppStore } from "@/store/useAppStore";
 import { DarkColors, LightColors } from "@/styles/globalStyles";
 
+// Tells expo-router to keep (tabs) underneath any deep-linked secondary
+// screen (topic-detail, discover-*, quiz). Without this, a cold-start deep
+// link mounts the target screen with no parent and the user has no path back
+// into the app — pressing Back exits.
+export const unstable_settings = {
+  initialRouteName: "(tabs)",
+};
+
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
   const colors = colorScheme === "dark" ? DarkColors : LightColors;
@@ -29,11 +37,17 @@ export default function RootLayout() {
   const checkSession = useAppStore((state) => state.checkSession);
   const globalError = useAppStore((state) => state.globalError);
   const clearGlobalError = useAppStore((state) => state.clearGlobalError);
+  const globalToast = useAppStore((state) => state.globalToast);
+  const clearGlobalToast = useAppStore((state) => state.clearGlobalToast);
   const inAuthGroup = segments[0] === "(auth)";
 
   const handleErrorDismiss = useCallback(() => {
     clearGlobalError();
   }, [clearGlobalError]);
+
+  const handleToastDismiss = useCallback(() => {
+    clearGlobalToast();
+  }, [clearGlobalToast]);
 
   useEffect(() => {
     checkSession();
@@ -100,7 +114,10 @@ export default function RootLayout() {
                 <Stack.Screen
                   name="discover-surprise"
                   options={{
-                    presentation: "card",
+                    // Modal presentation signals a user-initiated session
+                    // experience distinct from content drill-down (card).
+                    // iOS slides up from the bottom; swipe-down dismisses.
+                    presentation: "modal",
                     title: "Surprise Me",
                     headerStyle: { backgroundColor: colorScheme === "dark" ? colors.cardBackground : colors.primary },
                     headerTintColor: colorScheme === "dark" ? colors.text : colors.white,
@@ -110,7 +127,7 @@ export default function RootLayout() {
                 <Stack.Screen
                   name="discover-guided"
                   options={{
-                    presentation: "card",
+                    presentation: "modal",
                     title: "Guide Me",
                     headerStyle: { backgroundColor: colorScheme === "dark" ? colors.cardBackground : colors.primary },
                     headerTintColor: colorScheme === "dark" ? colors.text : colors.white,
@@ -149,6 +166,13 @@ export default function RootLayout() {
               visible={!!globalError}
               onDismiss={handleErrorDismiss}
               duration={5000}
+              bottomOffset={0}
+            />
+            <ToastNotification
+              message={globalToast ?? ''}
+              visible={!!globalToast}
+              onDismiss={handleToastDismiss}
+              duration={3000}
               bottomOffset={0}
             />
             <StatusBar style="auto" />

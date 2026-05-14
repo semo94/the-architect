@@ -15,6 +15,13 @@ interface Props {
   questions: QuizQuestion[];
   userAnswers: number[];
   onRetry?: () => void;
+  /**
+   * Called when the user dismisses the results. Wired by the parent to pop the
+   * Quiz off the stack so the user lands on the topic detail underneath. When
+   * provided, renders a "Done" CTA so the completion state is never a
+   * navigation dead-end.
+   */
+  onDone?: () => void;
 }
 
 export const QuizResults: React.FC<Props> = ({
@@ -22,6 +29,7 @@ export const QuizResults: React.FC<Props> = ({
   questions,
   userAnswers,
   onRetry,
+  onDone,
 }) => {
   const { colors, typography, spacing, borderRadius, styles: themeStyles } = useTheme();
   const passed = score >= 80;
@@ -181,6 +189,7 @@ export const QuizResults: React.FC<Props> = ({
     actionButtons: {
       padding: spacing.lg,
       paddingBottom: spacing.xxl,
+      gap: spacing.md,
     },
     retryButton: {
       backgroundColor: colors.warning,
@@ -194,6 +203,32 @@ export const QuizResults: React.FC<Props> = ({
       color: colors.onWarning,
       fontSize: typography.fontSize.base,
       fontWeight: typography.fontWeight.bold,
+    },
+    doneButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: spacing.lg,
+      borderRadius: borderRadius.lg,
+      alignItems: 'center',
+      cursor: 'pointer' as any,
+    },
+    doneButtonText: {
+      color: colors.onPrimary,
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.bold,
+    },
+    doneButtonSecondary: {
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: spacing.lg,
+      borderRadius: borderRadius.lg,
+      alignItems: 'center',
+      cursor: 'pointer' as any,
+    },
+    doneButtonSecondaryText: {
+      color: colors.text,
+      fontSize: typography.fontSize.base,
+      fontWeight: typography.fontWeight.semibold,
     },
   }), [colors, typography, spacing, borderRadius, themeStyles]);
 
@@ -299,17 +334,32 @@ export const QuizResults: React.FC<Props> = ({
         })}
       </View>
 
-      {!passed && onRetry && (
+      {(onDone || (!passed && onRetry)) && (
         <View style={styles.actionButtons}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.retryButton,
-              pressed && styles.pressed
-            ]}
-            onPress={onRetry}
-          >
-            <Text style={styles.retryButtonText}>Retry Quiz</Text>
-          </Pressable>
+          {!passed && onRetry && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed && styles.pressed
+              ]}
+              onPress={onRetry}
+            >
+              <Text style={styles.retryButtonText}>Retry Quiz</Text>
+            </Pressable>
+          )}
+          {onDone && (
+            <Pressable
+              style={({ pressed }) => [
+                passed ? styles.doneButton : styles.doneButtonSecondary,
+                pressed && styles.pressed
+              ]}
+              onPress={onDone}
+            >
+              <Text style={passed ? styles.doneButtonText : styles.doneButtonSecondaryText}>
+                {passed ? 'Done' : 'View Topic'}
+              </Text>
+            </Pressable>
+          )}
         </View>
       )}
     </ScrollView>

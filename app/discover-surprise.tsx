@@ -1,13 +1,9 @@
 import { SurpriseMeFlow } from '@/components/discover/SurpriseMeFlow';
-import { useRouter } from 'expo-router';
+import { useSafeBack } from '@/hooks/useSafeBack';
 import React from 'react';
 
 export default function SurpriseDiscoverScreen() {
-  const router = useRouter();
+  const safeBack = useSafeBack();
 
-  const handleComplete = () => {
-    router.back();
-  };
-
-  return <SurpriseMeFlow onComplete={handleComplete} />;
+  return <SurpriseMeFlow onComplete={safeBack} />;
 }
