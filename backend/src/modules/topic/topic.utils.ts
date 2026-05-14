@@ -29,7 +29,9 @@ const ALLOWED_MARKER_FIELDS: (keyof FlatTopicContent)[] = [
   'con_3',
   'con_4',
   'compare_0_tech',
+  'compare_0_text',
   'compare_1_tech',
+  'compare_1_text',
 ];
 
 /**

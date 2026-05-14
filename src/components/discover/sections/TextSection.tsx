@@ -12,6 +12,7 @@ interface Props {
   ContentWrapper?: React.FC<{ text: string; style: any }>;
   getLinkVariant?: (name: string) => 'owned' | 'discoverable';
   onTopicPress?: (name: string) => void;
+  selfName?: string;
 }
 
 export const TextSection: React.FC<Props> = ({
@@ -21,6 +22,7 @@ export const TextSection: React.FC<Props> = ({
   ContentWrapper,
   getLinkVariant,
   onTopicPress,
+  selfName,
 }) => {
   const styles = useTopicCardStyles();
 
@@ -37,6 +39,7 @@ export const TextSection: React.FC<Props> = ({
           style={styles.contentText}
           getLinkVariant={getLinkVariant}
           onTopicPress={onTopicPress}
+          selfName={selfName}
         />
       )}
     </Card>

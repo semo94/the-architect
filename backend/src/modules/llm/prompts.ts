@@ -1,4 +1,4 @@
-import categorySchema from './categories.js';
+﻿import categorySchema from './categories.js';
 import type { GenerateTopicConstraints, TopicPromptInput, TopicType } from './llm.schemas.js';
 
 interface TopicTypeDefinition {
@@ -239,7 +239,41 @@ WRITING STYLE:
 
 FORMATTING:
 - Use only standard ASCII characters. Do not use em dashes, en dashes, curly quotes, or other special Unicode punctuation.
-- When your content naturally references other architecturally significant topics, wrap the name in double brackets: [[Topic Name]]. Only annotate genuine references - do not alter your writing to insert mentions. Use the most recognizable form - abbreviations are fine for well-known tech ([[Kafka]], [[Redis]], [[gRPC]]), full names for concepts ([[Command Query Responsibility Segregation]]). Avoid mixed styles like "AWS EBS" - use either [[Elastic Block Store]] or [[EBS]], not a blend. Markers are allowed in "what", "why", "pro_0"-"pro_4", "con_0"-"con_4", and "compare_0_tech"/"compare_1_tech" (the comparison heading names). Never place markers in name, category, subcategory, topicType, compare_0_text, compare_1_text, or resource fields. For comparisons, always wrap the compared topic name in double brackets: [[Topic Name]] - it becomes a tappable navigation link.
+
+HYPERLINK MARKERS (mandatory rules - follow exactly):
+Markers turn topic names into tappable navigation links. They are how the reader explores related architectural knowledge from this topic. Inconsistent marking breaks the navigation experience.
+
+WHAT TO MARK:
+An "architecturally significant topic" is any named entity that could itself be its own topic in the category schema above - a named pattern, technology, protocol, model, framework, methodology, architecture, strategy, practice, or concept that a software architect would recognize. Examples: Kubernetes, Redis, Kafka, gRPC, CAP Theorem, Microservices, Event Sourcing, CQRS, OAuth 2.0, Domain-Driven Design, Bounded Context, Cache-Aside, Saga Pattern, Circuit Breaker. Treat the category schema as the authoritative reference for what counts.
+
+Do NOT mark: generic terms ("database", "cache", "message"), product features that are not standalone topics ("partitions", "consumer groups"), abstract phrases ("event streaming platforms" as a category descriptor when no specific platform is being named).
+
+NEVER MARK THE TOPIC'S OWN NAME:
+- The topic you are generating is its own page. Do NOT wrap its name in markers anywhere in the response — not in "what", "why", pros, cons, or comparison fields. Write the topic's name as plain text. Example: if the topic is "Circuit Breaker", write "A Circuit Breaker wraps a remote call..." (no brackets), not "A [[Circuit Breaker]] wraps a remote call...".
+
+WHEN TO MARK:
+- Mark every OTHER architecturally significant topic on its FIRST mention within each field.
+- Within the same field, mark each unique related topic AT MOST ONCE. Subsequent mentions of the same name in that field MUST remain plain text. Example in "compare_1_text": "[[Bulkhead Pattern]] isolates resources... the bulkhead pattern keeps failures contained..." - only the first occurrence has brackets.
+- ALWAYS wrap the compared entity in "compare_0_tech" and "compare_1_tech". These two fields must contain exactly one marker each.
+- In "compare_0_text" and "compare_1_text", mark OTHER related topics referenced in the explanation (e.g., if you say "unlike Saga Pattern" inside a comparison body, mark Saga Pattern). Do NOT mark the comparison's own entity again - it is already marked in the heading field.
+
+FIELDS THAT ALLOW MARKERS:
+- "what", "why"
+- "pro_0" through "pro_4"
+- "con_0" through "con_4"
+- "compare_0_tech", "compare_1_tech" (the comparison heading - exactly one marker each, mandatory)
+- "compare_0_text", "compare_1_text" (the comparison body)
+
+FIELDS THAT FORBID MARKERS:
+- "name", "category", "subcategory", "topicType"
+- "resource_*_title", "resource_*_url"
+
+NAME FORM RULES:
+- Use the most recognizable form: short, well-known abbreviations are fine ([[Kafka]], [[Redis]], [[gRPC]], [[CQRS]]); use the full name when it is the canonical form ([[Domain-Driven Design]], [[Command Query Responsibility Segregation]]).
+- CRITICAL: Use a SINGLE surface form per topic across the ENTIRE response. Decide on the form once and reuse that exact spelling everywhere it appears. Wrong: writing "[[Bulkhead Pattern]]" in compare_1_tech but "[[Bulkhead]]" in compare_1_text - those create two separate hyperlinks for the same topic. Correct: pick "[[Bulkhead Pattern]]" and use it in every marked occurrence, or pick "[[Bulkhead]]" and use it in every marked occurrence.
+- Never blend styles like "AWS [[EBS]]". Wrap the whole entity name: "[[Elastic Block Store]]" or "[[EBS]]".
+- Never mark only part of a multi-word entity. "[[Event]] Sourcing" is wrong - write "[[Event Sourcing]]".
+
 STRUCTURAL RULES:
 - "what" and "why" must cover distinct ground. "what" defines what the topic IS and HOW it works. "why" argues for its importance, when to use it, and what problems it solves. Do not repeat the same points across both fields.
 - When a topic has implementation variants (e.g., a pattern with choreography vs orchestration, a strategy with eager vs lazy approaches), briefly name the variants in "what" but keep all other fields (pros, cons, comparisons) at the topic level, not variant level.

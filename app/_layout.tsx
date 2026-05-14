@@ -118,6 +118,16 @@ export default function RootLayout() {
                   }}
                 />
                 <Stack.Screen
+                  name="discover-deep-link"
+                  options={{
+                    presentation: "card",
+                    title: "Explore Topic",
+                    headerStyle: { backgroundColor: colorScheme === "dark" ? colors.cardBackground : colors.primary },
+                    headerTintColor: colorScheme === "dark" ? colors.text : colors.white,
+                    headerTitleStyle: { fontWeight: "bold" },
+                  }}
+                />
+                <Stack.Screen
                   name="topic-detail"
                   options={{
                     presentation: "card",

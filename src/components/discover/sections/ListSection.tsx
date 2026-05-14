@@ -15,6 +15,7 @@ interface Props {
   ItemWrapper?: React.FC<{ children: React.ReactNode; index: number }>;
   getLinkVariant?: (name: string) => 'owned' | 'discoverable';
   onTopicPress?: (name: string) => void;
+  selfName?: string;
 }
 
 export const ListSection: React.FC<Props> = ({
@@ -26,6 +27,7 @@ export const ListSection: React.FC<Props> = ({
   ItemWrapper,
   getLinkVariant,
   onTopicPress,
+  selfName,
 }) => {
   const styles = useTopicCardStyles();
 
@@ -47,6 +49,7 @@ export const ListSection: React.FC<Props> = ({
                   style={styles.listText}
                   getLinkVariant={getLinkVariant}
                   onTopicPress={onTopicPress}
+                  selfName={selfName}
                 />
               </View>
             );
