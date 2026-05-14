@@ -1,4 +1,4 @@
-import { useTheme } from '@/contexts/ThemeContext';
+﻿import { useTheme } from '@/contexts/ThemeContext';
 import React from 'react';
 import { Text, View } from 'react-native';
 import { Card } from '../../common/Card';
@@ -17,6 +17,7 @@ interface Props {
   ItemWrapper?: React.FC<{ children: React.ReactNode; index: number }>;
   getLinkVariant?: (name: string) => 'owned' | 'discoverable';
   onTopicPress?: (name: string) => void;
+  selfName?: string;
 }
 
 export const ComparisonSection: React.FC<Props> = ({
@@ -25,6 +26,7 @@ export const ComparisonSection: React.FC<Props> = ({
   ItemWrapper,
   getLinkVariant,
   onTopicPress,
+  selfName,
 }) => {
   const styles = useTopicCardStyles();
   const { spacing } = useTheme();
@@ -46,6 +48,10 @@ export const ComparisonSection: React.FC<Props> = ({
       ) : (
         <>
           {comparisons.map((comparison, index) => {
+            const headingEntity = comparison.topic
+              .match(/\[\[([^\]]+)\]\]/)?.[1]
+              ?.trim();
+            const bodySuppressNames = headingEntity ? [headingEntity] : undefined;
             const comparisonItem = (
               <View style={styles.comparisonItem}>
                 <LinkedText
@@ -53,8 +59,16 @@ export const ComparisonSection: React.FC<Props> = ({
                   style={styles.comparisonTitle}
                   getLinkVariant={getLinkVariant}
                   onTopicPress={onTopicPress}
+                  selfName={selfName}
                 />
-                <Text style={styles.comparisonText}>{comparison.comparison}</Text>
+                <LinkedText
+                  text={comparison.comparison}
+                  style={styles.comparisonText}
+                  getLinkVariant={getLinkVariant}
+                  onTopicPress={onTopicPress}
+                  selfName={selfName}
+                  suppressNames={bodySuppressNames}
+                />
               </View>
             );
 

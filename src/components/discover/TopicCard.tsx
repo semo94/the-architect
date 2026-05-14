@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Topic } from '../../types';
 import { hasSectionData } from '../../utils/streamingParser';
 import { SafeAreaScrollView } from '../common/SafeAreaScrollView';
@@ -102,6 +102,7 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete, onTopicPress, ge
         ContentWrapper={!isComplete ? TypewriterText : undefined}
         getLinkVariant={isComplete ? getLinkVariant : undefined}
         onTopicPress={isComplete ? onTopicPress : undefined}
+        selfName={topic.name}
       />
 
       <TextSection
@@ -111,6 +112,7 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete, onTopicPress, ge
         ContentWrapper={!isComplete ? TypewriterText : undefined}
         getLinkVariant={isComplete ? getLinkVariant : undefined}
         onTopicPress={isComplete ? onTopicPress : undefined}
+        selfName={topic.name}
       />
 
       <ListSection
@@ -122,6 +124,7 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete, onTopicPress, ge
         ItemWrapper={!isComplete ? FadeInItemWrapper : undefined}
         getLinkVariant={isComplete ? getLinkVariant : undefined}
         onTopicPress={isComplete ? onTopicPress : undefined}
+        selfName={topic.name}
       />
 
       <ListSection
@@ -133,6 +136,7 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete, onTopicPress, ge
         ItemWrapper={!isComplete ? FadeInItemWrapper : undefined}
         getLinkVariant={isComplete ? getLinkVariant : undefined}
         onTopicPress={isComplete ? onTopicPress : undefined}
+        selfName={topic.name}
       />
 
       <ComparisonSection
@@ -141,6 +145,7 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete, onTopicPress, ge
         ItemWrapper={!isComplete ? FadeInComparisonWrapper : undefined}
         getLinkVariant={isComplete ? getLinkVariant : undefined}
         onTopicPress={isComplete ? onTopicPress : undefined}
+        selfName={topic.name}
       />
 
       {hasLearningResources && learningResources.length > 0 && (
