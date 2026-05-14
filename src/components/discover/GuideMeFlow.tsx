@@ -42,7 +42,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, typography, spacing, styles: themeStyles } = useTheme();
-  const { setTopicDetail, setTopicsNeedRefresh } = useAppStore();
+  const { setTopicDetail, setTopicsNeedRefresh, setGlobalToast } = useAppStore();
 
   // Use streaming hook for state management and cleanup
   const topicStreaming = useStreamingData<Topic>({
@@ -217,6 +217,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'dismissed', 'guided');
       setTopicsNeedRefresh(true);
+      setGlobalToast(`"${topic.name}" dismissed`);
     }
     onComplete();
   };
@@ -225,6 +226,7 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'guided');
       setTopicsNeedRefresh(true);
+      setGlobalToast(`"${topic.name}" saved to your bucket list`);
     }
     onComplete();
   };
@@ -245,6 +247,21 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
       });
       router.push({
         pathname: "/quiz",
+        params: { topicId },
+      });
+    }
+  };
+
+  const handleViewDetail = async () => {
+    if (topic && topicId) {
+      await topicService.updateTopicStatus(topicId, 'discovered', 'guided');
+      setTopicsNeedRefresh(true);
+      setTopicDetail(topic);
+      // Save and transition to the canonical view instead of returning to
+      // Discover — user can immediately see hyperlinks/insights for the topic
+      // they just bucketed.
+      router.replace({
+        pathname: "/topic-detail",
         params: { topicId },
       });
     }
@@ -287,6 +304,8 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
         <TopicCard
           topic={topic || topicStreaming.partialData}
           isComplete={!!topic}
+          isPreview
+          onViewDetail={handleViewDetail}
         />
         {topic && (
           <ActionButtons

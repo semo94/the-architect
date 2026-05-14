@@ -1,4 +1,4 @@
-import { authService, type User } from '@/services/authService';
+﻿import { authService, type User } from '@/services/authService';
 import statsService from '@/services/statsService';
 import topicService, { type TopicFilters } from '@/services/topicService';
 import { create } from 'zustand';
@@ -22,6 +22,15 @@ interface AppState {
   setAuthLoading: (loading: boolean) => void;
   setAuthError: (error: string | null) => void;
   globalError: string | null;
+  /**
+   * Non-error confirmation toast that survives screen unmounts. Set by any
+   * write action that pops the screen before the user can see a local toast
+   * (e.g. Dismiss / Add to Bucket from a discovery preview). Rendered once
+   * globally by the root layout.
+   */
+  globalToast: string | null;
+  setGlobalToast: (message: string | null) => void;
+  clearGlobalToast: () => void;
   setProfile: (profile: Profile) => void;
   setTopics: (topics: TopicSummary[]) => void;
   setTopicDetail: (topic: Topic) => void;
@@ -87,6 +96,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   isAuthLoading: true,
   authError: null,
   globalError: null,
+  globalToast: null,
   topicsNeedRefresh: false,
   isStatsLoading: false,
 
@@ -99,6 +109,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setTopics: (topics: TopicSummary[]) => set({ topics }),
   setTopicDetail: (topic: Topic) => set((state) => ({ topicDetails: { ...state.topicDetails, [topic.id]: topic } })),
   clearGlobalError: () => set({ globalError: null }),
+  setGlobalToast: (message: string | null) => set({ globalToast: message }),
+  clearGlobalToast: () => set({ globalToast: null }),
   setTopicsNeedRefresh: (value: boolean) => set({ topicsNeedRefresh: value }),
   removeTopicFromCache: (topicId: string) =>
     set((state) => ({ topics: state.topics.filter((t) => t.id !== topicId) })),

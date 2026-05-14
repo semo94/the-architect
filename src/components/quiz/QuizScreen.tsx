@@ -395,6 +395,7 @@ export function QuizScreen({ topicId }: QuizScreenProps) {
         questions={questions}
         userAnswers={userAnswers}
         onRetry={finalScore < 80 ? handleRetry : undefined}
+        onDone={safeBack}
       />
     );
   }

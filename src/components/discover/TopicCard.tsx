@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Topic } from '../../types';
 import { hasSectionData } from '../../utils/streamingParser';
 import { SafeAreaScrollView } from '../common/SafeAreaScrollView';
@@ -15,6 +15,14 @@ interface Props {
   isComplete: boolean;  // Has all required fields loaded
   onTopicPress?: (name: string) => void;
   getLinkVariant?: (name: string) => 'owned' | 'discoverable';
+  /** Marks the card as a transient discovery preview (no hyperlinks, no insights). */
+  isPreview?: boolean;
+  /**
+   * Optional callback to transition from the preview into the canonical topic
+   * detail. When provided alongside isPreview, the header pill becomes a
+   * tappable "View full →" affordance.
+   */
+  onViewDetail?: () => void;
 }
 
 /**
@@ -22,7 +30,14 @@ interface Props {
  * 1. Streaming state - Shows typewriter/fade-in effects for incomplete data
  * 2. Static state - Shows complete data without animations
  */
-export const TopicCard: React.FC<Props> = ({ topic, isComplete, onTopicPress, getLinkVariant }) => {
+export const TopicCard: React.FC<Props> = ({
+  topic,
+  isComplete,
+  onTopicPress,
+  getLinkVariant,
+  isPreview = false,
+  onViewDetail,
+}) => {
   const styles = useTopicCardStyles();
 
   const hasHeader = hasSectionData(topic, 'header');
@@ -93,6 +108,8 @@ export const TopicCard: React.FC<Props> = ({ topic, isComplete, onTopicPress, ge
         topicType={topic.topicType}
         isLoading={!isComplete && !hasHeader}
         LoadingWrapper={!isComplete ? FadeInView : undefined}
+        isPreview={isPreview}
+        onViewDetail={isComplete ? onViewDetail : undefined}
       />
 
       <TextSection

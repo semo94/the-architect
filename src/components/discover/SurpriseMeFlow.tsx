@@ -28,7 +28,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { styles: themeStyles } = useTheme();
-  const { setTopicDetail, setTopicsNeedRefresh } = useAppStore();
+  const { setTopicDetail, setTopicsNeedRefresh, setGlobalToast } = useAppStore();
 
 
   // Use streaming hook for state management and cleanup
@@ -77,6 +77,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'dismissed', 'surprise');
       setTopicsNeedRefresh(true);
+      setGlobalToast(`"${topic.name}" dismissed`);
     }
     onComplete();
   };
@@ -85,6 +86,7 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'surprise');
       setTopicsNeedRefresh(true);
+      setGlobalToast(`"${topic.name}" saved to your bucket list`);
     }
     onComplete();
   };
@@ -105,6 +107,22 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
       });
       router.push({
         pathname: '/quiz',
+        params: { topicId }
+      });
+    }
+  };
+
+  const handleViewDetail = async () => {
+    if (topic && topicId) {
+      await topicService.updateTopicStatus(topicId, 'discovered', 'surprise');
+      setTopicsNeedRefresh(true);
+      setTopicDetail(topic);
+      // Same "save and transition to canonical view" semantic as Add to Bucket,
+      // but the user lands on topic-detail instead of returning to Discover —
+      // so they can immediately see hyperlinks/insights for the topic they
+      // just bucketed.
+      router.replace({
+        pathname: '/topic-detail',
         params: { topicId }
       });
     }
@@ -154,6 +172,8 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
       <TopicCard
         topic={topic || topicStreaming.partialData}
         isComplete={!!topic}
+        isPreview
+        onViewDetail={handleViewDetail}
       />
       {topic && (
         <ActionButtons
