@@ -2,7 +2,7 @@
 import { TopicType } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '../../common/Card';
 import { SkeletonLoader } from '../../common/SkeletonLoader';
 import { useTopicCardStyles } from '../topicCardStyles';
@@ -16,18 +16,16 @@ interface Props {
   LoadingWrapper?: React.FC<{ children: React.ReactNode }>;
   /**
    * Marks the card as a discovery preview (no hyperlinks resolved, no
-   * insights). Renders a "Preview" pill above the category label so the user
-   * has an explicit visual signal that this is a transient view of an
-   * unowned topic, distinct from the canonical topic detail.
+   * insights). Renders a non-interactive "Preview" pill above the category
+   * label so the user has an explicit visual signal that this is a transient
+   * view of an unowned topic, distinct from the canonical topic detail.
+   *
+   * The pill is intentionally NOT tappable: ownership transitions are owned
+   * by the action buttons (Add to Bucket / Acquire Now), which both replace
+   * the preview with /topic-detail. Having a second affordance with the same
+   * effect was redundant and conceptually confusing.
    */
   isPreview?: boolean;
-  /**
-   * When provided alongside `isPreview`, the pill becomes tappable and reads
-   * "Preview · View full →". Tapping it should transition the user from the
-   * preview to the canonical topic detail (typically by acquiring the topic
-   * and replacing the route with /topic-detail).
-   */
-  onViewDetail?: () => void;
 }
 
 export const HeaderSection: React.FC<Props> = ({
@@ -38,7 +36,6 @@ export const HeaderSection: React.FC<Props> = ({
   isLoading = false,
   LoadingWrapper,
   isPreview = false,
-  onViewDetail,
 }) => {
   const styles = useTopicCardStyles();
   const { colors, typography, spacing, isDark } = useTheme();
@@ -61,18 +58,11 @@ export const HeaderSection: React.FC<Props> = ({
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: isDark ? colors.primaryDark : 'rgba(255,255,255,0.4)',
         },
-        pillPressed: {
-          opacity: 0.65,
-        },
         pillText: {
           fontSize: typography.fontSize.xs,
           fontWeight: typography.fontWeight.semibold,
           color: isDark ? colors.primaryDark : colors.white,
           letterSpacing: 0.5,
-        },
-        pillSeparator: {
-          marginHorizontal: 6,
-          opacity: 0.6,
         },
       }),
     [colors, typography, spacing, isDark]
@@ -81,38 +71,18 @@ export const HeaderSection: React.FC<Props> = ({
   const PreviewPill = () => {
     if (!isPreview) return null;
 
-    const pillContent = (
-      <View style={previewStyles.pill}>
-        <Ionicons
-          name="eye-outline"
-          size={12}
-          color={isDark ? colors.primaryDark : colors.white}
-        />
-        <Text style={[previewStyles.pillText, { marginLeft: 4 }]}>PREVIEW</Text>
-        {onViewDetail && (
-          <>
-            <Text style={[previewStyles.pillText, previewStyles.pillSeparator]}>·</Text>
-            <Text style={previewStyles.pillText}>View full →</Text>
-          </>
-        )}
+    return (
+      <View style={previewStyles.pillRow}>
+        <View style={previewStyles.pill} accessibilityRole="text" accessibilityLabel="Preview">
+          <Ionicons
+            name="eye-outline"
+            size={12}
+            color={isDark ? colors.primaryDark : colors.white}
+          />
+          <Text style={[previewStyles.pillText, { marginLeft: 4 }]}>PREVIEW</Text>
+        </View>
       </View>
     );
-
-    if (onViewDetail) {
-      return (
-        <View style={previewStyles.pillRow}>
-          <Pressable
-            onPress={onViewDetail}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            style={({ pressed }) => [pressed && previewStyles.pillPressed]}
-          >
-            {pillContent}
-          </Pressable>
-        </View>
-      );
-    }
-
-    return <View style={previewStyles.pillRow}>{pillContent}</View>;
   };
 
   const content = isLoading ? (

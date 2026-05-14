@@ -86,9 +86,16 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'surprise');
       setTopicsNeedRefresh(true);
+      setTopicDetail(topic);
       setGlobalToast(`"${topic.name}" saved to your bucket list`);
+      // Replace (not push) the preview with the canonical topic detail. The
+      // topic is now owned, so the preview is conceptually gone: backing out
+      // of /topic-detail must NOT return the user to a stale preview view.
+      router.replace({
+        pathname: '/topic-detail',
+        params: { topicId }
+      });
     }
-    onComplete();
   };
 
   const handleAcquireNow = async () => {
@@ -107,22 +114,6 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
       });
       router.push({
         pathname: '/quiz',
-        params: { topicId }
-      });
-    }
-  };
-
-  const handleViewDetail = async () => {
-    if (topic && topicId) {
-      await topicService.updateTopicStatus(topicId, 'discovered', 'surprise');
-      setTopicsNeedRefresh(true);
-      setTopicDetail(topic);
-      // Same "save and transition to canonical view" semantic as Add to Bucket,
-      // but the user lands on topic-detail instead of returning to Discover —
-      // so they can immediately see hyperlinks/insights for the topic they
-      // just bucketed.
-      router.replace({
-        pathname: '/topic-detail',
         params: { topicId }
       });
     }
@@ -173,7 +164,6 @@ export const SurpriseMeFlow: React.FC<Props> = ({ onComplete }) => {
         topic={topic || topicStreaming.partialData}
         isComplete={!!topic}
         isPreview
-        onViewDetail={handleViewDetail}
       />
       {topic && (
         <ActionButtons

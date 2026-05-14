@@ -226,9 +226,16 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
     if (topic && topicId) {
       await topicService.updateTopicStatus(topicId, 'discovered', 'guided');
       setTopicsNeedRefresh(true);
+      setTopicDetail(topic);
       setGlobalToast(`"${topic.name}" saved to your bucket list`);
+      // Replace (not push) the preview with the canonical topic detail. The
+      // topic is now owned, so the preview is conceptually gone: backing out
+      // of /topic-detail must NOT return the user to a stale preview view.
+      router.replace({
+        pathname: "/topic-detail",
+        params: { topicId },
+      });
     }
-    onComplete();
   };
 
   const handleAcquireNow = async () => {
@@ -247,21 +254,6 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
       });
       router.push({
         pathname: "/quiz",
-        params: { topicId },
-      });
-    }
-  };
-
-  const handleViewDetail = async () => {
-    if (topic && topicId) {
-      await topicService.updateTopicStatus(topicId, 'discovered', 'guided');
-      setTopicsNeedRefresh(true);
-      setTopicDetail(topic);
-      // Save and transition to the canonical view instead of returning to
-      // Discover — user can immediately see hyperlinks/insights for the topic
-      // they just bucketed.
-      router.replace({
-        pathname: "/topic-detail",
         params: { topicId },
       });
     }
@@ -305,7 +297,6 @@ export const GuideMeFlow: React.FC<Props> = ({ onComplete }) => {
           topic={topic || topicStreaming.partialData}
           isComplete={!!topic}
           isPreview
-          onViewDetail={handleViewDetail}
         />
         {topic && (
           <ActionButtons
