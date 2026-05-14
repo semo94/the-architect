@@ -1,4 +1,4 @@
-﻿import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import React from 'react';
 import { Text, View } from 'react-native';
 import { Card } from '../../common/Card';

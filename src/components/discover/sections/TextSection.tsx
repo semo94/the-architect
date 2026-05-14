@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Text } from 'react-native';
 import { Card } from '../../common/Card';
 import { LinkedText } from '../../common/LinkedText';
