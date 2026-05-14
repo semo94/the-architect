@@ -57,6 +57,9 @@ app-example
 
 # Agentic workflow
 .agents/
+.claude/
 .vscode/mcp.json
 .vscode/tasks.json
 skills-lock.json
+AGENTS.md
+CLAUDE.md
