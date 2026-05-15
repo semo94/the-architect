@@ -1,4 +1,5 @@
 ﻿import { FastifyReply, FastifyRequest } from 'fastify';
+import { runSseLlmStream } from '../shared/utils/sse-stream.js';
 import { startSseResponse } from '../shared/utils/sse.utils.js';
 import {
   DiscoverTopicRequestSchema,
@@ -18,75 +19,23 @@ export class TopicController {
   async discoverTopic(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const body = DiscoverTopicRequestSchema.parse(request.body);
     const userId = request.user.sub;
-    startSseResponse(request, reply);
 
-    const sseLog = request.log.child({
-      component: 'sse',
-      stream: 'discover_topic',
-      userId,
-      mode: body.mode,
-      topicId: body.topicId,
-    });
-
-    sseLog.info(
-      { topicName: body.topicName ?? null },
-      'sse stream opened'
-    );
-
-    const abortController = new AbortController();
-    let streamDone = false;
-    let chunkCount = 0;
-
-    reply.raw.on('close', () => {
-      sseLog.info(
-        { streamDone, chunkCount, reason: streamDone ? 'complete' : 'client_close' },
-        'sse connection closed'
-      );
-      if (!streamDone) {
-        abortController.abort();
-      }
-    });
-
-    try {
-      await this.topicService.discoverTopic(
+    await runSseLlmStream({
+      request,
+      reply,
+      sseBindings: {
+        stream: 'discover_topic',
         userId,
-        body,
-        {
-          onChunk: (text) => {
-            chunkCount += 1;
-            if (chunkCount === 1 || chunkCount % 50 === 0) {
-              sseLog.debug({ chunkCount, deltaChars: text.length }, 'sse chunk');
-            }
-            reply.raw.write(`data: ${JSON.stringify({ text })}\n\n`);
-          },
-          onMeta: (meta) => {
-            sseLog.info({ meta }, 'sse meta');
-            reply.raw.write(`data: ${JSON.stringify({ type: 'meta', ...meta })}\n\n`);
-          },
-          onLearningResources: (resources) => {
-            sseLog.info({ resourceCount: resources.length }, 'sse learning resources');
-            reply.raw.write(`data: ${JSON.stringify({ type: 'learningResources', resources })}\n\n`);
-          },
-          onComplete: () => {
-            streamDone = true;
-            sseLog.info({ chunkCount }, 'sse stream completed');
-            reply.raw.write('data: [DONE]\n\n');
-            reply.raw.end();
-          },
-        },
-        abortController.signal
-      );
-    } catch (error) {
-      streamDone = true;
-      if (reply.raw.destroyed) {
-        return;
-      }
-
-      const message = error instanceof Error ? error.message : 'Topic stream failed';
-      sseLog.error({ err: error, chunkCount }, 'discoverTopic stream error');
-      reply.raw.write(`data: ${JSON.stringify({ error: message })}\n\n`);
-      reply.raw.end();
-    }
+        mode: body.mode,
+        topicId: body.topicId,
+      },
+      openLogFields: { topicName: body.topicName ?? null },
+      includeLearningResources: true,
+      streamErrorLogMessage: 'discoverTopic stream error',
+      userFallbackErrorMessage: 'Topic stream failed',
+      run: (callbacks, signal) =>
+        this.topicService.discoverTopic(userId, body, callbacks, signal),
+    });
   }
 
   async listTopics(request: FastifyRequest, reply: FastifyReply): Promise<void> {

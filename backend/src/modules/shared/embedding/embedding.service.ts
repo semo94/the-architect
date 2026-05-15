@@ -1,6 +1,7 @@
 ﻿import { env } from '../config/env.js';
 import { observeOutboundFetch } from '../observability/fetch.js';
 import { getModuleLogger } from '../observability/logger.js';
+import { truncateForLog } from '../utils/string-log.utils.js';
 
 class EmbeddingService {
   /**
@@ -39,8 +40,7 @@ class EmbeddingService {
 
     if (!response.ok) {
       const body = await response.text().catch(() => '');
-      const MAX = 400;
-      const snippet = body.length > MAX ? `${body.slice(0, MAX)}…` : body;
+      const snippet = truncateForLog(body, 400);
       throw new Error(`OpenAI embeddings API error ${response.status}: ${snippet}`);
     }
 

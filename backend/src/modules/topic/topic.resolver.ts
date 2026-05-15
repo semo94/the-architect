@@ -2,6 +2,7 @@
 import { llmService, type JudgeResolutionItem } from '../llm/llm.service.js';
 import { embeddingService } from '../shared/embedding/embedding.service.js';
 import { getModuleLogger } from '../shared/observability/logger.js';
+import { truncateForLog } from '../shared/utils/string-log.utils.js';
 import { recordEntityResolutionEvent } from '../shared/observability/metrics.js';
 import type {
   AliasNeighborRow,
@@ -582,9 +583,7 @@ export class TopicResolver {
   }
 
   private previewText(text: string, maxLen = 160): string {
-    const t = text.trim();
-    if (t.length <= maxLen) return t;
-    return `${t.slice(0, maxLen)}…`;
+    return truncateForLog(text, maxLen);
   }
 
   private inputTraceFields(input: ResolveInput): Record<string, unknown> {

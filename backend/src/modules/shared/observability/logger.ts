@@ -1,6 +1,17 @@
 ﻿import { context, trace } from '@opentelemetry/api';
-import pino, { type Logger, type LoggerOptions } from 'pino';
+import type { Logger, LoggerOptions } from 'pino';
 import stdSerializers from 'pino-std-serializers';
+import {
+  configureUptraceLogExporterEnv,
+  uptraceLogResourceAttributes,
+} from './uptrace-log-export.js';
+
+/** Load Pino when called so OTel can start before the pino module is first required. */
+function createPino(options?: LoggerOptions): Logger {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const pino = require('pino') as (opts?: LoggerOptions) => Logger;
+  return pino(options);
+}
 
 let rootLogger: Logger | undefined;
 
@@ -26,15 +37,43 @@ const baseLoggerOptions = (): LoggerOptions => ({
   },
 });
 
+function createUptracePinoLogger(opts: LoggerOptions): Logger {
+  configureUptraceLogExporterEnv();
+
+  return createPino({
+    ...opts,
+    transport: {
+      targets: [
+        {
+          target: 'pino/file',
+          options: { destination: 1 },
+        },
+        {
+          target: 'pino-opentelemetry-transport',
+          options: {
+            resourceAttributes: uptraceLogResourceAttributes(),
+          },
+        },
+      ],
+    },
+  });
+}
+
 /**
  * Fallback root logger before `setRootLogger` runs (e.g. early process hooks).
  */
 export function getRootLogger(): Logger {
   if (!rootLogger) {
-    rootLogger = pino({
+    const level =
+      process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'development' ? 'debug' : 'info');
+    const baseOpts: LoggerOptions = {
       ...baseLoggerOptions(),
-      level: process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'development' ? 'debug' : 'info'),
-    });
+      level,
+    };
+
+    rootLogger = configureUptraceLogExporterEnv()
+      ? createUptracePinoLogger(baseOpts)
+      : createPino(baseOpts);
   }
   return rootLogger;
 }
@@ -49,8 +88,12 @@ export function createAppLogger(options: { level: string; usePretty: boolean }):
     level: options.level,
   };
 
+  if (configureUptraceLogExporterEnv()) {
+    return createUptracePinoLogger(opts);
+  }
+
   if (options.usePretty) {
-    return pino({
+    return createPino({
       ...opts,
       transport: {
         target: 'pino-pretty',
@@ -63,7 +106,7 @@ export function createAppLogger(options: { level: string; usePretty: boolean }):
     });
   }
 
-  return pino(opts);
+  return createPino(opts);
 }
 
 export function getModuleLogger(module: string): Logger {

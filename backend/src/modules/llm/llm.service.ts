@@ -1,4 +1,5 @@
 ﻿import { AppError } from '../shared/middleware/error-handler.js';
+import { truncateForLog } from '../shared/utils/string-log.utils.js';
 import { llmProvider } from './llm.provider.js';
 import type { GenerateQuizRequest, GenerateTopicRequest, TopicPromptInput } from './llm.schemas.js';
 import { promptTemplates } from './prompts.js';
@@ -115,9 +116,8 @@ export class LLMService {
 
     if (!upstream.ok) {
       const errorText = await upstream.text();
-      const MAX = 500;
       const raw = errorText || upstream.statusText;
-      const snippet = raw.length > MAX ? `${raw.slice(0, MAX)}…` : raw;
+      const snippet = truncateForLog(raw, 500);
       throw new AppError(`LLM provider error: ${snippet}`, upstream.status);
     }
 

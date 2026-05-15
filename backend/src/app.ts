@@ -21,14 +21,17 @@ import { userRoutes } from './modules/user/user.routes.js';
 export async function buildApp() {
   const logLevel =
     env.LOG_LEVEL ?? (env.NODE_ENV === 'development' ? 'debug' : 'info');
+  // Pretty transport breaks OTLP log export; use JSON logs when Uptrace is enabled.
+  const usePretty =
+    env.NODE_ENV === 'development' && !process.env.UPTRACE_DSN;
   const logger = createAppLogger({
     level: logLevel,
-    usePretty: env.NODE_ENV === 'development',
+    usePretty,
   });
   setRootLogger(logger);
 
   const app = Fastify({
-    logger,
+    loggerInstance: logger,
     genReqId: () => randomUUID(),
     trustProxy: true,
   });

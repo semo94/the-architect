@@ -1,14 +1,18 @@
 ﻿import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { configureOpentelemetry } from '@uptrace/node';
-import { getRootLogger } from './logger.js';
+import { normalizeUptraceDsn } from './uptrace-dsn.js';
+import { configureUptraceLogExporterEnv } from './uptrace-log-export.js';
 
 let sdk: ReturnType<typeof configureOpentelemetry> | undefined;
 
-function startUptrace(): void {
-  const dsn = process.env.UPTRACE_DSN;
+/** Start Uptrace traces/metrics. Call from instrumentation-preload before other app imports. */
+export function initUptraceInstrumentation(): void {
+  const dsn = normalizeUptraceDsn(process.env.UPTRACE_DSN);
   if (!dsn) {
     return;
   }
+
+  configureUptraceLogExporterEnv();
 
   try {
     sdk = configureOpentelemetry({
@@ -19,7 +23,8 @@ function startUptrace(): void {
         // HTTP/Undici: redact sensitive query params; keep header lists empty so bearer tokens are not copied to span attributes. Spot-check exported spans in Uptrace after deploy.
         getNodeAutoInstrumentations({
           '@opentelemetry/instrumentation-fs': { enabled: false },
-          // Avoid mapping auth/sensitive headers to spans; redact OAuth-style query params on URLs.
+          // Logs export via pino-opentelemetry-transport (see logger.ts), not instrumentation-pino.
+          '@opentelemetry/instrumentation-pino': { enabled: false },
           '@opentelemetry/instrumentation-http': {
             redactedQueryParams: [
               'code',
@@ -47,23 +52,28 @@ function startUptrace(): void {
     });
 
     sdk.start();
-    getRootLogger().info({ component: 'observability' }, 'OpenTelemetry started (Uptrace)');
+
+    void import('./logger.js').then(({ getRootLogger }) => {
+      getRootLogger().info({ component: 'observability' }, 'OpenTelemetry started (Uptrace)');
+    });
   } catch (err) {
-    getRootLogger().error({ err, component: 'observability' }, 'Failed to start OpenTelemetry (Uptrace)');
+    process.stderr.write(
+      `Failed to start OpenTelemetry (Uptrace): ${err instanceof Error ? err.message : String(err)}\n`
+    );
     sdk = undefined;
   }
 }
 
-startUptrace();
-
-const log = getRootLogger();
-
 process.on('unhandledRejection', (reason: unknown) => {
-  log.error({ err: reason, component: 'process' }, 'unhandledRejection');
+  void import('./logger.js').then(({ getRootLogger }) => {
+    getRootLogger().error({ err: reason, component: 'process' }, 'unhandledRejection');
+  });
 });
 
 process.on('uncaughtException', (err: Error) => {
-  log.fatal({ err, component: 'process' }, 'uncaughtException');
+  void import('./logger.js').then(({ getRootLogger }) => {
+    getRootLogger().fatal({ err, component: 'process' }, 'uncaughtException');
+  });
   process.exit(1);
 });
 

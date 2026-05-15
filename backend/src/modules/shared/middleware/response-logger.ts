@@ -1,11 +1,11 @@
 ﻿import { FastifyReply, FastifyRequest } from 'fastify';
-import { splitUrlForAccessLog } from '../utils/http-log.utils.js';
+import { accessLogUrlFromRequest } from '../utils/http-log.utils.js';
 
 export async function responseLogger(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  const { urlPath, queryPresent } = splitUrlForAccessLog(request.url);
+  const { urlPath, queryPresent } = accessLogUrlFromRequest(request);
   request.log.info(
     {
       component: 'http_server',

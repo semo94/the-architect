@@ -1,6 +1,7 @@
 ﻿import { SpanStatusCode, trace } from '@opentelemetry/api';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Logger } from 'pino';
+import { urlWithoutQueryForLog } from '../utils/http-log.utils.js';
 
 export type OutboundLogger = Logger | FastifyBaseLogger;
 
@@ -9,16 +10,6 @@ function safeHost(url: string): string {
     return new URL(url).host;
   } catch {
     return 'invalid-url';
-  }
-}
-
-/** Log / attribute URL without sensitive query strings (e.g. Brave subscription token). */
-function urlForLog(url: string): string {
-  try {
-    const u = new URL(url);
-    return `${u.protocol}//${u.host}${u.pathname}`;
-  } catch {
-    return '[unparseable-url]';
   }
 }
 
@@ -40,7 +31,7 @@ export async function observeOutboundFetch(
     span.setAttributes({
       'http.request.method': method,
       'server.address': host,
-      'url.full': urlForLog(url),
+      'url.full': urlWithoutQueryForLog(url),
       'breadthwise.downstream.label': label,
     });
 
@@ -61,7 +52,7 @@ export async function observeOutboundFetch(
           downstreamLabel: label,
           method,
           host,
-          url: urlForLog(url),
+          url: urlWithoutQueryForLog(url),
           status: response.status,
           durationMs,
         },
@@ -83,7 +74,7 @@ export async function observeOutboundFetch(
           downstreamLabel: label,
           method,
           host,
-          url: urlForLog(url),
+          url: urlWithoutQueryForLog(url),
           durationMs,
         },
         'downstream request failed'
