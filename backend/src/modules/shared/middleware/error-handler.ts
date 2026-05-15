@@ -1,4 +1,5 @@
-import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
+﻿import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
+import { errorForStructuredLog } from '../utils/error-log.utils.js';
 
 export class AppError extends Error {
   constructor(
@@ -16,8 +17,14 @@ export async function errorHandler(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  // Log error
-  request.log.error(error);
+  // Log error (no raw `err` object — avoids huge upstream bodies in message)
+  request.log.error(
+    {
+      ...errorForStructuredLog(error),
+      component: 'error_handler',
+    },
+    'request error'
+  );
 
   // Handle known errors
   if (error instanceof AppError) {

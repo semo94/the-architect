@@ -1,9 +1,23 @@
-import { drizzle as drizzleNeon } from 'drizzle-orm/neon-http';
+﻿import { drizzle as drizzleNeon } from 'drizzle-orm/neon-http';
 import { drizzle as drizzlePostgres } from 'drizzle-orm/postgres-js';
 import { neon } from '@neondatabase/serverless';
 import postgres from 'postgres';
 import { env } from '../config/env.js';
+import { getModuleLogger } from '../observability/logger.js';
 import * as schema from './schema.js';
+
+const drizzleLogger = {
+  logQuery(query: string, params: unknown[]): void {
+    getModuleLogger('database').debug(
+      {
+        component: 'db',
+        sql: query.length > 4000 ? `${query.slice(0, 4000)}…` : query,
+        paramCount: params.length,
+      },
+      'drizzle query'
+    );
+  },
+};
 
 // Detect connection type based on DATABASE_URL
 const isNeon = env.DATABASE_URL.includes('neon.tech') || env.DATABASE_URL.includes('?sslmode=require');
@@ -12,9 +26,9 @@ const isNeon = env.DATABASE_URL.includes('neon.tech') || env.DATABASE_URL.includ
 export const db = isNeon
   ? (() => {
       const sql = neon(env.DATABASE_URL);
-      return drizzleNeon(sql, { schema });
+      return drizzleNeon(sql, { schema, logger: drizzleLogger });
     })()
   : (() => {
       const sql = postgres(env.DATABASE_URL);
-      return drizzlePostgres(sql, { schema });
+      return drizzlePostgres(sql, { schema, logger: drizzleLogger });
     })();

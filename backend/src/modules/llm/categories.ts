@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SOFTWARE ARCHITECTURE KNOWLEDGE FRAMEWORK
  *
  * PURPOSE:
@@ -29,6 +29,8 @@
  * - Discovery potential is INFINITE, not limited to schema contents
  * - Schema provides context and boundaries, not a catalog
  */
+
+import { getModuleLogger } from '../shared/observability/logger.js';
 
 export type TopicType =
   | 'concepts'
@@ -801,11 +803,15 @@ const categorySchema: Record<string, CategorySchema> = {
 
 // Runtime validation helper
 export function validateSubcategorySchema(subcategory: SubcategorySchema): boolean {
+  const log = getModuleLogger('llm.categories');
   // Check that each topicType has a corresponding property
   for (const topicType of subcategory.topicTypes) {
     const examples = subcategory[topicType as keyof SubcategorySchema];
     if (!Array.isArray(examples)) {
-      console.warn(`Subcategory declares topicType "${topicType}" but has no corresponding array property`);
+      log.warn(
+        { topicType },
+        'Subcategory declares topicType but has no corresponding array property'
+      );
       // Allow this - examples are optional
     }
   }

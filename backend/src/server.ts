@@ -1,5 +1,8 @@
+﻿import './modules/shared/observability/instrumentation.js';
 import { buildApp } from './app.js';
 import { env } from './modules/shared/config/env.js';
+import { shutdownInstrumentation } from './modules/shared/observability/instrumentation.js';
+import { getRootLogger } from './modules/shared/observability/logger.js';
 
 const start = async () => {
   try {
@@ -21,13 +24,14 @@ const start = async () => {
       process.on(signal, async () => {
         app.log.info(`Received ${signal}, closing server gracefully...`);
         await app.close();
+        await shutdownInstrumentation();
         process.exit(0);
       });
     }
   } catch (err) {
-    console.error('Error starting server:', err);
+    getRootLogger().fatal({ err }, 'Error starting server');
     process.exit(1);
   }
 };
 
-start();
+void start();

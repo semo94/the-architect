@@ -1,5 +1,8 @@
-﻿import { llmService, type JudgeResolutionItem } from '../llm/llm.service.js';
+﻿import { randomUUID } from 'node:crypto';
+import { llmService, type JudgeResolutionItem } from '../llm/llm.service.js';
 import { embeddingService } from '../shared/embedding/embedding.service.js';
+import { getModuleLogger } from '../shared/observability/logger.js';
+import { recordEntityResolutionEvent } from '../shared/observability/metrics.js';
 import type {
   AliasNeighborRow,
   TopicAliasSource,
@@ -24,7 +27,7 @@ import type {
  *   this model due to embedding compression on short vs long surface forms.
  *   0.75 caused these to be declared NEW without ever reaching the judge.
  *
- * Margin guard:    when the best competitor from a DIFFERENT topic is within
+ * Margin guard:    when the best-scoring alias that belongs to a DIFFERENT topic is within
  *   this gap of the top score, fall through to the judge even if top score
  *   is above HIGH_CONFIDENCE_THRESHOLD (ambiguity protection).
  *   0.02 matches the tight score clustering of this model — a 0.04 guard
@@ -55,6 +58,10 @@ export interface ResolveInput {
    * inserts the candidate as a new alias on the matched topic.
    */
   aliasSource: TopicAliasSource;
+  /**
+   * When set, used as `resolutionFlowId` in logs so wrappers (e.g. `resolveByName`) share one id with `resolve()`.
+   */
+  resolutionCorrelationId?: string;
 }
 
 export type ResolveOutcome =
@@ -65,6 +72,16 @@ export type ResolveOutcome =
       primaryName: string;
       confidence: 'exact' | 'high_vector' | 'judged';
     };
+
+/** Correlates every log line for one `resolve` or `resolveBatch` invocation (filter in APM by this id). */
+interface ResolutionLogContext {
+  flowId: string;
+  mode: 'single' | 'batch';
+  /** 0-based index of the candidate within the batch (omit for single-candidate global lines). */
+  itemIdx?: number;
+  /** High-level pipeline position for A → Z tracing. */
+  stage: string;
+}
 
 /**
  * Three-tier entity resolver.
@@ -88,11 +105,24 @@ export class TopicResolver {
    * resolved together.
    */
   async resolveBatch(inputs: ResolveInput[]): Promise<ResolveOutcome[]> {
+    const flowId = randomUUID();
     const outcomes: ResolveOutcome[] = new Array(inputs.length);
     const judgePending: { idx: number; input: ResolveInput; neighbors: AliasNeighborRow[] }[] = [];
 
-    // Pre-compute trimmed names for all inputs
     const trimmedNames = inputs.map((input) => input.candidateName.trim());
+    const emptyNameCount = trimmedNames.filter((n) => n.length === 0).length;
+    const withEmbeddingCount = inputs.filter((i) => i.candidateEmbedding).length;
+
+    this.logResolution(
+      { flowId, mode: 'batch', stage: 'flow_start' },
+      'batch_flow_start',
+      {
+        batchSize: inputs.length,
+        batchEmptyNameCount: emptyNameCount,
+        batchWithEmbeddingCount: withEmbeddingCount,
+        neighborK: NEIGHBOR_K,
+      }
+    );
 
     // Tier 0: single IN query for all non-empty candidates (replaces N sequential lookups)
     const namesToLookup = trimmedNames.filter((n) => n.length > 0);
@@ -105,27 +135,49 @@ export class TopicResolver {
     for (let i = 0; i < inputs.length; i++) {
       const trimmed = trimmedNames[i];
       const input = inputs[i];
+      const ctx: ResolutionLogContext = { flowId, mode: 'batch', itemIdx: i, stage: 'tier0' };
 
       if (trimmed.length === 0) {
+        this.logResolution(ctx, 'empty_candidate', {
+          outcome: 'tier3_no_neighbors',
+          ...this.inputTraceFields(input),
+        });
         outcomes[i] = { isNew: true, reason: 'tier3_no_neighbors' };
         continue;
       }
 
       const exact = exactMap.get(trimmed.toLowerCase());
       if (exact) {
-        this.logResolution('tier0_hit', { candidate: trimmed, topicId: exact.topicId });
+        this.logResolution(ctx, 'tier0_hit', {
+          candidatePreview: this.previewText(trimmed),
+          topicId: exact.topicId,
+          primaryNamePreview: this.previewText(exact.primaryName, 80),
+          ...this.inputTraceFields(input),
+        });
         outcomes[i] = { isNew: false, topicId: exact.topicId, primaryName: exact.primaryName, confidence: 'exact' };
         continue;
       }
 
       if (!input.candidateEmbedding) {
-        this.logResolution('tier0_miss_no_embedding', { candidate: trimmed });
+        this.logResolution(ctx, 'tier0_miss_no_embedding', {
+          candidatePreview: this.previewText(trimmed),
+          ...this.inputTraceFields(input),
+        });
         outcomes[i] = { isNew: true, reason: 'tier0_miss_no_embedding' };
         continue;
       }
 
       annPending.push({ idx: i, input, trimmed });
     }
+
+    this.logResolution(
+      { flowId, mode: 'batch', stage: 'tier0_complete' },
+      'batch_post_tier0',
+      {
+        annQueueSize: annPending.length,
+        tier0ExactMapSize: exactMap.size,
+      }
+    );
 
     // Tier 1+: run ANN searches concurrently for all Tier-0 misses (pure reads, safe to parallelize)
     if (annPending.length > 0) {
@@ -136,18 +188,19 @@ export class TopicResolver {
       for (let j = 0; j < annPending.length; j++) {
         const { idx, input, trimmed } = annPending[j];
         const neighbors = neighborResults[j];
+        const ctx: ResolutionLogContext = { flowId, mode: 'batch', itemIdx: idx, stage: 'tier1_ann' };
 
         if (neighbors.length === 0) {
-          this.logResolution('tier3_new', { candidate: trimmed, reason: 'no_neighbors' });
+          this.logResolution({ ...ctx, stage: 'tier3' }, 'tier3_new', {
+            candidatePreview: this.previewText(trimmed),
+            reason: 'no_neighbors',
+            ...this.inputTraceFields(input),
+          });
           outcomes[idx] = { isNew: true, reason: 'tier3_no_neighbors' };
           continue;
         }
 
         const top = neighbors[0];
-        // Find the best-scoring alias that belongs to a DIFFERENT topic.
-        // Using neighbors[1] is wrong when topics have multiple aliases in the
-        // top-k: the second slot could be another alias of the same topic,
-        // hiding a genuine competitor at slot 2 or 3.
         const bestCompetitor = neighbors.find((n) => n.topicId !== top.topicId);
 
         if (
@@ -155,23 +208,56 @@ export class TopicResolver {
           (!bestCompetitor || bestCompetitor.score < HIGH_CONFIDENCE_THRESHOLD || (top.score - bestCompetitor.score) >= MARGIN_GUARD)
         ) {
           await this.recordAlias(top.topicId, trimmed, input.candidateEmbedding, input.aliasSource);
-          this.logResolution('tier1_hit', { candidate: trimmed, topicId: top.topicId, topScore: top.score, competitorScore: bestCompetitor?.score ?? null });
+          this.logResolution({ ...ctx, stage: 'tier1' }, 'tier1_hit', {
+            candidatePreview: this.previewText(trimmed),
+            topicId: top.topicId,
+            primaryNamePreview: this.previewText(top.primaryName, 80),
+            topScore: top.score,
+            competitorTopicId: bestCompetitor?.topicId ?? null,
+            competitorScore: bestCompetitor?.score ?? null,
+            highConfidenceThreshold: HIGH_CONFIDENCE_THRESHOLD,
+            marginGuard: MARGIN_GUARD,
+            ...this.neighborTraceFields(neighbors),
+            ...this.inputTraceFields(input),
+          });
           outcomes[idx] = { isNew: false, topicId: top.topicId, primaryName: top.primaryName, confidence: 'high_vector' };
           continue;
         }
 
         if (top.score < LOW_CONFIDENCE_THRESHOLD) {
-          this.logResolution('tier3_new', { candidate: trimmed, reason: 'below_low_threshold', topScore: top.score });
+          this.logResolution({ ...ctx, stage: 'tier3' }, 'tier3_new', {
+            candidatePreview: this.previewText(trimmed),
+            reason: 'below_low_threshold',
+            topScore: top.score,
+            lowConfidenceThreshold: LOW_CONFIDENCE_THRESHOLD,
+            ...this.neighborTraceFields(neighbors),
+            ...this.inputTraceFields(input),
+          });
           outcomes[idx] = { isNew: true, reason: 'tier3_no_neighbors' };
           continue;
         }
 
-        // Defer to judge batch
         judgePending.push({ idx, input, neighbors });
       }
     }
 
-    if (judgePending.length === 0) return outcomes;
+    if (judgePending.length === 0) {
+      this.logResolution(
+        { flowId, mode: 'batch', stage: 'flow_end' },
+        'batch_flow_end',
+        { outcome: 'no_judge_needed', resultCount: outcomes.length }
+      );
+      return outcomes;
+    }
+
+    this.logResolution(
+      { flowId, mode: 'batch', stage: 'tier2_judge_prep' },
+      'batch_judge_prep',
+      {
+        judgeBatchSize: judgePending.length,
+        resolutionItemIndices: judgePending.map((p) => p.idx),
+      }
+    );
 
     // Build a single judge call with all borderline items
     const allTopicIds = new Set<string>();
@@ -195,13 +281,31 @@ export class TopicResolver {
 
     let verdicts;
     try {
+      this.logResolution(
+        { flowId, mode: 'batch', stage: 'tier2_judge_call' },
+        'batch_judge_invoked',
+        {
+          judgeBatchSize: judgeItems.length,
+          distinctTopicIdsForJudge: allTopicIds.size,
+        }
+      );
       verdicts = await llmService.judgeEntityResolution(judgeItems);
     } catch {
-      // Judge failed — mark all pending as NEW (conservative)
       for (const p of judgePending) {
-        this.logResolution('tier2_hit_new', { candidate: p.input.candidateName.trim(), reason: 'judge_error' });
+        const ctx: ResolutionLogContext = { flowId, mode: 'batch', itemIdx: p.idx, stage: 'tier2_judge_error' };
+        this.logResolution(ctx, 'tier2_hit_new', {
+          candidatePreview: this.previewText(p.input.candidateName.trim()),
+          reason: 'judge_error',
+          ...this.inputTraceFields(p.input),
+          ...this.neighborTraceFields(p.neighbors),
+        });
         outcomes[p.idx] = { isNew: true, reason: 'tier2_judged_new' };
       }
+      this.logResolution(
+        { flowId, mode: 'batch', stage: 'flow_end' },
+        'batch_flow_end',
+        { outcome: 'judge_threw', resultCount: outcomes.length }
+      );
       return outcomes;
     }
 
@@ -209,39 +313,86 @@ export class TopicResolver {
       const p = judgePending[k];
       const verdict = verdicts[k];
       const trimmed = p.input.candidateName.trim();
+      const ctx: ResolutionLogContext = { flowId, mode: 'batch', itemIdx: p.idx, stage: 'tier2_verdict' };
 
       if (!verdict || verdict.match === 'NEW') {
-        this.logResolution('tier2_hit_new', { candidate: trimmed });
+        this.logResolution(ctx, 'tier2_hit_new', {
+          candidatePreview: this.previewText(trimmed),
+          verdict: verdict?.match ?? null,
+          ...this.inputTraceFields(p.input),
+          ...this.neighborTraceFields(p.neighbors),
+        });
         outcomes[p.idx] = { isNew: true, reason: 'tier2_judged_new' };
         continue;
       }
 
       const matched = dedupedPerItem[k].find((c) => c.topicId === verdict.match);
       if (!matched) {
-        this.logResolution('tier2_hit_new', { candidate: trimmed, reason: 'invalid_topic_id' });
+        this.logResolution(ctx, 'tier2_hit_new', {
+          candidatePreview: this.previewText(trimmed),
+          reason: 'invalid_topic_id',
+          verdictTopicId: verdict.match,
+          offeredTopicIds: dedupedPerItem[k].map((c) => c.topicId),
+          ...this.inputTraceFields(p.input),
+        });
         outcomes[p.idx] = { isNew: true, reason: 'tier2_judged_new' };
         continue;
       }
 
       await this.recordAlias(matched.topicId, trimmed, p.input.candidateEmbedding, p.input.aliasSource);
-      this.logResolution('tier2_hit_match', { candidate: trimmed, topicId: matched.topicId, topScore: p.neighbors[0].score });
+      this.logResolution(ctx, 'tier2_hit_match', {
+        candidatePreview: this.previewText(trimmed),
+        topicId: matched.topicId,
+        primaryNamePreview: this.previewText(matched.primaryName, 80),
+        verdictTopicId: verdict.match,
+        topNeighborScore: p.neighbors[0]?.score ?? null,
+        ...this.inputTraceFields(p.input),
+        ...this.neighborTraceFields(p.neighbors),
+      });
       outcomes[p.idx] = { isNew: false, topicId: matched.topicId, primaryName: matched.primaryName, confidence: 'judged' };
     }
+
+    this.logResolution(
+      { flowId, mode: 'batch', stage: 'flow_end' },
+      'batch_flow_end',
+      { outcome: 'complete', resultCount: outcomes.length }
+    );
 
     return outcomes;
   }
 
   async resolve(input: ResolveInput): Promise<ResolveOutcome> {
+    const flowId = input.resolutionCorrelationId ?? randomUUID();
+
+    this.logResolution(
+      { flowId, mode: 'single', stage: 'flow_start' },
+      'flow_start',
+      {
+        candidatePreview: this.previewText(input.candidateName),
+        resolutionEntryPoint: input.resolutionCorrelationId ? 'resolve_by_name' : 'resolve',
+        ...this.inputTraceFields(input),
+        neighborK: NEIGHBOR_K,
+      }
+    );
+
     const trimmed = input.candidateName.trim();
     if (trimmed.length === 0) {
+      this.logResolution({ flowId, mode: 'single', stage: 'early_exit' }, 'empty_candidate', {
+        outcome: 'tier3_no_neighbors',
+        ...this.inputTraceFields(input),
+      });
       return { isNew: true, reason: 'tier3_no_neighbors' };
     }
 
     // Tier 0 — exact alias match
     const exact = await this.topicRepository.findAliasExact(trimmed);
     if (exact) {
-      // Already a known alias; nothing to insert.
-      this.logResolution('tier0_hit', { candidate: trimmed, topicId: exact.topicId });
+      this.logResolution({ flowId, mode: 'single', stage: 'tier0' }, 'tier0_hit', {
+        candidatePreview: this.previewText(trimmed),
+        topicId: exact.topicId,
+        primaryNamePreview: this.previewText(exact.primaryName, 80),
+        ...this.inputTraceFields(input),
+      });
       return {
         isNew: false,
         topicId: exact.topicId,
@@ -251,7 +402,10 @@ export class TopicResolver {
     }
 
     if (!input.candidateEmbedding) {
-      this.logResolution('tier0_miss_no_embedding', { candidate: trimmed });
+      this.logResolution({ flowId, mode: 'single', stage: 'tier0' }, 'tier0_miss_no_embedding', {
+        candidatePreview: this.previewText(trimmed),
+        ...this.inputTraceFields(input),
+      });
       return { isNew: true, reason: 'tier0_miss_no_embedding' };
     }
 
@@ -259,15 +413,15 @@ export class TopicResolver {
     const neighbors = await this.topicRepository.findAliasNeighbors(input.candidateEmbedding, NEIGHBOR_K);
 
     if (neighbors.length === 0) {
-      this.logResolution('tier3_new', { candidate: trimmed, reason: 'no_neighbors' });
+      this.logResolution({ flowId, mode: 'single', stage: 'tier3' }, 'tier3_new', {
+        candidatePreview: this.previewText(trimmed),
+        reason: 'no_neighbors',
+        ...this.inputTraceFields(input),
+      });
       return { isNew: true, reason: 'tier3_no_neighbors' };
     }
 
     const top = neighbors[0];
-    // Find the best-scoring alias that belongs to a DIFFERENT topic.
-    // Using neighbors[1] is wrong when topics have multiple aliases in the
-    // top-k: the second slot could be another alias of the same topic,
-    // hiding a genuine competitor at slot 2 or 3.
     const bestCompetitor = neighbors.find((n) => n.topicId !== top.topicId);
 
     if (
@@ -275,11 +429,17 @@ export class TopicResolver {
       (!bestCompetitor || bestCompetitor.score < HIGH_CONFIDENCE_THRESHOLD || (top.score - bestCompetitor.score) >= MARGIN_GUARD)
     ) {
       await this.recordAlias(top.topicId, trimmed, input.candidateEmbedding, input.aliasSource);
-      this.logResolution('tier1_hit', {
-        candidate: trimmed,
+      this.logResolution({ flowId, mode: 'single', stage: 'tier1' }, 'tier1_hit', {
+        candidatePreview: this.previewText(trimmed),
         topicId: top.topicId,
+        primaryNamePreview: this.previewText(top.primaryName, 80),
         topScore: top.score,
+        competitorTopicId: bestCompetitor?.topicId ?? null,
         competitorScore: bestCompetitor?.score ?? null,
+        highConfidenceThreshold: HIGH_CONFIDENCE_THRESHOLD,
+        marginGuard: MARGIN_GUARD,
+        ...this.neighborTraceFields(neighbors),
+        ...this.inputTraceFields(input),
       });
       return {
         isNew: false,
@@ -289,12 +449,14 @@ export class TopicResolver {
       };
     }
 
-    // Tier 3 — top neighbor is below LOW threshold: nothing plausible
     if (top.score < LOW_CONFIDENCE_THRESHOLD) {
-      this.logResolution('tier3_new', {
-        candidate: trimmed,
+      this.logResolution({ flowId, mode: 'single', stage: 'tier3' }, 'tier3_new', {
+        candidatePreview: this.previewText(trimmed),
         reason: 'below_low_threshold',
         topScore: top.score,
+        lowConfidenceThreshold: LOW_CONFIDENCE_THRESHOLD,
+        ...this.neighborTraceFields(neighbors),
+        ...this.inputTraceFields(input),
       });
       return { isNew: true, reason: 'tier3_no_neighbors' };
     }
@@ -315,33 +477,63 @@ export class TopicResolver {
       })),
     }];
 
+    this.logResolution(
+      { flowId, mode: 'single', stage: 'tier2_judge_prep' },
+      'single_judge_prep',
+      {
+        dedupedCandidateTopicCount: distinctCandidates.length,
+        offeredTopicIds: distinctCandidates.map((c) => c.topicId),
+      }
+    );
+
     let verdicts;
     try {
+      this.logResolution({ flowId, mode: 'single', stage: 'tier2_judge_call' }, 'single_judge_invoked', {
+        judgeBatchSize: 1,
+      });
       verdicts = await llmService.judgeEntityResolution(judgeItems);
     } catch {
-      // Judge failed — be conservative, treat as new
-      this.logResolution('tier2_hit_new', { candidate: trimmed, reason: 'judge_error' });
+      this.logResolution({ flowId, mode: 'single', stage: 'tier2_judge_error' }, 'tier2_hit_new', {
+        candidatePreview: this.previewText(trimmed),
+        reason: 'judge_error',
+        ...this.inputTraceFields(input),
+        ...this.neighborTraceFields(neighbors),
+      });
       return { isNew: true, reason: 'tier2_judged_new' };
     }
 
     const verdict = verdicts[0];
     if (!verdict || verdict.match === 'NEW') {
-      this.logResolution('tier2_hit_new', { candidate: trimmed });
+      this.logResolution({ flowId, mode: 'single', stage: 'tier2_verdict' }, 'tier2_hit_new', {
+        candidatePreview: this.previewText(trimmed),
+        verdict: verdict?.match ?? null,
+        ...this.inputTraceFields(input),
+        ...this.neighborTraceFields(neighbors),
+      });
       return { isNew: true, reason: 'tier2_judged_new' };
     }
 
     const matched = distinctCandidates.find((c) => c.topicId === verdict.match);
     if (!matched) {
-      // Judge returned an id we did not offer — defensive fallback to NEW
-      this.logResolution('tier2_hit_new', { candidate: trimmed, reason: 'invalid_topic_id' });
+      this.logResolution({ flowId, mode: 'single', stage: 'tier2_verdict' }, 'tier2_hit_new', {
+        candidatePreview: this.previewText(trimmed),
+        reason: 'invalid_topic_id',
+        verdictTopicId: verdict.match,
+        offeredTopicIds: distinctCandidates.map((c) => c.topicId),
+        ...this.inputTraceFields(input),
+      });
       return { isNew: true, reason: 'tier2_judged_new' };
     }
 
     await this.recordAlias(matched.topicId, trimmed, input.candidateEmbedding, input.aliasSource);
-    this.logResolution('tier2_hit_match', {
-      candidate: trimmed,
+    this.logResolution({ flowId, mode: 'single', stage: 'tier2_verdict' }, 'tier2_hit_match', {
+      candidatePreview: this.previewText(trimmed),
       topicId: matched.topicId,
-      topScore: top.score,
+      primaryNamePreview: this.previewText(matched.primaryName, 80),
+      verdictTopicId: verdict.match,
+      topNeighborScore: top.score,
+      ...this.inputTraceFields(input),
+      ...this.neighborTraceFields(neighbors),
     });
     return {
       isNew: false,
@@ -389,9 +581,57 @@ export class TopicResolver {
     return Array.from(byTopic.values()).slice(0, NEIGHBOR_K);
   }
 
-  private logResolution(event: string, fields: Record<string, unknown>): void {
-    // Structured log line — Pino picks it up via stdout. Keep tag stable.
-    console.log(JSON.stringify({ tag: 'entity_resolution', event, ...fields }));
+  private previewText(text: string, maxLen = 160): string {
+    const t = text.trim();
+    if (t.length <= maxLen) return t;
+    return `${t.slice(0, maxLen)}…`;
+  }
+
+  private inputTraceFields(input: ResolveInput): Record<string, unknown> {
+    return {
+      aliasSource: input.aliasSource,
+      candidateEmbeddingPresent: !!input.candidateEmbedding,
+      contextSourceName: input.contextHint?.sourceName ?? null,
+      contextSourceCategory: input.contextHint?.sourceCategory ?? null,
+      resolutionCorrelationFromCaller: !!input.resolutionCorrelationId,
+    };
+  }
+
+  private neighborTraceFields(neighbors: AliasNeighborRow[]): Record<string, unknown> {
+    if (neighbors.length === 0) {
+      return { neighborCount: 0, distinctNeighborTopicCount: 0 };
+    }
+    const top = neighbors[0];
+    const competitor = neighbors.find((n) => n.topicId !== top.topicId);
+    return {
+      neighborCount: neighbors.length,
+      distinctNeighborTopicCount: new Set(neighbors.map((n) => n.topicId)).size,
+      topNeighborTopicId: top.topicId,
+      topNeighborScore: top.score,
+      topNeighborPrimaryPreview: this.previewText(top.primaryName, 80),
+      competitorNeighborTopicId: competitor?.topicId ?? null,
+      competitorNeighborScore: competitor?.score ?? null,
+    };
+  }
+
+  private logResolution(
+    ctx: ResolutionLogContext,
+    event: string,
+    fields: Record<string, unknown>
+  ): void {
+    recordEntityResolutionEvent(event);
+    getModuleLogger('topic.resolver').info(
+      {
+        component: 'entity_resolution',
+        resolutionFlowId: ctx.flowId,
+        resolutionMode: ctx.mode,
+        resolutionStage: ctx.stage,
+        ...(ctx.itemIdx !== undefined ? { resolutionItemIndex: ctx.itemIdx } : {}),
+        event,
+        ...fields,
+      },
+      'entity resolution'
+    );
   }
 }
 
@@ -405,16 +645,33 @@ export async function resolveByName(
   aliasSource: TopicAliasSource,
   contextHint?: ResolveContextHint | null
 ): Promise<ResolveOutcome> {
+  const flowId = randomUUID();
   let embedding: number[] | null = null;
   try {
     embedding = await embeddingService.embedText(candidateName);
   } catch {
+    getModuleLogger('topic.resolver').info(
+      {
+        component: 'entity_resolution',
+        resolutionFlowId: flowId,
+        resolutionMode: 'resolve_by_name',
+        resolutionStage: 'preflight_embedding',
+        event: 'embedding_failed_fallback_tier0_only',
+        candidatePreview: candidateName.trim().slice(0, 160),
+        aliasSource,
+        contextSourceName: contextHint?.sourceName ?? null,
+        contextSourceCategory: contextHint?.sourceCategory ?? null,
+      },
+      'entity resolution'
+    );
     embedding = null;
   }
+
   return resolver.resolve({
     candidateName,
     candidateEmbedding: embedding,
     aliasSource,
     contextHint: contextHint ?? null,
+    resolutionCorrelationId: flowId,
   });
 }

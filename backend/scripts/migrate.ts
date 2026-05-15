@@ -1,10 +1,17 @@
+﻿import pino from 'pino';
+
+const log = pino(
+  { level: 'info' },
+  pino.destination({ dest: 2, sync: true })
+);
+
 async function runMigrations() {
-  console.log('🔄 Running migrations...');
+  log.info('Running migrations');
 
   const databaseUrl = process.env.DATABASE_URL!;
 
   if (!databaseUrl) {
-    console.error('❌ DATABASE_URL is not set');
+    log.fatal('DATABASE_URL is not set');
     process.exit(1);
   }
 
@@ -13,7 +20,7 @@ async function runMigrations() {
 
   try {
     if (isNeon) {
-      console.log('🌐 Detected Neon database, using HTTP driver...');
+      log.info('Detected Neon database, using HTTP driver');
       const { migrate } = await import('drizzle-orm/neon-http/migrator');
       const { neon } = await import('@neondatabase/serverless');
       const { drizzle } = await import('drizzle-orm/neon-http');
@@ -25,7 +32,7 @@ async function runMigrations() {
         migrationsFolder: './src/modules/shared/database/migrations',
       });
     } else {
-      console.log('🐘 Detected PostgreSQL database, using node-postgres driver...');
+      log.info('Detected PostgreSQL database, using node-postgres driver');
       const { migrate } = await import('drizzle-orm/postgres-js/migrator');
       const postgres = await import('postgres');
       const { drizzle } = await import('drizzle-orm/postgres-js');
@@ -40,12 +47,12 @@ async function runMigrations() {
       await sql.end();
     }
 
-    console.log('✅ Migrations completed successfully');
+    log.info('Migrations completed successfully');
     process.exit(0);
   } catch (err) {
-    console.error('❌ Migration failed:', err);
+    log.fatal({ err }, 'Migration failed');
     process.exit(1);
   }
 }
 
-runMigrations();
+void runMigrations();

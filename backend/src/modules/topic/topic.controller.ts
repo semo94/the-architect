@@ -20,10 +20,28 @@ export class TopicController {
     const userId = request.user.sub;
     startSseResponse(request, reply);
 
+    const sseLog = request.log.child({
+      component: 'sse',
+      stream: 'discover_topic',
+      userId,
+      mode: body.mode,
+      topicId: body.topicId,
+    });
+
+    sseLog.info(
+      { topicName: body.topicName ?? null },
+      'sse stream opened'
+    );
+
     const abortController = new AbortController();
     let streamDone = false;
+    let chunkCount = 0;
 
     reply.raw.on('close', () => {
+      sseLog.info(
+        { streamDone, chunkCount, reason: streamDone ? 'complete' : 'client_close' },
+        'sse connection closed'
+      );
       if (!streamDone) {
         abortController.abort();
       }
@@ -35,16 +53,23 @@ export class TopicController {
         body,
         {
           onChunk: (text) => {
+            chunkCount += 1;
+            if (chunkCount === 1 || chunkCount % 50 === 0) {
+              sseLog.debug({ chunkCount, deltaChars: text.length }, 'sse chunk');
+            }
             reply.raw.write(`data: ${JSON.stringify({ text })}\n\n`);
           },
           onMeta: (meta) => {
+            sseLog.info({ meta }, 'sse meta');
             reply.raw.write(`data: ${JSON.stringify({ type: 'meta', ...meta })}\n\n`);
           },
           onLearningResources: (resources) => {
+            sseLog.info({ resourceCount: resources.length }, 'sse learning resources');
             reply.raw.write(`data: ${JSON.stringify({ type: 'learningResources', resources })}\n\n`);
           },
           onComplete: () => {
             streamDone = true;
+            sseLog.info({ chunkCount }, 'sse stream completed');
             reply.raw.write('data: [DONE]\n\n');
             reply.raw.end();
           },
@@ -58,7 +83,7 @@ export class TopicController {
       }
 
       const message = error instanceof Error ? error.message : 'Topic stream failed';
-      request.log.error({ err: error }, 'discoverTopic stream error');
+      sseLog.error({ err: error, chunkCount }, 'discoverTopic stream error');
       reply.raw.write(`data: ${JSON.stringify({ error: message })}\n\n`);
       reply.raw.end();
     }
@@ -137,6 +162,14 @@ export class TopicController {
     const { id } = TopicIdParamSchema.parse(request.params);
     startSseResponse(request, reply);
 
+    const sseLog = request.log.child({
+      component: 'sse',
+      stream: 'topic_events',
+      userId,
+      topicId: id,
+    });
+    sseLog.info({}, 'sse stream opened');
+
     const POLL_INTERVAL_MS = 3000;
     const MAX_POLLS = 40; // 2 minutes max
     let polls = 0;
@@ -148,11 +181,13 @@ export class TopicController {
     };
 
     reply.raw.on('close', () => {
+      sseLog.info({ polls, reason: polls > MAX_POLLS ? 'max_polls' : 'client_close' }, 'sse connection closed');
       polls = MAX_POLLS + 1; // Stop polling
     });
 
     const poll = async (): Promise<void> => {
       if (polls++ >= MAX_POLLS || reply.raw.destroyed) {
+        sseLog.info({ polls }, 'sse poll loop ended');
         reply.raw.end();
         return;
       }
@@ -161,6 +196,15 @@ export class TopicController {
         const topic = await this.topicService.getTopicDetail(userId, id);
         const bothReady = topic.hyperlinksStatus === 'ready' && topic.insightsStatus === 'ready';
         const anyProcessing = topic.hyperlinksStatus === 'processing' || topic.insightsStatus === 'processing';
+
+        sseLog.debug(
+          {
+            poll: polls,
+            hyperlinksStatus: topic.hyperlinksStatus,
+            insightsStatus: topic.insightsStatus,
+          },
+          'sse status poll'
+        );
 
         sendEvent({
           type: 'status',
@@ -171,10 +215,12 @@ export class TopicController {
 
         if (bothReady || !anyProcessing) {
           sendEvent({ type: 'done' });
+          sseLog.info({ polls }, 'sse topic events completed');
           reply.raw.end();
           return;
         }
-      } catch {
+      } catch (err) {
+        sseLog.error({ err, polls }, 'sse topic events poll error');
         sendEvent({ type: 'error' });
         reply.raw.end();
         return;

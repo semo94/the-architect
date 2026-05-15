@@ -5,6 +5,8 @@ import { db } from '../shared/database/client.js';
 import { quizTopics, topics, userQuizzes, userTopics } from '../shared/database/schema.js';
 import { embeddingService } from '../shared/embedding/embedding.service.js';
 import { AppError } from '../shared/middleware/error-handler.js';
+import { getModuleLogger } from '../shared/observability/logger.js';
+import { recordEntityResolutionEvent } from '../shared/observability/metrics.js';
 import { linkResourceService } from './link-resource.service.js';
 import { TopicRepository } from './topic.repository.js';
 import { LOW_CONFIDENCE_THRESHOLD, TopicResolver, type ResolveInput } from './topic.resolver.js';
@@ -474,13 +476,17 @@ export class TopicService {
     if (!outcome.isNew) {
       const existing = await this.topicRepository.findById(outcome.topicId);
       if (existing) {
-        console.log(JSON.stringify({
-          tag: 'entity_resolution',
-          event: 'dedup_rescued',
-          candidate: validated.name,
-          rescuedTopicId: existing.id,
-          confidence: outcome.confidence,
-        }));
+        recordEntityResolutionEvent('dedup_rescued');
+        getModuleLogger('topic.service').info(
+          {
+            component: 'entity_resolution',
+            event: 'dedup_rescued',
+            candidate: validated.name,
+            rescuedTopicId: existing.id,
+            confidence: outcome.confidence,
+          },
+          'entity resolution'
+        );
         // A new alias was just registered for this existing topic. Retroactively
         // fix any topic_relationships rows that had target_topic_id = NULL for
         // this same concept (e.g. insight chips from other topics).
@@ -563,12 +569,16 @@ export class TopicService {
       const exactIds = await this.topicRepository.findUnresolvedRelationshipsByExactName(topic.name);
       if (exactIds.length > 0) {
         await this.topicRepository.resolveRelationships(exactIds, topicId);
-        console.log(JSON.stringify({
-          tag: 'entity_resolution',
-          event: 'reverse_resolve_exact',
-          topicId,
-          flippedCount: exactIds.length,
-        }));
+        recordEntityResolutionEvent('reverse_resolve_exact');
+        getModuleLogger('topic.service').info(
+          {
+            component: 'entity_resolution',
+            event: 'reverse_resolve_exact',
+            topicId,
+            flippedCount: exactIds.length,
+          },
+          'entity resolution'
+        );
       }
 
       if (!topicEmbedding) return;
@@ -603,21 +613,29 @@ export class TopicService {
 
       if (toFlip.length > 0) {
         await this.topicRepository.resolveRelationships(toFlip, topicId);
-        console.log(JSON.stringify({
-          tag: 'entity_resolution',
-          event: 'reverse_resolve',
-          topicId,
-          flippedCount: toFlip.length,
-          consideredCount: candidates.length,
-        }));
+        recordEntityResolutionEvent('reverse_resolve');
+        getModuleLogger('topic.service').info(
+          {
+            component: 'entity_resolution',
+            event: 'reverse_resolve',
+            topicId,
+            flippedCount: toFlip.length,
+            consideredCount: candidates.length,
+          },
+          'entity resolution'
+        );
       }
     } catch (err) {
-      console.log(JSON.stringify({
-        tag: 'entity_resolution',
-        event: 'reverse_resolve_error',
-        topicId,
-        error: err instanceof Error ? err.message : String(err),
-      }));
+      recordEntityResolutionEvent('reverse_resolve_error');
+      getModuleLogger('topic.service').warn(
+        {
+          component: 'entity_resolution',
+          event: 'reverse_resolve_error',
+          topicId,
+          err,
+        },
+        'reverse resolve failed'
+      );
     }
   }
 

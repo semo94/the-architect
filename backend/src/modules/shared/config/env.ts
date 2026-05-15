@@ -1,4 +1,4 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
@@ -51,6 +51,13 @@ const envSchema = z.object({
   // Learn More / Brave Search
   BRAVE_API_KEY: z.string().optional(),
   BRAVE_API_URL: z.url().optional(),
+
+  // Observability (optional)
+  UPTRACE_DSN: z.string().url().optional(),
+  OTEL_SERVICE_NAME: z.string().min(1).optional(),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).optional(),
+  /** Reserved for future slow-query detection (Drizzle logs query start only). */
+  DB_SLOW_QUERY_MS: z.string().optional().transform((v) => (v ? Number(v) : undefined)),
 });
 
 export type Env = z.infer<typeof envSchema>;

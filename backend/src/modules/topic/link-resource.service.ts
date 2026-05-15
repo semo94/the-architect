@@ -1,4 +1,6 @@
 ﻿import { env } from '../shared/config/env.js';
+import { observeOutboundFetch } from '../shared/observability/fetch.js';
+import { getModuleLogger } from '../shared/observability/logger.js';
 import { BraveSearchResponseSchema } from './link-resource.schemas.js';
 
 const DEFAULT_BRAVE_API_URL = 'https://api.search.brave.com/res/v1/web/search';
@@ -196,12 +198,17 @@ export class LinkResourceService {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), VERIFY_TIMEOUT_MS);
         try {
-          const res = await fetch(candidate.url, {
-            method: 'HEAD',
-            signal: controller.signal,
-            redirect: 'follow',
-            headers: { 'User-Agent': 'Breadthwise/1.0 LinkChecker' },
-          });
+          const res = await observeOutboundFetch(
+            'link_verify_head',
+            candidate.url,
+            {
+              method: 'HEAD',
+              signal: controller.signal,
+              redirect: 'follow',
+              headers: { 'User-Agent': 'Breadthwise/1.0 LinkChecker' },
+            },
+            getModuleLogger('link-resource.service')
+          );
           // Accept 2xx and 3xx; treat 405 (Method Not Allowed) as potentially valid
           if (res.ok || res.status === 405) return candidate;
           return null;
@@ -231,14 +238,19 @@ export class LinkResourceService {
 
       try {
         const url = `${apiUrl}?q=${encodeURIComponent(query)}&count=${MAX_RESULTS}&search_lang=en`;
-        const response = await fetch(url, {
-          signal: controller.signal,
-          headers: {
-            Accept: 'application/json',
-            'Accept-Encoding': 'gzip',
-            'X-Subscription-Token': env.BRAVE_API_KEY!,
+        const response = await observeOutboundFetch(
+          'brave_web_search',
+          url,
+          {
+            signal: controller.signal,
+            headers: {
+              Accept: 'application/json',
+              'Accept-Encoding': 'gzip',
+              'X-Subscription-Token': env.BRAVE_API_KEY!,
+            },
           },
-        });
+          getModuleLogger('link-resource.service')
+        );
 
         if (!response.ok) {
           if (attempt < 2 && response.status >= 500) continue;

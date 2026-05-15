@@ -1,8 +1,9 @@
-import cookie from '@fastify/cookie';
+﻿import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
+import { randomUUID } from 'node:crypto';
 import Fastify from 'fastify';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { jwtGuard } from './modules/auth/guards/jwt.guard.js';
@@ -12,24 +13,23 @@ import { RATE_LIMITS } from './modules/shared/config/constants.js';
 import { env } from './modules/shared/config/env.js';
 import { errorHandler } from './modules/shared/middleware/error-handler.js';
 import { requestLogger } from './modules/shared/middleware/request-logger.js';
+import { responseLogger } from './modules/shared/middleware/response-logger.js';
+import { createAppLogger, setRootLogger } from './modules/shared/observability/logger.js';
 import { topicRoutes } from './modules/topic/topic.routes.js';
 import { userRoutes } from './modules/user/user.routes.js';
 
 export async function buildApp() {
+  const logLevel =
+    env.LOG_LEVEL ?? (env.NODE_ENV === 'development' ? 'debug' : 'info');
+  const logger = createAppLogger({
+    level: logLevel,
+    usePretty: env.NODE_ENV === 'development',
+  });
+  setRootLogger(logger);
+
   const app = Fastify({
-    logger: {
-      level: env.NODE_ENV === 'development' ? 'debug' : 'info',
-      transport: env.NODE_ENV === 'development'
-        ? {
-            target: 'pino-pretty',
-            options: {
-              colorize: true,
-              translateTime: 'HH:MM:ss Z',
-              ignore: 'pid,hostname',
-            },
-          }
-        : undefined,
-    },
+    logger,
+    genReqId: () => randomUUID(),
     trustProxy: true,
   });
 
@@ -77,6 +77,7 @@ export async function buildApp() {
 
   // Custom middleware
   app.addHook('onRequest', requestLogger);
+  app.addHook('onResponse', responseLogger);
   app.setErrorHandler(errorHandler);
 
   // Health check
