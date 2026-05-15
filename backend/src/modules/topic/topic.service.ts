@@ -7,6 +7,11 @@ import { embeddingService } from '../shared/embedding/embedding.service.js';
 import { AppError } from '../shared/middleware/error-handler.js';
 import { getModuleLogger } from '../shared/observability/logger.js';
 import { recordEntityResolutionEvent } from '../shared/observability/metrics.js';
+import {
+  EntityResolutionDecisionKind,
+  EntityResolutionEvent,
+  EntityResolutionMatchStrategy,
+} from '../shared/observability/entity-resolution.js';
 import { linkResourceService } from './link-resource.service.js';
 import { TopicRepository } from './topic.repository.js';
 import { LOW_CONFIDENCE_THRESHOLD, TopicResolver, type ResolveInput } from './topic.resolver.js';
@@ -463,7 +468,7 @@ export class TopicService {
     try {
       candidateEmbedding = await embeddingService.embedText(validated.name);
     } catch {
-      // proceed with Tier-0-only resolution
+      // proceed with exact-lookup-only resolution
     }
 
     const outcome = await this.resolver.resolve({
@@ -473,17 +478,17 @@ export class TopicService {
       contextHint: requestedName ? { sourceName: requestedName } : null,
     });
 
-    if (!outcome.isNew) {
+    if (outcome.kind === EntityResolutionDecisionKind.Matched) {
       const existing = await this.topicRepository.findById(outcome.topicId);
       if (existing) {
-        recordEntityResolutionEvent('dedup_rescued');
+        recordEntityResolutionEvent(EntityResolutionEvent.ExistingTopicReused);
         getModuleLogger('topic.service').info(
           {
             component: 'entity_resolution',
-            event: 'dedup_rescued',
+            event: EntityResolutionEvent.ExistingTopicReused,
             candidate: validated.name,
             rescuedTopicId: existing.id,
-            confidence: outcome.confidence,
+            strategy: outcome.strategy,
           },
           'entity resolution'
         );
@@ -562,18 +567,18 @@ export class TopicService {
       const topic = await this.topicRepository.findById(topicId);
       if (!topic) return;
 
-      // Tier 0 — cheap exact-name reverse pass via SQL.
+      // Phase 1 — cheap exact-name reverse pass via SQL.
       // Catches unresolved rows whose target_name_embedding is NULL (stored
       // when the embedding service was unavailable at extraction time) and
       // would therefore be invisible to the vector pre-filter below.
       const exactIds = await this.topicRepository.findUnresolvedRelationshipsByExactName(topic.name);
       if (exactIds.length > 0) {
         await this.topicRepository.resolveRelationships(exactIds, topicId);
-        recordEntityResolutionEvent('reverse_resolve_exact');
+        recordEntityResolutionEvent(EntityResolutionEvent.ReverseResolutionExactMatch);
         getModuleLogger('topic.service').info(
           {
             component: 'entity_resolution',
-            event: 'reverse_resolve_exact',
+            event: EntityResolutionEvent.ReverseResolutionExactMatch,
             topicId,
             flippedCount: exactIds.length,
           },
@@ -606,18 +611,18 @@ export class TopicService {
       const toFlip: string[] = [];
       for (let i = 0; i < outcomes.length; i++) {
         const outcome = outcomes[i];
-        if (!outcome.isNew && outcome.topicId === topicId) {
+        if (outcome.kind === EntityResolutionDecisionKind.Matched && outcome.topicId === topicId) {
           toFlip.push(candidates[i].relationshipId);
         }
       }
 
       if (toFlip.length > 0) {
         await this.topicRepository.resolveRelationships(toFlip, topicId);
-        recordEntityResolutionEvent('reverse_resolve');
+        recordEntityResolutionEvent(EntityResolutionEvent.ReverseResolutionSemanticMatch);
         getModuleLogger('topic.service').info(
           {
             component: 'entity_resolution',
-            event: 'reverse_resolve',
+            event: EntityResolutionEvent.ReverseResolutionSemanticMatch,
             topicId,
             flippedCount: toFlip.length,
             consideredCount: candidates.length,
@@ -626,11 +631,11 @@ export class TopicService {
         );
       }
     } catch (err) {
-      recordEntityResolutionEvent('reverse_resolve_error');
+      recordEntityResolutionEvent(EntityResolutionEvent.ReverseResolutionFailed);
       getModuleLogger('topic.service').warn(
         {
           component: 'entity_resolution',
-          event: 'reverse_resolve_error',
+          event: EntityResolutionEvent.ReverseResolutionFailed,
           topicId,
           err,
         },
@@ -662,7 +667,7 @@ export class TopicService {
       try {
         candidateEmbedding = await embeddingService.embedText(request.topicName);
       } catch {
-        // fall through to Tier-0-only resolution
+        // fall through to exact-lookup-only resolution
       }
 
       const outcome = await this.resolver.resolve({
@@ -671,15 +676,15 @@ export class TopicService {
         aliasSource: 'user_query',
       });
 
-      if (!outcome.isNew) {
+      if (outcome.kind === EntityResolutionDecisionKind.Matched) {
         topic = await this.topicRepository.findById(outcome.topicId) ?? undefined;
-        // When a new alias was just registered (tier-1 or tier-2 hit), any
+        // When a new alias was just registered from vector/judge matching, any
         // existing topic_relationships rows with target_topic_id = NULL that
         // refer to this same concept (e.g. insight chips from other topics)
         // won't know about the match yet. Trigger a reverse-resolve pass so
         // those rows get their target_topic_id filled in — making the chips
         // show as "owned" on the next GET /insights call.
-        if (outcome.confidence !== 'exact') {
+        if (outcome.strategy !== EntityResolutionMatchStrategy.ExactAlias) {
           void this.reverseResolveUnresolvedRelationships(outcome.topicId, candidateEmbedding);
         }
       }
@@ -872,7 +877,7 @@ export class TopicService {
           ? await embeddingService.embedTexts(mentionedNames)
           : [];
       } catch {
-        // Proceed without embeddings — resolver degrades to Tier 0 only
+        // Proceed without embeddings — resolver degrades to exact lookup only
       }
 
       const inputs: ResolveInput[] = mentionedNames.map((name, i) => ({
@@ -886,7 +891,7 @@ export class TopicService {
 
       const rows = mentionedNames.map((name, i) => {
         const outcome = outcomes[i];
-        const resolved = outcome && !outcome.isNew;
+        const resolved = outcome?.kind === EntityResolutionDecisionKind.Matched;
         return {
           sourceTopicId: topicId,
           targetTopicId: resolved ? outcome.topicId : null,
@@ -963,7 +968,7 @@ export class TopicService {
         ? await embeddingService.embedTexts(targetNames)
         : [];
     } catch {
-      // Proceed without embeddings — resolver degrades to Tier 0 only
+      // Proceed without embeddings — resolver degrades to exact lookup only
     }
 
     const inputs: ResolveInput[] = targetNames.map((name, i) => ({
@@ -977,7 +982,7 @@ export class TopicService {
 
     const rows = result.groups.map((item, i) => {
       const outcome = outcomes[i];
-      const resolved = outcome && !outcome.isNew;
+      const resolved = outcome?.kind === EntityResolutionDecisionKind.Matched;
       return {
         sourceTopicId: topic.id,
         targetTopicId: resolved ? outcome.topicId : null,

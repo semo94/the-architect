@@ -261,7 +261,7 @@ export class TopicRepository {
   // ---------------------------------------------------------------------------
 
   /**
-   * Tier-0 alias lookup: case-insensitive exact match against any recorded
+   * Phase 1 (exact lookup): case-insensitive exact match against any recorded
    * alias of any topic. Returns the matched topic id (and its primary name)
    * or undefined.
    */
@@ -280,7 +280,7 @@ export class TopicRepository {
   }
 
   /**
-   * Tier-0 batch alias lookup: case-insensitive exact match for multiple
+   * Phase 1 batch exact lookup: case-insensitive exact match for multiple
    * candidates in a single IN query. Returns a map keyed by the lowercased
    * alias text so the caller can look up each candidate in O(1).
    */
@@ -311,9 +311,9 @@ export class TopicRepository {
   }
 
   /**
-   * Tier-1 alias-vector ANN: cosine search over alias_embedding. Returns up
-   * to `k` nearest aliases with their parent topic id, primary name, and
-   * cosine similarity score (1 - distance).
+   * Phase 2 (vector candidate search): cosine search over alias_embedding.
+   * Returns up to `k` nearest aliases with their parent topic id, primary
+   * name, and cosine similarity score (1 - distance).
    */
   async findAliasNeighbors(embedding: number[], k = 5): Promise<AliasNeighborRow[]> {
     const vecLiteral = `[${embedding.join(',')}]`;
@@ -425,7 +425,7 @@ export class TopicRepository {
   /**
    * Returns IDs of unresolved relationship rows whose `target_name`
    * case-insensitively matches the given name. No embedding required.
-   * Used by the Tier-0 reverse-resolution pass.
+   * Used by the phase-1 reverse-resolution pass.
    */
   async findUnresolvedRelationshipsByExactName(name: string): Promise<string[]> {
     const lower = name.trim().toLowerCase();
