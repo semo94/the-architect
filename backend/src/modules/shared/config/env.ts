@@ -1,4 +1,5 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
+import { normalizeUptraceDsn } from '../observability/uptrace-dsn.js';
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
@@ -51,6 +52,15 @@ const envSchema = z.object({
   // Learn More / Brave Search
   BRAVE_API_KEY: z.string().optional(),
   BRAVE_API_URL: z.url().optional(),
+
+  // Observability (optional)
+  UPTRACE_DSN: z.preprocess(
+    normalizeUptraceDsn,
+    z.string().url().optional()
+  ),
+  OTEL_SERVICE_NAME: z.string().min(1).optional(),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).optional(),
+  DB_LOG_QUERIES: z.string().default('false').transform((val) => val === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;

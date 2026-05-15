@@ -1,4 +1,5 @@
 ﻿import { FastifyReply, FastifyRequest } from 'fastify';
+import { runSseLlmStream } from '../shared/utils/sse-stream.js';
 import { startSseResponse } from '../shared/utils/sse.utils.js';
 import {
   DiscoverTopicRequestSchema,
@@ -18,50 +19,23 @@ export class TopicController {
   async discoverTopic(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const body = DiscoverTopicRequestSchema.parse(request.body);
     const userId = request.user.sub;
-    startSseResponse(request, reply);
 
-    const abortController = new AbortController();
-    let streamDone = false;
-
-    reply.raw.on('close', () => {
-      if (!streamDone) {
-        abortController.abort();
-      }
-    });
-
-    try {
-      await this.topicService.discoverTopic(
+    await runSseLlmStream({
+      request,
+      reply,
+      sseBindings: {
+        stream: 'discover_topic',
         userId,
-        body,
-        {
-          onChunk: (text) => {
-            reply.raw.write(`data: ${JSON.stringify({ text })}\n\n`);
-          },
-          onMeta: (meta) => {
-            reply.raw.write(`data: ${JSON.stringify({ type: 'meta', ...meta })}\n\n`);
-          },
-          onLearningResources: (resources) => {
-            reply.raw.write(`data: ${JSON.stringify({ type: 'learningResources', resources })}\n\n`);
-          },
-          onComplete: () => {
-            streamDone = true;
-            reply.raw.write('data: [DONE]\n\n');
-            reply.raw.end();
-          },
-        },
-        abortController.signal
-      );
-    } catch (error) {
-      streamDone = true;
-      if (reply.raw.destroyed) {
-        return;
-      }
-
-      const message = error instanceof Error ? error.message : 'Topic stream failed';
-      request.log.error({ err: error }, 'discoverTopic stream error');
-      reply.raw.write(`data: ${JSON.stringify({ error: message })}\n\n`);
-      reply.raw.end();
-    }
+        mode: body.mode,
+        topicId: body.topicId,
+      },
+      openLogFields: { topicName: body.topicName ?? null },
+      includeLearningResources: true,
+      streamErrorLogMessage: 'discoverTopic stream error',
+      userFallbackErrorMessage: 'Topic stream failed',
+      run: (callbacks, signal) =>
+        this.topicService.discoverTopic(userId, body, callbacks, signal),
+    });
   }
 
   async listTopics(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -137,6 +111,14 @@ export class TopicController {
     const { id } = TopicIdParamSchema.parse(request.params);
     startSseResponse(request, reply);
 
+    const sseLog = request.log.child({
+      component: 'sse',
+      stream: 'topic_events',
+      userId,
+      topicId: id,
+    });
+    sseLog.info({}, 'sse stream opened');
+
     const POLL_INTERVAL_MS = 3000;
     const MAX_POLLS = 40; // 2 minutes max
     let polls = 0;
@@ -148,11 +130,13 @@ export class TopicController {
     };
 
     reply.raw.on('close', () => {
+      sseLog.info({ polls, reason: polls > MAX_POLLS ? 'max_polls' : 'client_close' }, 'sse connection closed');
       polls = MAX_POLLS + 1; // Stop polling
     });
 
     const poll = async (): Promise<void> => {
       if (polls++ >= MAX_POLLS || reply.raw.destroyed) {
+        sseLog.info({ polls }, 'sse poll loop ended');
         reply.raw.end();
         return;
       }
@@ -161,6 +145,15 @@ export class TopicController {
         const topic = await this.topicService.getTopicDetail(userId, id);
         const bothReady = topic.hyperlinksStatus === 'ready' && topic.insightsStatus === 'ready';
         const anyProcessing = topic.hyperlinksStatus === 'processing' || topic.insightsStatus === 'processing';
+
+        sseLog.debug(
+          {
+            poll: polls,
+            hyperlinksStatus: topic.hyperlinksStatus,
+            insightsStatus: topic.insightsStatus,
+          },
+          'sse status poll'
+        );
 
         sendEvent({
           type: 'status',
@@ -171,10 +164,12 @@ export class TopicController {
 
         if (bothReady || !anyProcessing) {
           sendEvent({ type: 'done' });
+          sseLog.info({ polls }, 'sse topic events completed');
           reply.raw.end();
           return;
         }
-      } catch {
+      } catch (err) {
+        sseLog.error({ err, polls }, 'sse topic events poll error');
         sendEvent({ type: 'error' });
         reply.raw.end();
         return;

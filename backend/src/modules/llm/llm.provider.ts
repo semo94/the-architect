@@ -1,4 +1,6 @@
-import { env } from '../shared/config/env.js';
+﻿import { env } from '../shared/config/env.js';
+import { observeOutboundFetch } from '../shared/observability/fetch.js';
+import { getModuleLogger } from '../shared/observability/logger.js';
 
 interface StreamOptions {
   prompt: string;
@@ -57,14 +59,17 @@ export class LLMProvider {
       };
     }
 
-    const response = await fetch(this.apiUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
-      signal,
-    });
-
-    return response;
+    return observeOutboundFetch(
+      'llm_completion',
+      this.apiUrl,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+        signal,
+      },
+      getModuleLogger('llm.provider')
+    );
   }
 }
 

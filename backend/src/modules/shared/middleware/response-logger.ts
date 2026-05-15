@@ -1,23 +1,23 @@
 ﻿import { FastifyReply, FastifyRequest } from 'fastify';
 import { accessLogUrlFromRequest } from '../utils/http-log.utils.js';
 
-export async function requestLogger(
+export async function responseLogger(
   request: FastifyRequest,
-  _reply: FastifyReply
+  reply: FastifyReply
 ): Promise<void> {
   const { urlPath, queryPresent } = accessLogUrlFromRequest(request);
-  request.log.debug(
+  request.log.info(
     {
       component: 'http_server',
-      phase: 'request',
+      phase: 'response',
       method: request.method,
       urlPath,
       queryPresent,
-      ip: request.ip,
-      userAgent: request.headers['user-agent'],
-      platform: request.headers['x-platform'],
+      statusCode: reply.statusCode,
+      responseTime: reply.elapsedTime,
+      route: request.routeOptions?.url,
       requestId: request.id,
     },
-    'request received'
+    'request completed'
   );
 }

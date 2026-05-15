@@ -1,6 +1,7 @@
-import type { OAuth2Namespace } from '@fastify/oauth2';
+﻿import type { OAuth2Namespace } from '@fastify/oauth2';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { env } from '../shared/config/env.js';
+import { observeOutboundFetch } from '../shared/observability/fetch.js';
 import { refreshTokenSchema, type RefreshTokenDto } from './auth.schemas.js';
 import { AuthService } from './auth.service.js';
 
@@ -28,12 +29,17 @@ export class AuthController {
     const token = tokenData.token;
 
     // Fetch user profile from GitHub
-    const response = await fetch('https://api.github.com/user', {
-      headers: {
-        Authorization: `Bearer ${token.access_token}`,
-        Accept: 'application/json',
+    const response = await observeOutboundFetch(
+      'github_user_profile',
+      'https://api.github.com/user',
+      {
+        headers: {
+          Authorization: `Bearer ${token.access_token}`,
+          Accept: 'application/json',
+        },
       },
-    });
+      request.log
+    );
 
     if (!response.ok) {
       throw new Error('Failed to fetch GitHub profile');
