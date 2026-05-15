@@ -60,6 +60,7 @@ const envSchema = z.object({
   ),
   OTEL_SERVICE_NAME: z.string().min(1).optional(),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).optional(),
+  DB_LOG_QUERIES: z.string().default('false').transform((val) => val === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;

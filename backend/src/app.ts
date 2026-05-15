@@ -32,6 +32,8 @@ export async function buildApp() {
 
   const app = Fastify({
     loggerInstance: logger,
+    // We emit a single redacted access log path via custom hooks below.
+    disableRequestLogging: true,
     genReqId: () => randomUUID(),
     trustProxy: true,
   });

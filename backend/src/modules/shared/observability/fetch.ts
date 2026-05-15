@@ -22,66 +22,64 @@ export async function observeOutboundFetch(
   init: RequestInit | undefined,
   log: OutboundLogger
 ): Promise<Response> {
-  const tracer = trace.getTracer('breadthwise-outbound');
   const method = init?.method ?? 'GET';
   const host = safeHost(url);
   const started = Date.now();
+  const activeSpan = trace.getActiveSpan();
 
-  return await tracer.startActiveSpan(`outbound.${label}`, async (span) => {
-    span.setAttributes({
-      'http.request.method': method,
-      'server.address': host,
-      'url.full': urlWithoutQueryForLog(url),
-      'breadthwise.downstream.label': label,
-    });
-
-    try {
-      const response = await fetch(url, init);
-      const durationMs = Date.now() - started;
-      span.setAttribute('http.response.status_code', response.status);
-      if (!response.ok) {
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: `HTTP ${response.status}`,
-        });
-      }
-
-      log.info(
-        {
-          component: 'downstream_http',
-          downstreamLabel: label,
-          method,
-          host,
-          url: urlWithoutQueryForLog(url),
-          status: response.status,
-          durationMs,
-        },
-        'downstream response'
-      );
-
-      return response;
-    } catch (err) {
-      const durationMs = Date.now() - started;
-      span.recordException(err as Error);
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: err instanceof Error ? err.message : String(err),
-      });
-      log.error(
-        {
-          err,
-          component: 'downstream_http',
-          downstreamLabel: label,
-          method,
-          host,
-          url: urlWithoutQueryForLog(url),
-          durationMs,
-        },
-        'downstream request failed'
-      );
-      throw err;
-    } finally {
-      span.end();
-    }
+  activeSpan?.setAttributes({
+    'breadthwise.downstream.label': label,
+    'breadthwise.downstream.host': host,
+    'breadthwise.downstream.method': method,
   });
+
+  try {
+    const response = await fetch(url, init);
+    const durationMs = Date.now() - started;
+    activeSpan?.setAttributes({
+      'breadthwise.downstream.status_code': response.status,
+      'breadthwise.downstream.duration_ms': durationMs,
+    });
+    if (!response.ok) {
+      activeSpan?.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: `HTTP ${response.status}`,
+      });
+    }
+
+    log.debug(
+      {
+        component: 'downstream_http',
+        downstreamLabel: label,
+        method,
+        host,
+        url: urlWithoutQueryForLog(url),
+        status: response.status,
+        durationMs,
+      },
+      'downstream response'
+    );
+
+    return response;
+  } catch (err) {
+    const durationMs = Date.now() - started;
+    activeSpan?.recordException(err as Error);
+    activeSpan?.setStatus({
+      code: SpanStatusCode.ERROR,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    log.error(
+      {
+        err,
+        component: 'downstream_http',
+        downstreamLabel: label,
+        method,
+        host,
+        url: urlWithoutQueryForLog(url),
+        durationMs,
+      },
+      'downstream request failed'
+    );
+    throw err;
+  }
 }

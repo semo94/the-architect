@@ -20,7 +20,9 @@ export function initUptraceInstrumentation(): void {
       serviceName: process.env.OTEL_SERVICE_NAME ?? 'breadthwise-backend',
       deploymentEnvironment: process.env.NODE_ENV,
       instrumentations: [
-        // HTTP/Undici: redact sensitive query params; keep header lists empty so bearer tokens are not copied to span attributes. Spot-check exported spans in Uptrace after deploy.
+        // HTTP/Undici client spans are auto-instrumented here.
+        // `observeOutboundFetch` enriches/logs around those spans and does not create nested manual spans.
+        // Keep header lists empty so bearer tokens are never copied to span attributes.
         getNodeAutoInstrumentations({
           '@opentelemetry/instrumentation-fs': { enabled: false },
           // Logs export via pino-opentelemetry-transport (see logger.ts), not instrumentation-pino.

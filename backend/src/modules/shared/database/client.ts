@@ -6,8 +6,13 @@ import { env } from '../config/env.js';
 import { getModuleLogger } from '../observability/logger.js';
 import * as schema from './schema.js';
 
+const shouldLogDbQueries = env.NODE_ENV === 'development' || env.DB_LOG_QUERIES;
+
 const drizzleLogger = {
   logQuery(query: string, params: unknown[]): void {
+    if (!shouldLogDbQueries) {
+      return;
+    }
     getModuleLogger('database').debug(
       {
         component: 'db',
