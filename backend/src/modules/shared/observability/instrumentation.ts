@@ -1,5 +1,5 @@
 ﻿import { normalizeUptraceDsn } from './uptrace-dsn.js';
-import { applyOtelMemoryTuningEnv, shouldExportOtelLogs } from './otel-memory-tuning.js';
+import { applyOtelMemoryTuningEnv } from './otel-memory-tuning.js';
 import { getOtelRuntimeState } from './otel-global.js';
 import { startOtelMemoryDiagnostics, stopOtelMemoryDiagnostics } from './otel-memory-diagnostics.js';
 import { buildOtelSdk } from './otel-sdk.js';
@@ -19,9 +19,7 @@ export function initUptraceInstrumentation(): void {
   }
 
   applyOtelMemoryTuningEnv();
-  if (shouldExportOtelLogs()) {
-    configureUptraceLogExporterEnv();
-  }
+  configureUptraceLogExporterEnv();
 
   registerProcessHooksOnce();
 

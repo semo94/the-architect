@@ -1,7 +1,6 @@
 ﻿import { context, trace } from '@opentelemetry/api';
 import type { Logger, LoggerOptions } from 'pino';
 import stdSerializers from 'pino-std-serializers';
-import { shouldUsePinoOtlpTransport } from './otel-memory-tuning.js';
 import { normalizeUptraceDsn } from './uptrace-dsn.js';
 import {
   configureUptraceLogExporterEnv,
@@ -39,17 +38,8 @@ const baseLoggerOptions = (): LoggerOptions => ({
   },
 });
 
+/** Stdout + OTLP to Uptrace when UPTRACE_DSN is set. */
 function createUptracePinoLogger(opts: LoggerOptions): Logger {
-  if (!shouldUsePinoOtlpTransport()) {
-    return createPino({
-      ...opts,
-      transport: {
-        target: 'pino/file',
-        options: { destination: 1 },
-      },
-    });
-  }
-
   configureUptraceLogExporterEnv();
   return createPino({
     ...opts,
@@ -72,19 +62,16 @@ function createUptracePinoLogger(opts: LoggerOptions): Logger {
 
 /**
  * Fallback root logger before `setRootLogger` runs (e.g. early process hooks).
+ * Uses plain stdout — `buildApp` replaces this with the full Uptrace logger when configured.
  */
 export function getRootLogger(): Logger {
   if (!rootLogger) {
     const level =
       process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'development' ? 'debug' : 'info');
-    const baseOpts: LoggerOptions = {
+    rootLogger = createPino({
       ...baseLoggerOptions(),
       level,
-    };
-
-    rootLogger = normalizeUptraceDsn(process.env.UPTRACE_DSN)
-      ? createUptracePinoLogger(baseOpts)
-      : createPino(baseOpts);
+    });
   }
   return rootLogger;
 }

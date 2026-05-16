@@ -1,14 +1,9 @@
-﻿import { shouldExportOtelLogs } from './otel-memory-tuning.js';
-import { normalizeUptraceDsn } from './uptrace-dsn.js';
+﻿import { normalizeUptraceDsn } from './uptrace-dsn.js';
 
 const UTRACE_OTLP_LOGS_ENDPOINT = 'https://api.uptrace.dev/v1/logs';
 
 /** Configure OTLP log exporter env vars for pino-opentelemetry-transport / otlp-logger. */
 export function configureUptraceLogExporterEnv(): string | undefined {
-  if (!shouldExportOtelLogs()) {
-    return undefined;
-  }
-
   const dsn = normalizeUptraceDsn(process.env.UPTRACE_DSN);
   if (!dsn) {
     return undefined;
