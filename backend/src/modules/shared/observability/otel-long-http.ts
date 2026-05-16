@@ -25,5 +25,9 @@ export function shouldIgnoreLongRunningIncomingRequest(req: IncomingMessage): bo
     return true;
   }
 
+  if (method === 'GET' && path === '/health') {
+    return true;
+  }
+
   return false;
 }

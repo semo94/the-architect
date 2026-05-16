@@ -2,7 +2,8 @@
 import { configureOpentelemetry } from '@uptrace/node';
 import { normalizeUptraceDsn } from './uptrace-dsn.js';
 import { shouldIgnoreLongRunningIncomingRequest } from './otel-long-http.js';
-import { applyOtelMemoryTuningEnv } from './otel-memory-tuning.js';
+import { applyOtelMemoryTuningEnv, shouldExportOtelLogs } from './otel-memory-tuning.js';
+import { createOtelTraceSampler } from './otel-sampler.js';
 import { configureUptraceLogExporterEnv } from './uptrace-log-export.js';
 
 let sdk: ReturnType<typeof configureOpentelemetry> | undefined;
@@ -14,14 +15,17 @@ export function initUptraceInstrumentation(): void {
     return;
   }
 
-  configureUptraceLogExporterEnv();
   applyOtelMemoryTuningEnv();
+  if (shouldExportOtelLogs()) {
+    configureUptraceLogExporterEnv();
+  }
 
   try {
     sdk = configureOpentelemetry({
       dsn,
       serviceName: process.env.OTEL_SERVICE_NAME ?? 'breadthwise-backend',
       deploymentEnvironment: process.env.NODE_ENV,
+      sampler: createOtelTraceSampler(),
       instrumentations: [
         // HTTP/Undici client spans are auto-instrumented here.
         // `observeOutboundFetch` enriches/logs around those spans and does not create nested manual spans.
