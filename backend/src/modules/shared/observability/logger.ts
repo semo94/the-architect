@@ -1,6 +1,8 @@
 ﻿import { context, trace } from '@opentelemetry/api';
 import type { Logger, LoggerOptions } from 'pino';
 import stdSerializers from 'pino-std-serializers';
+import { shouldExportOtelLogs } from './otel-memory-tuning.js';
+import { normalizeUptraceDsn } from './uptrace-dsn.js';
 import {
   configureUptraceLogExporterEnv,
   uptraceLogResourceAttributes,
@@ -38,24 +40,26 @@ const baseLoggerOptions = (): LoggerOptions => ({
 });
 
 function createUptracePinoLogger(opts: LoggerOptions): Logger {
-  configureUptraceLogExporterEnv();
+  const targets: { target: string; options: Record<string, unknown> }[] = [
+    {
+      target: 'pino/file',
+      options: { destination: 1 },
+    },
+  ];
+
+  if (shouldExportOtelLogs()) {
+    configureUptraceLogExporterEnv();
+    targets.push({
+      target: 'pino-opentelemetry-transport',
+      options: {
+        resourceAttributes: uptraceLogResourceAttributes(),
+      },
+    });
+  }
 
   return createPino({
     ...opts,
-    transport: {
-      targets: [
-        {
-          target: 'pino/file',
-          options: { destination: 1 },
-        },
-        {
-          target: 'pino-opentelemetry-transport',
-          options: {
-            resourceAttributes: uptraceLogResourceAttributes(),
-          },
-        },
-      ],
-    },
+    transport: { targets },
   });
 }
 
@@ -71,7 +75,7 @@ export function getRootLogger(): Logger {
       level,
     };
 
-    rootLogger = configureUptraceLogExporterEnv()
+    rootLogger = normalizeUptraceDsn(process.env.UPTRACE_DSN)
       ? createUptracePinoLogger(baseOpts)
       : createPino(baseOpts);
   }
@@ -88,7 +92,7 @@ export function createAppLogger(options: { level: string; usePretty: boolean }):
     level: options.level,
   };
 
-  if (configureUptraceLogExporterEnv()) {
+  if (normalizeUptraceDsn(process.env.UPTRACE_DSN)) {
     return createUptracePinoLogger(opts);
   }
 
