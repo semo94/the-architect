@@ -1,15 +1,19 @@
-﻿import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { configureOpentelemetry } from '@uptrace/node';
-import { normalizeUptraceDsn } from './uptrace-dsn.js';
-import { shouldIgnoreLongRunningIncomingRequest } from './otel-long-http.js';
+﻿import { normalizeUptraceDsn } from './uptrace-dsn.js';
 import { applyOtelMemoryTuningEnv, shouldExportOtelLogs } from './otel-memory-tuning.js';
-import { createOtelTraceSampler } from './otel-sampler.js';
+import { startOtelMemoryDiagnostics, stopOtelMemoryDiagnostics } from './otel-memory-diagnostics.js';
+import { buildOtelSdk, type OtelSdkHandle } from './otel-sdk.js';
 import { configureUptraceLogExporterEnv } from './uptrace-log-export.js';
 
-let sdk: ReturnType<typeof configureOpentelemetry> | undefined;
+let sdk: OtelSdkHandle | undefined;
+let initStarted = false;
 
-/** Start Uptrace traces/metrics. Call from instrumentation-preload before other app imports. */
+/** Start Uptrace traces. Call from instrumentation-preload before other app imports. */
 export function initUptraceInstrumentation(): void {
+  if (initStarted) {
+    return;
+  }
+  initStarted = true;
+
   const dsn = normalizeUptraceDsn(process.env.UPTRACE_DSN);
   if (!dsn) {
     return;
@@ -21,50 +25,22 @@ export function initUptraceInstrumentation(): void {
   }
 
   try {
-    sdk = configureOpentelemetry({
+    sdk = buildOtelSdk({
       dsn,
       serviceName: process.env.OTEL_SERVICE_NAME ?? 'breadthwise-backend',
-      deploymentEnvironment: process.env.NODE_ENV,
-      sampler: createOtelTraceSampler(),
-      instrumentations: [
-        // HTTP/Undici client spans are auto-instrumented here.
-        // `observeOutboundFetch` enriches/logs around those spans and does not create nested manual spans.
-        // Keep header lists empty so bearer tokens are never copied to span attributes.
-        getNodeAutoInstrumentations({
-          '@opentelemetry/instrumentation-fs': { enabled: false },
-          // Logs export via pino-opentelemetry-transport (see logger.ts), not instrumentation-pino.
-          '@opentelemetry/instrumentation-pino': { enabled: false },
-          '@opentelemetry/instrumentation-http': {
-            ignoreIncomingRequestHook: shouldIgnoreLongRunningIncomingRequest,
-            redactedQueryParams: [
-              'code',
-              'state',
-              'access_token',
-              'refresh_token',
-              'token',
-              'client_secret',
-              'id_token',
-              'session_state',
-            ],
-            headersToSpanAttributes: {
-              client: { requestHeaders: [], responseHeaders: [] },
-              server: { requestHeaders: [], responseHeaders: [] },
-            },
-          },
-          '@opentelemetry/instrumentation-undici': {
-            headersToSpanAttributes: {
-              requestHeaders: [],
-              responseHeaders: [],
-            },
-          },
-        }),
-      ],
+      deploymentEnvironment: process.env.NODE_ENV ?? 'production',
     });
-
     sdk.start();
+    startOtelMemoryDiagnostics();
 
     void import('./logger.js').then(({ getRootLogger }) => {
-      getRootLogger().info({ component: 'observability' }, 'OpenTelemetry started (Uptrace)');
+      getRootLogger().info(
+        {
+          component: 'observability',
+          spanProcessor: process.env.OTEL_SPAN_PROCESSOR ?? (process.env.NODE_ENV === 'staging' ? 'simple' : 'batch'),
+        },
+        'OpenTelemetry started (Uptrace)'
+      );
     });
   } catch (err) {
     process.stderr.write(
@@ -88,6 +64,7 @@ process.on('uncaughtException', (err: Error) => {
 });
 
 export async function shutdownInstrumentation(): Promise<void> {
+  stopOtelMemoryDiagnostics();
   if (!sdk) {
     return;
   }

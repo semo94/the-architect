@@ -1,4 +1,4 @@
-# Multi-stage build
+﻿# Multi-stage build
 FROM node:22-alpine AS builder
 
 WORKDIR /app
@@ -42,9 +42,7 @@ RUN chown -R nodejs:nodejs /app
 
 USER nodejs
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
+# Use Render HTTP health checks only — avoid spawning a second Node process every 30s on 512MB instances.
 
 EXPOSE 3000
 
