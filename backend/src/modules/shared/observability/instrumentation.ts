@@ -1,88 +1,83 @@
-﻿import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { configureOpentelemetry } from '@uptrace/node';
-import { normalizeUptraceDsn } from './uptrace-dsn.js';
+﻿import { normalizeUptraceDsn } from './uptrace-dsn.js';
+import { applyOtelMemoryTuningEnv } from './otel-memory-tuning.js';
+import { getOtelRuntimeState } from './otel-global.js';
+import { startOtelMemoryDiagnostics, stopOtelMemoryDiagnostics } from './otel-memory-diagnostics.js';
+import { buildOtelSdk } from './otel-sdk.js';
 import { configureUptraceLogExporterEnv } from './uptrace-log-export.js';
 
-let sdk: ReturnType<typeof configureOpentelemetry> | undefined;
-
-/** Start Uptrace traces/metrics. Call from instrumentation-preload before other app imports. */
+/** Start Uptrace traces. Call from instrumentation-preload before other app imports. */
 export function initUptraceInstrumentation(): void {
+  const state = getOtelRuntimeState();
+  if (state.initStarted) {
+    return;
+  }
+  state.initStarted = true;
+
   const dsn = normalizeUptraceDsn(process.env.UPTRACE_DSN);
   if (!dsn) {
     return;
   }
 
+  applyOtelMemoryTuningEnv();
   configureUptraceLogExporterEnv();
 
+  registerProcessHooksOnce();
+
   try {
-    sdk = configureOpentelemetry({
+    state.initGeneration += 1;
+    state.sdk = buildOtelSdk({
       dsn,
       serviceName: process.env.OTEL_SERVICE_NAME ?? 'breadthwise-backend',
-      deploymentEnvironment: process.env.NODE_ENV,
-      instrumentations: [
-        // HTTP/Undici client spans are auto-instrumented here.
-        // `observeOutboundFetch` enriches/logs around those spans and does not create nested manual spans.
-        // Keep header lists empty so bearer tokens are never copied to span attributes.
-        getNodeAutoInstrumentations({
-          '@opentelemetry/instrumentation-fs': { enabled: false },
-          // Logs export via pino-opentelemetry-transport (see logger.ts), not instrumentation-pino.
-          '@opentelemetry/instrumentation-pino': { enabled: false },
-          '@opentelemetry/instrumentation-http': {
-            redactedQueryParams: [
-              'code',
-              'state',
-              'access_token',
-              'refresh_token',
-              'token',
-              'client_secret',
-              'id_token',
-              'session_state',
-            ],
-            headersToSpanAttributes: {
-              client: { requestHeaders: [], responseHeaders: [] },
-              server: { requestHeaders: [], responseHeaders: [] },
-            },
-          },
-          '@opentelemetry/instrumentation-undici': {
-            headersToSpanAttributes: {
-              requestHeaders: [],
-              responseHeaders: [],
-            },
-          },
-        }),
-      ],
+      deploymentEnvironment: process.env.NODE_ENV ?? 'production',
     });
+    state.sdk.start();
+    startOtelMemoryDiagnostics();
 
-    sdk.start();
-
-    void import('./logger.js').then(({ getRootLogger }) => {
-      getRootLogger().info({ component: 'observability' }, 'OpenTelemetry started (Uptrace)');
-    });
+    process.stderr.write(
+      `${JSON.stringify({
+        component: 'observability',
+        msg: 'OpenTelemetry started (Uptrace)',
+        spanProcessor:
+          process.env.OTEL_SPAN_PROCESSOR ??
+          (process.env.NODE_ENV === 'staging' ? 'simple' : 'batch'),
+        initGeneration: state.initGeneration,
+      })}\n`
+    );
   } catch (err) {
     process.stderr.write(
       `Failed to start OpenTelemetry (Uptrace): ${err instanceof Error ? err.message : String(err)}\n`
     );
-    sdk = undefined;
+    state.sdk = undefined;
   }
 }
 
-process.on('unhandledRejection', (reason: unknown) => {
-  void import('./logger.js').then(({ getRootLogger }) => {
-    getRootLogger().error({ err: reason, component: 'process' }, 'unhandledRejection');
-  });
-});
-
-process.on('uncaughtException', (err: Error) => {
-  void import('./logger.js').then(({ getRootLogger }) => {
-    getRootLogger().fatal({ err, component: 'process' }, 'uncaughtException');
-  });
-  process.exit(1);
-});
-
-export async function shutdownInstrumentation(): Promise<void> {
-  if (!sdk) {
+function registerProcessHooksOnce(): void {
+  const state = getOtelRuntimeState();
+  if (state.processHooksRegistered) {
     return;
   }
-  await sdk.shutdown();
-  sdk = undefined;
+  state.processHooksRegistered = true;
+
+  process.on('unhandledRejection', (reason: unknown) => {
+    void import('./logger.js').then(({ getRootLogger }) => {
+      getRootLogger().error({ err: reason, component: 'process' }, 'unhandledRejection');
+    });
+  });
+
+  process.on('uncaughtException', (err: Error) => {
+    void import('./logger.js').then(({ getRootLogger }) => {
+      getRootLogger().fatal({ err, component: 'process' }, 'uncaughtException');
+    });
+    process.exit(1);
+  });
+}
+
+export async function shutdownInstrumentation(): Promise<void> {
+  stopOtelMemoryDiagnostics();
+  const state = getOtelRuntimeState();
+  if (!state.sdk) {
+    return;
+  }
+  await state.sdk.shutdown();
+  state.sdk = undefined;
 }
