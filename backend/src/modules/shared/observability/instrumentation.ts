@@ -1,6 +1,8 @@
 ﻿import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { configureOpentelemetry } from '@uptrace/node';
 import { normalizeUptraceDsn } from './uptrace-dsn.js';
+import { shouldIgnoreLongRunningIncomingRequest } from './otel-long-http.js';
+import { applyOtelMemoryTuningEnv } from './otel-memory-tuning.js';
 import { configureUptraceLogExporterEnv } from './uptrace-log-export.js';
 
 let sdk: ReturnType<typeof configureOpentelemetry> | undefined;
@@ -13,6 +15,7 @@ export function initUptraceInstrumentation(): void {
   }
 
   configureUptraceLogExporterEnv();
+  applyOtelMemoryTuningEnv();
 
   try {
     sdk = configureOpentelemetry({
@@ -28,6 +31,7 @@ export function initUptraceInstrumentation(): void {
           // Logs export via pino-opentelemetry-transport (see logger.ts), not instrumentation-pino.
           '@opentelemetry/instrumentation-pino': { enabled: false },
           '@opentelemetry/instrumentation-http': {
+            ignoreIncomingRequestHook: shouldIgnoreLongRunningIncomingRequest,
             redactedQueryParams: [
               'code',
               'state',
