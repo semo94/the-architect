@@ -23,10 +23,13 @@ export function buildOtelSdk(options: {
       serviceName: options.serviceName,
       deploymentEnvironment: options.deploymentEnvironment,
     }),
+    autoDetectResources: false,
     sampler: createOtelTraceSampler(),
     spanProcessors: [createTraceSpanProcessor(traceExporterUrl, options.dsn)],
     instrumentations: createOtelInstrumentations(),
-    // No metricReader / logRecordProcessor — metrics via API are optional; logs via Pino transport.
+    // Traces only — logs via pino-opentelemetry-transport; metrics disabled on tight profile.
+    metricReaders: [],
+    logRecordProcessors: [],
   });
 
   return {

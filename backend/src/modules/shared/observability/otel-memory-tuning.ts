@@ -2,7 +2,8 @@
  * Apply conservative OpenTelemetry exporter defaults before the SDK starts.
  * Honors explicit process.env overrides (e.g. set in Render or .env).
  *
- * Trace batching is configured in otel-span-processor.ts (not @uptrace/node's hardcoded 1000-queue BSP).
+ * NodeSDK defaults OTLP logs/metrics when env vars are unset — we pin them off here
+ * and export logs only through pino-opentelemetry-transport (when enabled).
  *
  * @see https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/
  */
@@ -28,8 +29,29 @@ export function shouldExportOtelLogs(): boolean {
   return true;
 }
 
+/**
+ * Pino OTLP transport spawns worker threads; each worker runs otlp-logger which
+ * registers another global LoggerProvider + resource detectors (~100MB+ RSS each on 512MB).
+ * Default off on memory-optimized; stdout logs still go to Render.
+ */
+export function shouldUsePinoOtlpTransport(): boolean {
+  if (!shouldExportOtelLogs()) {
+    return false;
+  }
+  if (!isOtelMemoryOptimized()) {
+    return true;
+  }
+  const flag = process.env.OTEL_PINO_OTLP_TRANSPORT?.toLowerCase();
+  return flag === 'true' || flag === '1';
+}
+
 export function applyOtelMemoryTuningEnv(): void {
   const tight = isOtelMemoryOptimized();
+
+  // NodeSDK must not start its own OTLP log/metric pipelines (pino handles logs when enabled).
+  setDefault('OTEL_LOGS_EXPORTER', 'none');
+  setDefault('OTEL_METRICS_EXPORTER', 'none');
+  setDefault('OTEL_NODE_RESOURCE_DETECTORS', 'none');
 
   if (tight) {
     setDefault('OTEL_SPAN_PROCESSOR', 'simple');
@@ -43,7 +65,6 @@ export function applyOtelMemoryTuningEnv(): void {
     setDefault('OTEL_BLRP_SCHEDULE_DELAY', '2000');
     setDefault('OTEL_BLRP_EXPORT_TIMEOUT', '5000');
     setDefault('OTEL_EXPORTER_OTLP_TIMEOUT', '5000');
-    setDefault('OTEL_METRICS_EXPORTER', 'none');
   } else {
     setDefault('OTEL_BSP_MAX_QUEUE_SIZE', '512');
     setDefault('OTEL_BSP_MAX_EXPORT_BATCH_SIZE', '128');
