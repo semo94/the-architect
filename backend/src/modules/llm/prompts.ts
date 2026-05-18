@@ -1,4 +1,11 @@
 ﻿import categorySchema from './categories.js';
+import {
+  formatInsightSubcategoryContextForPrompt,
+  formatPerKindCapsForPrompt,
+  getInsightSubcategoryContext,
+  INSIGHT_RELATION_KINDS,
+  MAX_INSIGHTS_TOTAL,
+} from './insight-generation.js';
 import type { GenerateTopicConstraints, TopicPromptInput, TopicType } from './llm.schemas.js';
 
 interface TopicTypeDefinition {
@@ -339,28 +346,32 @@ Respond with this JSON structure:
   },
 
   generateInsights: (topic: TopicPromptInput): { system: string; user: string } => {
-    const VALID_RELATION_KINDS = [
-      'PREREQUISITE_OF',
-      'BUILDS_ON',
-      'PART_OF',
-      'TYPE_OF',
-      'EXAMPLE_OF',
-      'IMPLEMENTS',
-      'CAUSES',
-      'USED_WITH',
-      'ALTERNATIVE_TO',
-      'SIMILAR_TO',
-      'TRADEOFF_WITH',
-    ];
+    const subcategoryCtx = getInsightSubcategoryContext(topic.category, topic.subcategory);
 
     const system = `You are a software architecture knowledge graph builder. Your task is to identify genuine semantic learning relationships between software architecture topics.
 
+BUDGET:
+- Maximum ${MAX_INSIGHTS_TOTAL} total items. No minimum - never fabricate a relationship to meet a count.
+- Per-relationKind limits (omit a kind entirely if you have no confident items):
+${formatPerKindCapsForPrompt()}
+- Most topics need only 3-5 relation kinds; use your budget on kinds that genuinely apply.
+
+VALID INSIGHT TARGETS (graph-node granularity):
+- Each target must be a standalone software-architecture topic worthy of its own knowledge-graph node: a named pattern, technology, protocol, concept, architecture, methodology, strategy, practice, or framework that a senior engineer would recognize.
+- TOO BROAD (do not suggest): entire domains, category labels, or umbrella fields (e.g. "Distributed Systems", "Security", "Microservices Architecture" as a parent of a specific pattern) unless the source topic is itself that scope.
+- TOO NARROW (do not suggest): product sub-features, configuration parameters, version-specific details, or phrases that are not recognizable standalone topics (e.g. "consumer groups", "thread pool size").
+- Cross-domain relationships are encouraged when the relationship is real and granularity is correct.
+
+RELATION-KIND USAGE:
+- PART_OF, TYPE_OF, EXAMPLE_OF: at most one taxonomic step; not a whole domain.
+- PREREQUISITE_OF, BUILDS_ON: concrete topics at peer level or one step broader - not parent fields.
+- IMPLEMENTS, CAUSES: specific realization or consequence, not a pile of loosely related names.
+- USED_WITH, ALTERNATIVE_TO, SIMILAR_TO, TRADEOFF_WITH: peer-level named topics; cross-domain is fine.
+
 RULES:
-- Maximum 10 total items across all groups. No minimum - never fabricate a relationship to meet a count.
-- Maximum 3 items per group. Omit a group entirely if you have no confident items for it.
 - targetName must be a canonical full name a software architect would immediately recognize.
 - Must NOT include the source topic itself in any group.
-- relationKind must be exactly one of: ${VALID_RELATION_KINDS.join(', ')}.
+- relationKind must be exactly one of: ${INSIGHT_RELATION_KINDS.join(', ')}.
 - Quality over quantity: two strong, confident relationships are better than five weak ones.
 - Return valid JSON only, no markdown, no wrapping, no commentary.
 
@@ -382,6 +393,9 @@ RELATIONSHIP MEANINGS:
 Topic context:
 - Category: ${topic.category} > ${topic.subcategory}
 - What it is: ${topic.content.what.slice(0, 300)}
+
+SUBCATEGORY CONTEXT (calibration for graph-node granularity - not a menu):
+${formatInsightSubcategoryContextForPrompt(subcategoryCtx)}
 
 Return JSON with this structure:
 {

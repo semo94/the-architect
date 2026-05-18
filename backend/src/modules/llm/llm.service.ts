@@ -2,6 +2,7 @@
 import { truncateForLog } from '../shared/utils/string-log.utils.js';
 import { llmProvider } from './llm.provider.js';
 import type { GenerateQuizRequest, GenerateTopicRequest, TopicPromptInput } from './llm.schemas.js';
+import { sanitizeInsightSuggestions } from './insight-generation.js';
 import { promptTemplates } from './prompts.js';
 
 export interface InsightGenerationItem {
@@ -64,11 +65,13 @@ export class LLMService {
     const clean = accumulatedText.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
     const parsed = JSON.parse(clean) as { groups: Array<{ targetName: string; relationKind: string }> };
 
+    const normalized = (parsed.groups ?? []).map((item) => ({
+      targetName: (item.targetName ?? '').trim(),
+      relationKind: (item.relationKind ?? '').trim().toUpperCase(),
+    }));
+
     return {
-      groups: (parsed.groups ?? []).map((item) => ({
-        targetName: (item.targetName ?? '').trim(),
-        relationKind: (item.relationKind ?? '').trim().toUpperCase(),
-      })).filter((item) => item.targetName.length > 0 && item.relationKind.length > 0),
+      groups: sanitizeInsightSuggestions(normalized, topic.name),
     };
   }
 
